@@ -9,8 +9,8 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
     <Product>PS5Kitsune</Product>
-    <Authors>Kilian Audroin</Authors>
-    <Copyright>Copyright (C) 2026 Kilian Audroin</Copyright>
+    <Authors>La-Kiks</Authors>
+    <Copyright>Copyright (C) 2026 La-Kiks</Copyright>
     <PackageLicenseExpression>GPL-2.0-only</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/La-Kiks/PS5Kitsune</RepositoryUrl>
     <Version>0.1.0</Version>
