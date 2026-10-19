@@ -1,0 +1,18 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <Product>PS5Kitsune</Product>
+    <Authors>Kilian Audroin</Authors>
+    <Copyright>Copyright (C) 2026 Kilian Audroin</Copyright>
+    <PackageLicenseExpression>GPL-2.0-only</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/La-Kiks/PS5Kitsune</RepositoryUrl>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

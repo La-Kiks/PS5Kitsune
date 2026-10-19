@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PS5Kitsune.App/PS5Kitsune.App.csproj" />
+    <Project Path="src/PS5Kitsune.Cli/PS5Kitsune.Cli.csproj" />
+    <Project Path="src/PS5Kitsune.Core/PS5Kitsune.Core.csproj" />
+    <Project Path="src/PS5Kitsune.Platform.Windows/PS5Kitsune.Platform.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PS5Kitsune.Core.Tests/PS5Kitsune.Core.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Targets plain net10.0 (not net10.0-windows) so the Linux CI job still compiles it;
+       Windows-only APIs are guarded by [SupportedOSPlatform("windows")]. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\PS5Kitsune.Core\PS5Kitsune.Core.csproj" />
+  </ItemGroup>
+
+</Project>

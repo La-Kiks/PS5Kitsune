@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "doom-validated-2026-10",
+  "validated": false,
+  "source": { "kind": "release", "tag": "v0.1.2" },
+  "alternateSource": { "kind": "commit", "sha": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd" },
+  "assets": {
+    "relinker": {
+      "name": "relinker-v0.1.2.exe",
+      "sha256": "88cc311d19b1a4e41f0f34883dfb61b118bdfacd317c3960cb62e4c707bd9401"
+    },
+    "libs": {
+      "name": "prx-windows-v0.1.2.zip",
+      "sha256": "b26e507e7cc01922312f4ca9c7b36ab333ed3a1d7048d676f20214cadf2d4895"
+    }
+  },
+  "tools": {
+    "python": {
+      "version": "3.14.8",
+      "url": "https://www.python.org/ftp/python/3.14.8/python-3.14.8-embed-amd64.zip",
+      "sha256": "a93abe456ab01bd96d7a085b3cdb6566b3063f4241360d114142fbdb07f0a310"
+    }
+  },
+  "relinker": {
+    "windowsArgs": [ "--windows", "--registry" ],
+    "intelArg": "--to-intel"
+  }
+}

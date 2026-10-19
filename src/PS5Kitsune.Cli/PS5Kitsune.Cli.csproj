@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ps5kitsune</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PS5Kitsune.Core\PS5Kitsune.Core.csproj" />
+    <ProjectReference Include="..\PS5Kitsune.Platform.Windows\PS5Kitsune.Platform.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

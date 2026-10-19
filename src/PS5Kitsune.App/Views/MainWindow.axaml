@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PS5Kitsune.App.ViewModels"
+        x:Class="PS5Kitsune.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="PS5Kitsune"
+        Width="720" Height="420">
+  <StackPanel Margin="24" Spacing="12">
+    <TextBlock Text="PS5Kitsune" FontSize="28" FontWeight="SemiBold" />
+    <TextBlock Text="Installer and launcher for AnyPS5. Screens arrive from milestone 3." Opacity="0.7" />
+    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="16">
+      <TextBlock Grid.Row="0" Grid.Column="0" Text="Platform" FontWeight="SemiBold" />
+      <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Platform}" />
+      <TextBlock Grid.Row="1" Grid.Column="0" Text="Data root" FontWeight="SemiBold" />
+      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DataRoot}" />
+      <TextBlock Grid.Row="2" Grid.Column="0" Text="AnyPS5 profile" FontWeight="SemiBold" />
+      <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Profile}" />
+    </Grid>
+  </StackPanel>
+</Window>
