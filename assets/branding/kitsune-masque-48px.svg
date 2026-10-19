@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 260 270"><title>Kitsune</title><path d="M120 64 C132 60 146 56 156 50 L182 8 C190 36 192 62 188 86 C202 100 214 116 222 136 L204 140 L214 156 L196 158 C184 186 160 214 132 236 Q120 246 108 236 C80 214 56 186 44 158 L26 156 L36 140 L18 136 C26 116 38 100 52 86 C48 62 50 36 58 8 L84 50 C94 56 108 60 120 64 Z" fill="#F4EFE7" stroke="#C99A3E" stroke-width="10" stroke-linejoin="round"/>
+<path d="M58 14 L82 50 C70 60 58 72 52 84 C48 60 50 36 58 14 Z" fill="#D9452A"/>
+<path d="M182 14 L158 50 C170 60 182 72 188 84 C192 60 190 36 182 14 Z" fill="#D9452A"/>
+<path d="M120 68 C134 84 136 100 120 112 C104 100 106 84 120 68 Z" fill="#C99A3E"/>
+<path d="M62 110 C78 94 96 94 110 106" stroke="#D9452A" stroke-width="14" stroke-linecap="round" fill="none"/>
+<path d="M178 110 C162 94 144 94 130 106" stroke="#D9452A" stroke-width="14" stroke-linecap="round" fill="none"/>
+<path d="M66 132 C80 112 100 112 112 124 C98 138 80 140 66 132 Z" fill="#15131D"/>
+<path d="M174 132 C160 112 140 112 128 124 C142 138 160 140 174 132 Z" fill="#15131D"/>
+<path d="M104 222 Q120 232 136 222 Q128 242 120 242 Q112 242 104 222 Z" fill="#D9452A"/></svg>

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/branding/kitsune-icone-encre.svg" alt="PS5Kitsune logo" width="128">
+</p>
+
 # PS5Kitsune
 
 A desktop installer and launcher for [AnyPS5](https://github.com/boykopovar/AnyPS5), the project that relinks PS5 executables into native Windows and Linux programs.
