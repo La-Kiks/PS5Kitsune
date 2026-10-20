@@ -56,14 +56,12 @@ public sealed class GameImporterTests : IDisposable
             throw new InvalidOperationException($"Unexpected command {spec.FileName}");
         }
 
-        if (_relinkerExitCode != 0)
-        {
-            return new FakeProcessResult(_relinkerExitCode, StandardError: ["relinker: failure"]);
-        }
-
+        // A failing relinker still leaves its first outputs behind.
         TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "PPSA99666.exe"), "exe");
         TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "PPSA99666.registry.json"), "[]");
-        return new FakeProcessResult(0);
+        return _relinkerExitCode != 0
+            ? new FakeProcessResult(_relinkerExitCode, StandardError: ["relinker: failure"])
+            : new FakeProcessResult(0);
     }
 
     [Fact]
@@ -132,6 +130,20 @@ public sealed class GameImporterTests : IDisposable
         Assert.IsType<GameAdded>(await AddAsync(WriteZip()));
 
         Assert.Equal(unwrapsBefore, _setup.Runner.Calls.Count(spec => FakeProcessRunner.ScriptName(spec) == "unwrap_self.py"));
+    }
+
+    [Fact]
+    public async Task A_relinker_that_failed_after_writing_its_outputs_runs_again()
+    {
+        await _setup.InstallAsync();
+        _relinkerExitCode = 2;
+        await Assert.ThrowsAsync<StepFailedException>(() => AddAsync(WriteZip()));
+        var relinksBefore = _setup.Runner.Calls.Count(spec => spec.FileName == _setup.Paths.Relinker);
+
+        _relinkerExitCode = 0;
+        Assert.IsType<GameAdded>(await AddAsync(WriteZip()));
+
+        Assert.Equal(relinksBefore + 1, _setup.Runner.Calls.Count(spec => spec.FileName == _setup.Paths.Relinker));
     }
 
     public void Dispose() => _temp.Dispose();

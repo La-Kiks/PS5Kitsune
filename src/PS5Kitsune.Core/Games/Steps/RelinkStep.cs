@@ -8,16 +8,17 @@ namespace PS5Kitsune.Core.Games.Steps;
 
 /// <summary>
 /// Runs the relinker from the game folder: relinker --windows --registry [--to-intel] app0/eboot.bin &lt;titleId&gt;.exe.
-/// Done when the executable and its registry exist.
+/// Done when the marker written after a successful run exists, with the executable and its registry.
 /// </summary>
 public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, AnyPS5Profile profile, IProcessRunner processRunner) : IStep
 {
     public string Name => "Convert with the relinker";
 
-    public bool IsAlreadyDone() => File.Exists(context.Game.Executable) && File.Exists(context.Game.Registry);
+    public bool IsAlreadyDone() => File.Exists(context.Game.RelinkedMarker) && File.Exists(context.Game.Executable) && File.Exists(context.Game.Registry);
 
     public async Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken)
     {
+        DeletePreviousOutputs();
         List<string> arguments = [.. profile.Relinker.WindowsArgs];
         if (context.ToIntel && profile.Relinker.IntelArg is { } intelArg)
         {
@@ -36,6 +37,38 @@ public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, Any
                 ? $" It ran with {profile.Relinker.IntelArg}: the game may use an AMD-only instruction that cannot be converted for Intel CPUs."
                 : "";
             throw new GameImportException($"The relinker failed with exit code {result.ExitCode}.{intelNote}{Environment.NewLine}{errors}");
+        }
+
+        Directory.CreateDirectory(context.Game.Meta);
+        await File.WriteAllTextAsync(context.Game.RelinkedMarker, "", cancellationToken).ConfigureAwait(false);
+    }
+
+    // A rerun must never mix old and new outputs: the relinker's own files go, the game's modules stay.
+    private void DeletePreviousOutputs()
+    {
+        var game = context.Game;
+        if (!Directory.Exists(game.Root))
+        {
+            return;
+        }
+
+        if (Directory.Exists(game.Meta))
+        {
+            File.Delete(game.RelinkedMarker);
+        }
+
+        File.Delete(game.Executable);
+        foreach (var file in Directory.EnumerateFiles(game.Root, "*.registry.json").Concat(Directory.EnumerateFiles(game.Root, "*.needed.json")))
+        {
+            File.Delete(file);
+        }
+
+        if (Directory.Exists(game.App0))
+        {
+            foreach (var file in Directory.EnumerateFiles(game.App0, "*.guest.prx", SearchOption.AllDirectories))
+            {
+                File.Delete(file);
+            }
         }
     }
 }

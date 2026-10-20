@@ -34,5 +34,8 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
 
     public string Logs => Path.Combine(Meta, "logs");
 
+    /// <summary>Written once the relinker exited 0; its outputs are only trusted with it.</summary>
+    public string RelinkedMarker => Path.Combine(Meta, "relinked");
+
     public string RecordFile => Path.Combine(Meta, "game.json");
 }

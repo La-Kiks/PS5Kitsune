@@ -67,5 +67,39 @@ public sealed class RelinkStepTests : IDisposable
         Assert.Contains("unsupported instruction vpdpbusd", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_failed_run_that_wrote_its_outputs_is_not_done()
+    {
+        _runner.Respond = spec =>
+        {
+            TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "PPSA99666.exe"), "exe");
+            TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "PPSA99666.registry.json"), "[]");
+            return new FakeProcessResult(2);
+        };
+        var step = CreateStep(toIntel: false);
+
+        await Assert.ThrowsAsync<GameImportException>(() => step.ExecuteAsync(null, TestContext.Current.CancellationToken));
+
+        Assert.True(File.Exists(_game.Executable));
+        Assert.False(step.IsAlreadyDone());
+    }
+
+    [Fact]
+    public async Task Stale_relinker_outputs_are_removed_before_a_run()
+    {
+        TestFiles.Write(Path.Combine(_game.Root, "PPSA99666.old.guest.prx.registry.json"), "[]");
+        TestFiles.Write(Path.Combine(_game.Root, "PPSA99666.old.needed.json"), "[]");
+        TestFiles.Write(Path.Combine(_game.App0, "sce_module", "libold.guest.prx"), "pe");
+        TestFiles.Write(Path.Combine(_game.App0, "sce_module", "libold.prx"), "elf");
+        _runner.Respond = _ => new FakeProcessResult(0);
+
+        await CreateStep(toIntel: false).ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.False(File.Exists(Path.Combine(_game.Root, "PPSA99666.old.guest.prx.registry.json")));
+        Assert.False(File.Exists(Path.Combine(_game.Root, "PPSA99666.old.needed.json")));
+        Assert.False(File.Exists(Path.Combine(_game.App0, "sce_module", "libold.guest.prx")));
+        Assert.True(File.Exists(Path.Combine(_game.App0, "sce_module", "libold.prx")));
+    }
+
     public void Dispose() => _temp.Dispose();
 }
