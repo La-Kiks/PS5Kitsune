@@ -91,7 +91,7 @@ PS5Kitsune/
 
 ### Resuming steps
 
-Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the file exists, its hash is right, the clone's commit matches the profile) rather than on a state journal. If the user deletes a folder by hand, the step is simply redone. The `StepRunner` skips completed steps and resumes at the first one that is not. A done-check only sees outputs that were completed and confirmed (atomic moves or a marker written after success), never files a tool may leave half-written.
+Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the file exists, its hash is right, the clone's commit matches the profile) rather than on a state journal. If the user deletes a folder by hand, the step is simply redone. The `StepRunner` skips completed steps and resumes at the first one that is not. A done-check never trusts a file an external tool may leave half-written: tool outputs are moved into place or confirmed by a marker written after success. The copy steps still compare sizes after an in-place copy; copying to a temporary file and moving it is a follow-up.
 
 ### Isolated Vulkan probe
 
