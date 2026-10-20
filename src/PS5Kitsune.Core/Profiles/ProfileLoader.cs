@@ -50,15 +50,20 @@ public static class ProfileLoader
         foreach (var (name, asset) in profile.Assets)
         {
             RequireSha256(profile.Id, $"asset {name}", asset.Sha256);
+            if (asset.Url is not null)
+            {
+                RequireHttps(profile.Id, $"asset {name}", asset.Url);
+            }
+            else if (string.IsNullOrEmpty(asset.Name) || profile.Source.Tag is null)
+            {
+                throw new InvalidProfileException($"Profile {profile.Id}: asset {name} needs a url, or a name and a release source tag.");
+            }
         }
 
         foreach (var (name, tool) in profile.Tools)
         {
             RequireSha256(profile.Id, $"tool {name}", tool.Sha256);
-            if (tool.Url.Scheme != Uri.UriSchemeHttps)
-            {
-                throw new InvalidProfileException($"Profile {profile.Id}: tool {name} must be downloaded over HTTPS.");
-            }
+            RequireHttps(profile.Id, $"tool {name}", tool.Url);
         }
     }
 
@@ -67,6 +72,14 @@ public static class ProfileLoader
         if (value.Length != 64 || !value.All(char.IsAsciiHexDigitLower))
         {
             throw new InvalidProfileException($"Profile {profileId}: {what} needs a lowercase hex SHA-256, got \"{value}\".");
+        }
+    }
+
+    private static void RequireHttps(string profileId, string what, Uri url)
+    {
+        if (url.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new InvalidProfileException($"Profile {profileId}: {what} must be downloaded over HTTPS.");
         }
     }
 }

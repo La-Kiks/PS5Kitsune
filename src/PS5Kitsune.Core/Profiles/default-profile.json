@@ -12,6 +12,15 @@
     "libs": {
       "name": "prx-windows-v0.1.2.zip",
       "sha256": "b26e507e7cc01922312f4ca9c7b36ab333ed3a1d7048d676f20214cadf2d4895"
+    },
+    "scripts": {
+      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.2.zip",
+      "sha256": "90c802352b5478beacfdf032b57649872ccf0b7dc18c9c868b35903378ad2545",
+      "include": [ "tools/", "core/libs/prx/" ]
+    },
+    "unwrapScript": {
+      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/360e8bd685d32b0e9d37e6ee2fae44417c0f808c/tools/unwrap_self.py",
+      "sha256": "2f9321fa41009411b9cd07730f68094967c80a6c0c31d801b31d55141c291ef7"
     }
   },
   "tools": {
