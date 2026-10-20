@@ -1,5 +1,6 @@
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Processes;
 using PS5Kitsune.Core.Tools;
@@ -26,10 +27,27 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, Pyth
         }
 
         List<string> arguments = [.. registries, "--libs", "libs"];
+        // Relinker v0.1.2 writes PE <module>.guest.prx files beside the original modules, and import_audit.py
+        // reads every file of a --modules folder as an ELF. So the audit gets a copy of the ELF modules only.
+        if (Directory.Exists(game.AuditModules))
+        {
+            Directory.Delete(game.AuditModules, recursive: true);
+        }
+
         foreach (var directory in context.ModuleDirectories)
         {
+            var source = Path.Combine(game.App0, directory);
+            var staged = Path.Combine(game.AuditModules, directory);
+            Directory.CreateDirectory(staged);
+            foreach (var relative in FileTree.RelativeFiles(source).Where(relative => BinaryKinds.Detect(Path.Combine(source, relative)) == BinaryKind.Elf))
+            {
+                var target = Path.Combine(staged, relative);
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(Path.Combine(source, relative), target, overwrite: true);
+            }
+
             arguments.Add("--modules");
-            arguments.Add(Path.Combine("app0", directory));
+            arguments.Add(Path.Combine(Path.GetRelativePath(game.Root, game.AuditModules), directory));
         }
 
         arguments.Add("--json");

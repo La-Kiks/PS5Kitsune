@@ -29,6 +29,9 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
     /// <summary>Files as they were before unwrapping, at their path relative to app0.</summary>
     public string Originals => Path.Combine(Meta, "originals");
 
+    /// <summary>Copies of the ELF modules only, rebuilt for each audit.</summary>
+    public string AuditModules => Path.Combine(Meta, "audit-modules");
+
     public string Logs => Path.Combine(Meta, "logs");
 
     public string RecordFile => Path.Combine(Meta, "game.json");

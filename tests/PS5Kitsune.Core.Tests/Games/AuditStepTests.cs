@@ -28,7 +28,11 @@ public sealed class AuditStepTests : IDisposable
         TestFiles.Write(Path.Combine(_game.Root, "PPSA99666.registry.json"), "[]");
         TestFiles.Write(Path.Combine(_game.Root, "PPSA99666.libc.registry.json"), "[]");
         TestFiles.Write(Path.Combine(_game.Root, "PPSA99666.needed.json"), "[]");
+        TestFiles.Write(Path.Combine(_game.App0, "sce_module", "libc.prx"), TestFiles.Elf());
+        TestFiles.Write(Path.Combine(_game.App0, "sce_module", "libc.prx.guest.prx"), "MZ fake pe"u8.ToArray());
     }
+
+    private static string StagedModules => Path.Combine(".ps5kitsune", "audit-modules", "sce_module");
 
     private AuditStep CreateStep() => new(_context, _paths, _python, _runner);
 
@@ -48,10 +52,45 @@ public sealed class AuditStepTests : IDisposable
         var call = Assert.Single(_runner.Calls);
         Assert.Equal(_game.Root, call.WorkingDirectory);
         Assert.Equal(
-            [_paths.ImportAudit, "PPSA99666.libc.registry.json", "PPSA99666.registry.json", "--libs", "libs", "--modules", Path.Combine("app0", "sce_module"), "--json", "audit.json"],
+            [_paths.ImportAudit, "PPSA99666.libc.registry.json", "PPSA99666.registry.json", "--libs", "libs", "--modules", StagedModules, "--json", "audit.json"],
             call.Arguments.Skip(2));
         Assert.Equal(AuditVerdict.Green, _context.Audit!.Verdict);
         Assert.Equal(262, _context.Audit.Implemented);
+    }
+
+    [Fact]
+    public async Task Gives_the_audit_only_the_elf_modules()
+    {
+        List<string> seen = [];
+        _runner.Respond = spec =>
+        {
+            var staged = Path.Combine(spec.WorkingDirectory!, StagedModules);
+            seen.AddRange(Directory.GetFiles(staged, "*", SearchOption.AllDirectories).Select(path => Path.GetRelativePath(staged, path)));
+            TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "audit.json"), AuditFiles.Json(1, 0, 0));
+            return new FakeProcessResult(0);
+        };
+
+        await CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["libc.prx"], seen);
+        Assert.True(File.Exists(Path.Combine(_game.App0, "sce_module", "libc.prx.guest.prx")));
+    }
+
+    [Fact]
+    public async Task A_stale_staged_file_is_gone_when_the_audit_runs()
+    {
+        TestFiles.Write(Path.Combine(_game.AuditModules, "sce_module", "stale.prx"), TestFiles.Elf());
+        var stale = true;
+        _runner.Respond = spec =>
+        {
+            stale = File.Exists(Path.Combine(spec.WorkingDirectory!, StagedModules, "stale.prx"));
+            TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "audit.json"), AuditFiles.Json(1, 0, 0));
+            return new FakeProcessResult(0);
+        };
+
+        await CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.False(stale);
     }
 
     [Fact]
