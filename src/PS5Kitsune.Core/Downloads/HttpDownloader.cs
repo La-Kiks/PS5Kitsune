@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.IO;
 
 namespace PS5Kitsune.Core.Downloads;
 
@@ -19,7 +19,7 @@ public sealed partial class HttpDownloader(HttpClient httpClient, ILogger<HttpDo
         ArgumentNullException.ThrowIfNull(request);
         var expected = request.ExpectedSha256.ToLowerInvariant();
 
-        if (File.Exists(request.Destination) && await ComputeSha256Async(request.Destination, cancellationToken).ConfigureAwait(false) == expected)
+        if (File.Exists(request.Destination) && await FileHash.Sha256Async(request.Destination, cancellationToken).ConfigureAwait(false) == expected)
         {
             LogAlreadyPresent(request.Destination);
             return;
@@ -60,7 +60,7 @@ public sealed partial class HttpDownloader(HttpClient httpClient, ILogger<HttpDo
             await CopyWithProgressAsync(source, target, existingBytes, total, progress, cancellationToken).ConfigureAwait(false);
         }
 
-        var actual = await ComputeSha256Async(partPath, cancellationToken).ConfigureAwait(false);
+        var actual = await FileHash.Sha256Async(partPath, cancellationToken).ConfigureAwait(false);
         if (actual != expected)
         {
             File.Delete(partPath);
@@ -69,13 +69,6 @@ public sealed partial class HttpDownloader(HttpClient httpClient, ILogger<HttpDo
 
         File.Move(partPath, request.Destination, overwrite: true);
         LogDownloaded(request.Source, request.Destination);
-    }
-
-    internal static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
-    {
-        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, useAsync: true);
-        var hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
-        return Convert.ToHexStringLower(hash);
     }
 
     private static async Task CopyWithProgressAsync(Stream source, Stream target, long received, long? total, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
