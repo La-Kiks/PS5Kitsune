@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Downloads;
+using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Processes;
 using PS5Kitsune.Core.Profiles;
@@ -30,6 +31,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<StepRunner>();
         services.AddSingleton<AnyPS5Paths>();
         services.AddSingleton<AnyPS5Installer>();
+        services.AddSingleton<GameSourceResolver>();
+        services.AddSingleton(_ => new GameValidator());
+        services.AddSingleton<GameImporter>();
 
         if (profile.Tools.TryGetValue(PythonEmbeddableTool.ToolId, out var python))
         {

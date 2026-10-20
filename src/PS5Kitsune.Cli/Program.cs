@@ -10,6 +10,7 @@ var rootOption = new Option<DirectoryInfo?>("--root")
 var rootCommand = new RootCommand("PS5Kitsune: installer and launcher for AnyPS5.")
 {
     InstallCommand.Create(rootOption),
+    AddCommand.Create(rootOption),
     ToolsCommand.Create(rootOption),
 };
 rootCommand.Options.Add(rootOption);
