@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
@@ -21,7 +22,7 @@ public sealed class GameImporterTests : IDisposable
         _importer = new GameImporter(
             _setup.Layout, _setup.Platform, _setup.Profile, _setup.Paths, _setup.Installer,
             new GameSourceResolver(_setup.Layout), new GameValidator(_ => long.MaxValue),
-            _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time);
+            _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time, NullLogger<GameImporter>.Instance);
     }
 
     private string GameDirectory => _setup.Layout.GameDirectory(TestGames.TitleId);

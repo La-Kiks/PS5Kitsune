@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games.Steps;
@@ -12,7 +13,7 @@ namespace PS5Kitsune.Core.Games;
 /// Adds a game: resolve the folder or zip, validate it, then run the add steps. Without game.json,
 /// a new add resumes at the first step not done. See docs/architecture.md, "V2 — Add a game".
 /// </summary>
-public sealed class GameImporter(
+public sealed partial class GameImporter(
     DataLayout layout,
     IPlatform platform,
     AnyPS5Profile profile,
@@ -23,7 +24,8 @@ public sealed class GameImporter(
     PythonEmbeddableTool python,
     IProcessRunner processRunner,
     StepRunner stepRunner,
-    TimeProvider time)
+    TimeProvider time,
+    ILogger<GameImporter> logger)
 {
     /// <param name="toIntel">Convert for an Intel CPU (relinker Intel option).</param>
     /// <exception cref="AnyPS5NotInstalledException">Run install first.</exception>
@@ -72,10 +74,24 @@ public sealed class GameImporter(
         finally
         {
             // An extracted zip is only needed until the game is copied; keep it when the copy did not complete.
-            if (source.StagingDirectory is { } staging && Directory.Exists(staging) && (copy is null || copy.IsAlreadyDone()))
+            // A cleanup failure (antivirus scanning fresh files) must not replace the real error or fail a finished add.
+            if (source.StagingDirectory is { } staging)
             {
-                Directory.Delete(staging, recursive: true);
+                try
+                {
+                    if (Directory.Exists(staging) && (copy is null || copy.IsAlreadyDone()))
+                    {
+                        Directory.Delete(staging, recursive: true);
+                    }
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    LogStagingNotDeleted(exception, staging);
+                }
             }
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not delete the staging folder {Staging}; it can be deleted by hand.")]
+    private partial void LogStagingNotDeleted(Exception exception, string staging);
 }
