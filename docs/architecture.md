@@ -425,7 +425,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] License: **GPL v2 only**, public GitHub repository
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
-- [ ] Default mode of the first profile: release `v0.1.2` if it runs DOOM, otherwise a build of a validated commit
+- [x] Default mode of the first profile: **release `v0.1.2`**, which runs DOOM for PS5 (validated 2026-10-20 with milestone 2's CLI; audit orange: 361 implemented, 3 stubs, 0 absent)
 - [ ] Disk space threshold, to measure at the first full build
 - [ ] Check for new profiles at startup, or only on demand
 

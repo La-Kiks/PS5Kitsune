@@ -12,6 +12,7 @@ public sealed class ProfileLoaderTests
 
         Assert.Equal(AnyPS5Profile.CurrentSchemaVersion, profile.SchemaVersion);
         Assert.Equal("release", profile.Source.Kind);
+        Assert.True(profile.Validated);
         var python = profile.Tools["python"];
         Assert.Equal(Uri.UriSchemeHttps, python.Url.Scheme);
         Assert.Equal(64, python.Sha256.Length);
