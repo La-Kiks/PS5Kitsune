@@ -48,4 +48,16 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Verdict: red. Not playable yet: wait for an AnyPS5 update. The game stays added and will need a reconversion.")]
     public static partial void VerdictRed(this ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Executable} is missing; an antivirus may have deleted it. Add an exclusion for the games folder, delete the game folder, then add the game again.")]
+    public static partial void ExecutableMissing(this ILogger logger, string executable);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Name} started (PID {ProcessId}). Log: {LogFile}")]
+    public static partial void GameStarted(this ILogger logger, string name, int processId, string logFile);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Name} exited with code {ExitCode}.")]
+    public static partial void GameExited(this ILogger logger, string name, int exitCode);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Stopped following the log. {Name} is still running (PID {ProcessId}). Log: {LogFile}")]
+    public static partial void StoppedFollowing(this ILogger logger, string name, int processId, string logFile);
 }
