@@ -1,3 +1,4 @@
+using System.IO.Pipes;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
@@ -68,6 +69,29 @@ public sealed class WindowsGameLauncherTests : IDisposable
         Assert.Equal(10, logs.Length);
         Assert.DoesNotContain(Path.Combine(Logs, "20000101-000000.log"), logs);
         Assert.Contains(Path.Combine(Logs, "20000101-000011.log"), logs);
+    }
+
+    [Fact]
+    public async Task Passes_no_other_inheritable_handle_to_the_game()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        // The client end is the write end, and the only one made inheritable.
+        using var pipe = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.Inheritable);
+        using var game = _launcher.Launch(new GameLaunchRequest(Path.Combine(Environment.SystemDirectory, "cmd.exe"), _temp.Path, Logs)
+        {
+            Arguments = ["/c", "ping", "-n", "11", "127.0.0.1", ">nul"],
+        });
+        pipe.DisposeLocalCopyOfClientHandle();
+
+        // The game lives about 10 s. If it held the write end, the read would only end when it exits.
+        var read = Task.Run(() => pipe.Read(new byte[1]), cancellationToken);
+        var completed = await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+
+        Assert.Same(read, completed);
+        Assert.Equal(0, await read);
+        await game.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
     }
 
     public void Dispose() => _temp.Dispose();

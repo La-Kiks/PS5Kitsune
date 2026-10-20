@@ -18,6 +18,8 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     private const uint CreateNoWindow = 0x08000000;
     private const int StartfUseStdHandles = 0x00000100;
     private const uint HandleFlagInherit = 0x00000001;
+    private const uint ExtendedStartupInfoPresent = 0x00080000;
+    private const nint ProcThreadAttributeHandleList = 0x00020002;
 
     public ILaunchedGame Launch(GameLaunchRequest request)
     {
@@ -26,28 +28,72 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         DeleteOldLogs(request.LogDirectory);
         var logFile = Path.Combine(request.LogDirectory, $"{DateTime.Now:yyyyMMdd-HHmmss}.log");
 
+        // A handle list entry must be inheritable; the handle is closed as soon as the game has started.
         using var log = File.OpenHandle(logFile, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
         if (!SetHandleInformation(log, HandleFlagInherit, HandleFlagInherit))
         {
             throw new Win32Exception(Marshal.GetLastPInvokeError());
         }
 
-        var startupInfo = new StartupInfo
-        {
-            Size = Marshal.SizeOf<StartupInfo>(),
-            Flags = StartfUseStdHandles,
-            StdOutput = log.DangerousGetHandle(),
-            StdError = log.DangerousGetHandle(),
-        };
-        var commandLine = (WindowsCommandLine.Build(request.Executable, request.Arguments) + '\0').ToCharArray();
-        if (!CreateProcess(request.Executable, ref commandLine[0], 0, 0, inheritHandles: true, CreateNoWindow, 0, request.WorkingDirectory, ref startupInfo, out var process))
-        {
-            throw new Win32Exception(Marshal.GetLastPInvokeError(), $"Could not start {request.Executable}.");
-        }
+        var commandLine = WindowsCommandLine.Build(request.Executable, request.Arguments);
+        var process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle());
 
         CloseHandle(process.Thread);
         LogLaunched(request.Executable, process.ProcessId, logFile);
         return new LaunchedGame(new SafeProcessHandle(process.Process, ownsHandle: true), process.ProcessId, logFile);
+    }
+
+    // bInheritHandles = TRUE alone would hand the game every inheritable handle of this process (a parent's
+    // output pipe, a concurrent child's redirect pipe), keeping them open as long as the game runs.
+    // The handle list attribute restricts inheritance to the log.
+    private static unsafe ProcessInformation Start(string executable, string commandLine, string workingDirectory, nint log)
+    {
+        nuint size = 0;
+        InitializeProcThreadAttributeList(0, 1, 0, ref size); // Size query: fails with ERROR_INSUFFICIENT_BUFFER.
+        var attributes = (nint)NativeMemory.Alloc(size);
+        try
+        {
+            if (!InitializeProcThreadAttributeList(attributes, 1, 0, ref size))
+            {
+                throw new Win32Exception(Marshal.GetLastPInvokeError());
+            }
+
+            try
+            {
+                var inherited = log; // Read by CreateProcess, so it lives on this frame until then.
+                if (!UpdateProcThreadAttribute(attributes, 0, ProcThreadAttributeHandleList, (nint)(&inherited), (nuint)sizeof(nint), 0, 0))
+                {
+                    throw new Win32Exception(Marshal.GetLastPInvokeError());
+                }
+
+                var startupInfo = new StartupInfoEx
+                {
+                    StartupInfo = new StartupInfo
+                    {
+                        Size = sizeof(StartupInfoEx),
+                        Flags = StartfUseStdHandles,
+                        StdOutput = log,
+                        StdError = log,
+                    },
+                    AttributeList = attributes,
+                };
+                var commandLineBuffer = (commandLine + '\0').ToCharArray();
+                if (!CreateProcess(executable, ref commandLineBuffer[0], 0, 0, inheritHandles: true, CreateNoWindow | ExtendedStartupInfoPresent, 0, workingDirectory, ref startupInfo, out var process))
+                {
+                    throw new Win32Exception(Marshal.GetLastPInvokeError(), $"Could not start {executable}.");
+                }
+
+                return process;
+            }
+            finally
+            {
+                DeleteProcThreadAttributeList(attributes);
+            }
+        }
+        finally
+        {
+            NativeMemory.Free((void*)attributes);
+        }
     }
 
     // Makes room for the new log by keeping the newest KeptLogs - 1. Names sort by date.
@@ -73,8 +119,19 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         uint creationFlags,
         nint environment,
         string currentDirectory,
-        ref StartupInfo startupInfo,
+        ref StartupInfoEx startupInfo,
         out ProcessInformation processInformation);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool InitializeProcThreadAttributeList(nint attributeList, int attributeCount, int flags, ref nuint size);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool UpdateProcThreadAttribute(nint attributeList, uint flags, nint attribute, nint value, nuint size, nint previousValue, nint returnSize);
+
+    [LibraryImport("kernel32.dll")]
+    private static partial void DeleteProcThreadAttributeList(nint attributeList);
 
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -110,6 +167,13 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         public nint StdInput;
         public nint StdOutput;
         public nint StdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct StartupInfoEx
+    {
+        public StartupInfo StartupInfo;
+        public nint AttributeList;
     }
 
     [StructLayout(LayoutKind.Sequential)]
