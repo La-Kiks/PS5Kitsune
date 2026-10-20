@@ -14,4 +14,7 @@ public sealed class GameImportContext(GameSource source, GameMetadata metadata, 
 
     /// <summary>Whether the relinker gets its Intel option.</summary>
     public bool ToIntel { get; } = toIntel;
+
+    /// <summary>Set by the audit step; the game record is written from it.</summary>
+    public AuditSummary? Audit { get; set; }
 }
