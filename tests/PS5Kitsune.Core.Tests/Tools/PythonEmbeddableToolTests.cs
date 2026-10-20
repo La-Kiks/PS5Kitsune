@@ -1,6 +1,5 @@
-using System.IO.Compression;
-using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Profiles;
+using PS5Kitsune.Core.Tests.Fakes;
 using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.Core.Tests.Tools;
@@ -12,6 +11,11 @@ public sealed class PythonEmbeddableToolTests : IDisposable
     private readonly TempDirectory _temp = new();
     private readonly FakeDownloader _downloader = new();
     private readonly FakeProcessRunner _processRunner = new();
+
+    public PythonEmbeddableToolTests()
+    {
+        _downloader.Serve(Definition.Url, TestFiles.ZipBytes(("python.exe", "fake"u8.ToArray()), ("python314.zip", [])));
+    }
 
     private PythonEmbeddableTool CreateTool() =>
         new(Definition, new DataLayout(_temp.Path), new FakePlatform(), _downloader, _processRunner);
@@ -67,7 +71,7 @@ public sealed class PythonEmbeddableToolTests : IDisposable
     [Fact]
     public async Task GetVersion_parses_the_python_banner()
     {
-        _processRunner.Output = "Python 3.14.8";
+        _processRunner.Respond = _ => new FakeProcessResult(0, ["Python 3.14.8"]);
 
         var version = await CreateTool().GetVersionAsync(TestContext.Current.CancellationToken);
 
@@ -78,57 +82,26 @@ public sealed class PythonEmbeddableToolTests : IDisposable
     [Fact]
     public async Task GetVersion_fails_on_a_non_zero_exit_code()
     {
-        _processRunner.ExitCode = 9009;
+        _processRunner.Respond = _ => new FakeProcessResult(9009);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => CreateTool().GetVersionAsync(TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public void Scripts_run_through_a_bootstrap_that_keeps_their_folder_importable()
+    {
+        var tool = CreateTool();
+        var script = _temp.Combine("scripts", "tools", "import_audit.py");
+
+        var spec = tool.CreateScriptSpec(script, ["a.registry.json", "--libs", "libs"]);
+
+        Assert.Equal(tool.Executable, spec.FileName);
+        Assert.Equal("-c", spec.Arguments[0]);
+        Assert.Contains("sys.path.insert(0", spec.Arguments[1], StringComparison.Ordinal);
+        Assert.Contains("runpy.run_path", spec.Arguments[1], StringComparison.Ordinal);
+        Assert.Equal([script, "a.registry.json", "--libs", "libs"], spec.Arguments.Skip(2));
+        Assert.Equal("import_audit.py", FakeProcessRunner.ScriptName(spec));
+    }
+
     public void Dispose() => _temp.Dispose();
-
-    private sealed class FakePlatform : IPlatform
-    {
-        public string Name => "Test";
-
-        public string DefaultDataRoot => "unused";
-
-        public string SettingsDirectory => "unused";
-
-        public string ExecutableSuffix => ".exe";
-    }
-
-    /// <summary>Writes a small zip that looks like the embeddable Python archive.</summary>
-    private sealed class FakeDownloader : IDownloader
-    {
-        public List<DownloadRequest> Requests { get; } = [];
-
-        public Task DownloadAsync(DownloadRequest request, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
-        {
-            Requests.Add(request);
-            Directory.CreateDirectory(Path.GetDirectoryName(request.Destination)!);
-            using var archive = ZipFile.Open(request.Destination, ZipArchiveMode.Create);
-            using (var writer = new StreamWriter(archive.CreateEntry("python.exe").Open()))
-            {
-                writer.Write("fake");
-            }
-
-            archive.CreateEntry("python314.zip");
-            return Task.CompletedTask;
-        }
-    }
-
-    private sealed class FakeProcessRunner : IProcessRunner
-    {
-        public string Output { get; set; } = "";
-
-        public int ExitCode { get; set; }
-
-        public ProcessSpec? LastSpec { get; private set; }
-
-        public Task<ProcessResult> RunAsync(ProcessSpec spec, Action<OutputLine>? onOutput = null, CancellationToken cancellationToken = default)
-        {
-            LastSpec = spec;
-            onOutput?.Invoke(new OutputLine(OutputSource.StandardOutput, Output));
-            return Task.FromResult(new ProcessResult(ExitCode, TimeSpan.Zero));
-        }
-    }
 }

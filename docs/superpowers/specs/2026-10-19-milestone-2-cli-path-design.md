@@ -27,6 +27,8 @@ runs DOOM for PS5. The milestone also tells whether release `v0.1.2` is enough o
 | Source archive of `v0.1.2` | `https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.2.zip`, SHA-256 `90c802352b5478beacfdf032b57649872ccf0b7dc18c9c868b35903378ad2545`, top folder `AnyPS5-0.1.2/`; the tag points to commit `a48c00660eae7afd204fdb7513a52380dddf5a04`. |
 | `import_audit.py` in `v0.1.2` | Present; `--libs` (required, repeatable), `--modules`, `--source` (default `<script>/../core/libs/prx`), `--json`; exit codes 0 / 1 / 2. |
 | `unwrap_self.py` | **Not in `v0.1.2`.** Added later, standard library only, fixed several times a day. Pinned at commit `360e8bd685d32b0e9d37e6ee2fae44417c0f808c`, SHA-256 `2f9321fa41009411b9cd07730f68094967c80a6c0c31d801b31d55141c291ef7`. Usage: `unwrap_self.py <input> <output> [--verbose]`. |
+| Embeddable Python and sibling imports | `import_audit.py` imports `nid_names` and `progress` from `tools/`. The `python314._pth` file keeps the script folder off `sys.path` and disables `PYTHONPATH`, so run directly the script fails with `ModuleNotFoundError` (checked 2026-10-20 with 3.14.8). Scripts are run as `python -c <bootstrap> <script> <args>`; the bootstrap puts the script folder first and calls `runpy.run_path`, keeping the exit code. |
+| SELF magics | `unwrap_self.py` accepts `4F 15 3D 1D` and `54 14 F5 EE`. |
 | Test machine | AMD Ryzen 7 7730U, Radeon iGPU, 15.4 GB RAM: no `--to-intel`; the commit limit may require a larger page file. |
 
 ## Profile changes
@@ -68,7 +70,7 @@ Steps, all writing under `<root>/anyps5/current/`:
 3. `DownloadLibsStep`: `prx-windows-v0.1.2.zip` extracted so that its `libs/` folder becomes `libs/`.
 4. `DownloadScriptsStep`: source archive; only entries under the `include` prefixes (after stripping the top folder) are extracted into `scripts/`, keeping the tree, so `import_audit.py` finds `../core/libs/prx` by default.
 5. `DownloadUnwrapScriptStep`: `unwrap_self.py` → `scripts/tools/unwrap_self.py`.
-6. `WriteInstallRecordStep`: `install.json` (`schemaVersion`, profile id, mode `release`, version, unwrap script commit, date).
+6. `WriteInstallRecordStep`: `install.json` (`schemaVersion`, profile id, mode `release`, version, unwrap script URL holding the commit, date).
 
 `IsAlreadyDone()` checks outputs: a downloaded file present with the right hash, or, for an extracted archive, a `.ps5kitsune-extracted` marker holding the archive hash. `IAnyPS5Source` is not created yet: there is a single mode until milestone 5. `DataLayout` gains `AnyPS5Current`, `Games`, `Staging` and per-game paths.
 
@@ -83,7 +85,7 @@ Steps:
 
 1. `CopyGameStep`: copy the game root into `<root>/games/<titleId>/app0/` as-is. Done when every source file exists at the destination with the same size.
 2. `CopyLibsStep`: copy `anyps5/current/libs/` into `<game>/libs/`.
-3. `UnwrapSelfStep`: for `app0/eboot.bin` and every file of the module folders, read the first 4 bytes. For each non-ELF file, back it up to `<game>/.ps5kitsune/originals/<relative path>` (outside `app0`), then run `python unwrap_self.py <backup> <original path>`. A refusal (encrypted container) fails with "the game must come already unwrapped from the dump tool". Done when every file is an ELF.
+3. `UnwrapSelfStep`: for `app0/eboot.bin` and every file of the module folders, read the first 4 bytes. For each SELF file (either magic above), back it up to `<game>/.ps5kitsune/originals/<relative path>` (outside `app0`), then run `unwrap_self.py <backup> <original path>`. Other non-ELF files are left as they are. A refusal (encrypted container) fails with "the game must come already unwrapped from the dump tool". Done when no SELF file remains and no backup lacks its unwrapped copy.
 4. `RelinkStep`: from the game folder, `relinker --windows --registry [--to-intel] app0/eboot.bin <titleId>.exe` with options from the profile. Exit 0 succeeds; 1 or 2 fails with the last stderr lines, naming `--to-intel` when it was used. Done when `<titleId>.exe` and `<titleId>.registry.json` both exist (this only matters when resuming a partial add).
 5. `AuditStep`: `python scripts/tools/import_audit.py <all *.registry.json> --libs libs --modules <module folder> --json audit.json` from the game folder. Exit 0 or 1 → read `audit.json` and compute the verdict (green: absent = 0 and stub = 0; orange: absent = 0, stub > 0; red: absent > 0 or a missing library). Exit 2 fails.
 6. `WriteGameRecordStep`: `<game>/.ps5kitsune/game.json` as in the architecture, `settings` with defaults.
