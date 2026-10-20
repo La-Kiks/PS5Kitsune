@@ -33,13 +33,19 @@ public sealed class UnwrapSelfStep(GameImportContext context, AnyPS5Paths paths,
 
             progress?.Report(new StepProgress($"Unwrapping {relative}"));
             var errors = new OutputTail();
-            var spec = python.CreateScriptSpec(paths.UnwrapSelf, [backup, original]);
+            // The script writes its output in one go: a kill mid-write must not leave a truncated ELF at the real path.
+            var partial = original + ".partial";
+            File.Delete(partial);
+            var spec = python.CreateScriptSpec(paths.UnwrapSelf, [backup, partial]);
             var result = await processRunner.RunAsync(spec, errors.Collect, cancellationToken).ConfigureAwait(false);
             if (result.ExitCode != 0)
             {
+                File.Delete(partial);
                 throw new GameImportException(
                     $"unwrap_self.py could not unwrap {relative} (exit code {result.ExitCode}): the game must come already unwrapped from the dump tool.{Environment.NewLine}{errors}");
             }
+
+            File.Move(partial, original, overwrite: true);
         }
     }
 

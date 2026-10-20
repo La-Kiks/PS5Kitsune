@@ -65,13 +65,15 @@ public sealed class UnwrapSelfStepTests : IDisposable
     }
 
     [Fact]
-    public async Task Runs_unwrap_self_py_from_the_backup_to_the_original_path()
+    public async Task Runs_unwrap_self_py_from_the_backup_to_a_partial_file_then_moves_it_into_place()
     {
         await CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken);
 
         var call = _runner.Calls[0];
         Assert.Equal(_python.Executable, call.FileName);
-        Assert.Equal([_paths.UnwrapSelf, Original("eboot.bin"), App0("eboot.bin")], call.Arguments.Skip(2));
+        Assert.Equal([_paths.UnwrapSelf, Original("eboot.bin"), App0("eboot.bin") + ".partial"], call.Arguments.Skip(2));
+        Assert.Equal(TestFiles.Elf(), File.ReadAllBytes(App0("eboot.bin")));
+        Assert.Empty(Directory.EnumerateFiles(_game.App0, "*.partial", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -111,6 +113,50 @@ public sealed class UnwrapSelfStepTests : IDisposable
         Assert.Equal(TestFiles.Self(), File.ReadAllBytes(Original("eboot.bin")));
         Assert.Equal(TestFiles.Elf(), File.ReadAllBytes(App0("eboot.bin")));
         Assert.Equal(Original("eboot.bin"), _runner.Calls[0].Arguments[^2]);
+    }
+
+    [Fact]
+    public async Task A_failed_run_leaves_no_partial_and_no_elf_so_a_rerun_unwraps_again()
+    {
+        _runner.Respond = spec =>
+        {
+            TestFiles.Write(spec.Arguments[^1], TestFiles.Elf()[..4]);
+            return new FakeProcessResult(1);
+        };
+        var step = CreateStep();
+
+        await Assert.ThrowsAsync<GameImportException>(() => step.ExecuteAsync(null, TestContext.Current.CancellationToken));
+
+        Assert.Empty(Directory.EnumerateFiles(_game.App0, "*.partial", SearchOption.AllDirectories));
+        Assert.False(File.Exists(App0("eboot.bin")));
+        Assert.False(step.IsAlreadyDone());
+
+        _runner.Respond = spec =>
+        {
+            TestFiles.Write(spec.Arguments[^1], TestFiles.Elf());
+            return new FakeProcessResult(0);
+        };
+        await step.ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TestFiles.Elf(), File.ReadAllBytes(App0("eboot.bin")));
+        Assert.True(step.IsAlreadyDone());
+    }
+
+    [Fact]
+    public async Task A_leftover_partial_is_deleted_before_the_run()
+    {
+        TestFiles.Write(App0("eboot.bin") + ".partial", "stale");
+        var seen = new List<bool>();
+        _runner.Respond = spec =>
+        {
+            seen.Add(File.Exists(spec.Arguments[^1]));
+            TestFiles.Write(spec.Arguments[^1], TestFiles.Elf());
+            return new FakeProcessResult(0);
+        };
+
+        await CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.All(seen, existed => Assert.False(existed));
     }
 
     public void Dispose() => _temp.Dispose();
