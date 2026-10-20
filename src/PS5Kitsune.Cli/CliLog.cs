@@ -18,4 +18,7 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Full log: {LogFile}")]
     public static partial void FullLog(this ILogger logger, string logFile);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "AnyPS5 {Version} is installed in {Directory}.")]
+    public static partial void AnyPS5Ready(this ILogger logger, string version, string directory);
 }
