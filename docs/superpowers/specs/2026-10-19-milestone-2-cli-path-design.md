@@ -86,8 +86,8 @@ Steps:
 
 1. `CopyGameStep`: copy the game root into `<root>/games/<titleId>/app0/` as-is. Done when every source file exists at the destination with the same size.
 2. `CopyLibsStep`: copy `anyps5/current/libs/` into `<game>/libs/`.
-3. `UnwrapSelfStep`: for `app0/eboot.bin` and every file of the module folders, read the first 4 bytes. For each SELF file (either magic above), back it up to `<game>/.ps5kitsune/originals/<relative path>` (outside `app0`), then run `unwrap_self.py <backup> <original path>`. Other non-ELF files are left as they are. A refusal (encrypted container) fails with "the game must come already unwrapped from the dump tool". Done when no SELF file remains and no backup lacks its unwrapped copy.
-4. `RelinkStep`: from the game folder, `relinker --windows --registry [--to-intel] app0/eboot.bin <titleId>.exe` with options from the profile. Exit 0 succeeds; 1 or 2 fails with the last stderr lines, naming `--to-intel` when it was used. Done when `<titleId>.exe` and `<titleId>.registry.json` both exist (this only matters when resuming a partial add).
+3. `UnwrapSelfStep`: for `app0/eboot.bin` and every file of the module folders, read the first 4 bytes. For each SELF file (either magic above), back it up to `<game>/.ps5kitsune/originals/<relative path>` (outside `app0`), then run `unwrap_self.py <backup> <original path>.partial` and move the output to the original path only after exit 0 (a failed run deletes it). Other non-ELF files are left as they are. A refusal (encrypted container) fails with "the game must come already unwrapped from the dump tool". Done when no SELF file remains and no backup lacks its unwrapped copy.
+4. `RelinkStep`: from the game folder, `relinker --windows --registry [--to-intel] app0/eboot.bin <titleId>.exe` with options from the profile. Exit 0 succeeds; 1 or 2 fails with the last stderr lines, naming `--to-intel` when it was used. Before running, it deletes the previous outputs (marker, executable, `*.registry.json`, `*.needed.json`, `app0/**/*.guest.prx`). Done when the success marker `.ps5kitsune/relinked`, written after exit 0, exists along with `<titleId>.exe` and `<titleId>.registry.json` (this only matters when resuming a partial add).
 5. `AuditStep`: `python scripts/tools/import_audit.py <all *.registry.json> --libs libs --modules <ELF-only copy of each module folder> --json audit.json` from the game folder. Exit 0 or 1 → read `audit.json` and compute the verdict (green: absent = 0 and stub = 0; orange: absent = 0, stub > 0; red: absent > 0 or a missing library). Exit 2 fails.
 6. `WriteGameRecordStep`: `<game>/.ps5kitsune/game.json` as in the architecture, `settings` with defaults.
 
@@ -128,7 +128,7 @@ Unit tests (xUnit, fake `IProcessRunner`, temporary folders; no DOOM file in the
 - Install steps: partial extraction of a small generated source archive, extraction marker.
 - `WindowsGameLauncher` (Windows only, skipped on Linux in CI): launches `cmd /c echo` and checks the log content, working directory and exit code.
 
-End-to-end validation by hand on the test machine: `install` on an empty root, `add PPSA99666.zip` (expected green verdict), `run PPSA99666` starts DOOM. The `--to-intel` path is only covered by unit tests (AMD machine).
+End-to-end validation by hand on the test machine: `install` on an empty root, `add PPSA99666.zip` (validated 2026-10-20: orange, 361 implemented, 3 stubs, 0 absent), `run PPSA99666` starts DOOM. The `--to-intel` path is only covered by unit tests (AMD machine).
 
 ## If DOOM fails
 
