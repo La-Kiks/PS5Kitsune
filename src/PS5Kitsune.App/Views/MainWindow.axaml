@@ -4,6 +4,7 @@
         x:Class="PS5Kitsune.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="PS5Kitsune"
+        Icon="/Assets/kitsune.ico"
         Width="720" Height="420">
   <StackPanel Margin="24" Spacing="12">
     <TextBlock Text="PS5Kitsune" FontSize="28" FontWeight="SemiBold" />

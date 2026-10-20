@@ -17,6 +17,14 @@ public static class PlatformServices
         throw new PlatformNotSupportedException("PS5Kitsune currently runs on Windows only; Linux support is planned.");
     }
 
-    public static IServiceCollection AddPlatform(this IServiceCollection services, IPlatform platform) =>
+    public static IServiceCollection AddPlatform(this IServiceCollection services, IPlatform platform)
+    {
         services.AddSingleton(platform);
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<IGameLauncher, WindowsGameLauncher>();
+        }
+
+        return services;
+    }
 }

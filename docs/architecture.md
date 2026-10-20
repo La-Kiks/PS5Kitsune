@@ -91,7 +91,7 @@ PS5Kitsune/
 
 ### Resuming steps
 
-Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the file exists, its hash is right, the clone's commit matches the profile) rather than on a state journal. If the user deletes a folder by hand, the step is simply redone. The `StepRunner` skips completed steps and resumes at the first one that is not.
+Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the file exists, its hash is right, the clone's commit matches the profile) rather than on a state journal. If the user deletes a folder by hand, the step is simply redone. The `StepRunner` skips completed steps and resumes at the first one that is not. A done-check never trusts a file an external tool may leave half-written: tool outputs are moved into place or confirmed by a marker written after success. The copy steps still compare sizes after an in-place copy; copying to a temporary file and moving it is a follow-up.
 
 ### Isolated Vulkan probe
 
@@ -425,7 +425,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] License: **GPL v2 only**, public GitHub repository
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
-- [ ] Default mode of the first profile: release `v0.1.2` if it runs DOOM, otherwise a build of a validated commit
+- [x] Default mode of the first profile: **release `v0.1.2`**, which runs DOOM for PS5 (validated 2026-10-20 with milestone 2's CLI; audit orange: 361 implemented, 3 stubs, 0 absent)
 - [ ] Disk space threshold, to measure at the first full build
 - [ ] Check for new profiles at startup, or only on demand
 

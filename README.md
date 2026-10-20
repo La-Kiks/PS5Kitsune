@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/branding/kitsune-icone-encre.svg" alt="PS5Kitsune logo" width="128">
+</p>
+
 # PS5Kitsune
 
 A desktop installer and launcher for [AnyPS5](https://github.com/boykopovar/AnyPS5), the project that relinks PS5 executables into native Windows and Linux programs.
@@ -12,16 +16,17 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 1 of 8 (foundation). Nothing is usable by end users yet. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 2 of 8 (end-to-end command-line path). There is no graphical interface yet. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
-Today the command-line tool can install the portable Python used to run AnyPS5's scripts:
+The command-line tool installs AnyPS5, adds a game and runs it:
 
 ```powershell
-ps5kitsune tools list
-ps5kitsune tools install python [--root <data root>]
+ps5kitsune install                   # Python, relinker, libraries and scripts of AnyPS5 v0.1.2
+ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
+ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ```
 
-The default data root is `C:\PS5Kitsune`.
+Every command takes `--root <data root>`; the default is `C:\PS5Kitsune`.
 
 ## What PS5Kitsune does not do
 
@@ -43,6 +48,7 @@ dotnet test --solution PS5Kitsune.slnx -c Release
 | `src/PS5Kitsune.Cli` | `ps5kitsune` command-line tool |
 | `src/PS5Kitsune.App` | Avalonia desktop app |
 | `tests/PS5Kitsune.Core.Tests` | Unit tests |
+| `tests/PS5Kitsune.Platform.Windows.Tests` | Windows tests (skipped on Linux) |
 
 ## License
 

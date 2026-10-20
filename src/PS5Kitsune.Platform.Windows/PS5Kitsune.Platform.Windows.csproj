@@ -7,4 +7,13 @@
     <ProjectReference Include="..\PS5Kitsune.Core\PS5Kitsune.Core.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <!-- Required by the LibraryImport source generator (P/Invoke for the game launcher). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PS5Kitsune.Platform.Windows.Tests" />
+  </ItemGroup>
+
 </Project>
