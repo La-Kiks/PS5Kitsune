@@ -24,7 +24,8 @@ public sealed class UnwrapSelfStep(GameImportContext context, AnyPS5Paths paths,
         {
             var original = Path.Combine(context.Game.App0, relative);
             var backup = Path.Combine(context.Game.Originals, relative);
-            if (File.Exists(original))
+            // Only a SELF is backed up. A partial output from an interrupted run must never replace the backup.
+            if (BinaryKinds.Detect(original) == BinaryKind.Self)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
                 File.Move(original, backup, overwrite: true);

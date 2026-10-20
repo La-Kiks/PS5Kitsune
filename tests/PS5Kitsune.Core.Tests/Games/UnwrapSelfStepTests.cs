@@ -99,5 +99,19 @@ public sealed class UnwrapSelfStepTests : IDisposable
         Assert.Equal(TestFiles.Self(), File.ReadAllBytes(Original("eboot.bin")));
     }
 
+    [Fact]
+    public async Task A_partial_output_never_replaces_the_backup()
+    {
+        Directory.CreateDirectory(_game.Originals);
+        File.Move(App0("eboot.bin"), Original("eboot.bin"));
+        TestFiles.Write(App0("eboot.bin"), "partial");
+
+        await CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TestFiles.Self(), File.ReadAllBytes(Original("eboot.bin")));
+        Assert.Equal(TestFiles.Elf(), File.ReadAllBytes(App0("eboot.bin")));
+        Assert.Equal(Original("eboot.bin"), _runner.Calls[0].Arguments[^2]);
+    }
+
     public void Dispose() => _temp.Dispose();
 }
