@@ -152,6 +152,7 @@ On the AMD laptop:
 4. "Back" returns to the previous page through the navigator's back stack. The PC check runs by itself only the first time its page is entered, or after a cancelled check.
 5. Root helpers live in a static `DataRoots` class in Core: `Resolve` and `Prepare`.
 6. `AppSettingsStore.Load()` returns the settings and an optional problem text, which the host logs once logging exists.
+7. On a root change the app replaces the session first and saves the setting second. A refused change leaves settings.json untouched; a failed save keeps the new root for this run and shows "Cannot save the setting". Settings with an empty or relative `dataRoot` are ignored with a warning (the defaults are used).
 
 ## Criterion result
 
