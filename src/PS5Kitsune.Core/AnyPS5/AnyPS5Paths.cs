@@ -20,4 +20,6 @@ public sealed class AnyPS5Paths(DataLayout layout, IPlatform platform)
     public string UnwrapSelf => Path.Combine(Scripts, "tools", "unwrap_self.py");
 
     public string RecordFile => Path.Combine(RootDirectory, "install.json");
+
+    public string RequestedModeFile => Path.Combine(layout.AnyPS5, "state", "requested-mode");
 }

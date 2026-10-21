@@ -1,4 +1,6 @@
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Pipeline;
+using PS5Kitsune.Core.Tests.Fakes;
 
 namespace PS5Kitsune.Core.Tests.AnyPS5;
 
@@ -68,11 +70,63 @@ public sealed class BuildInstallTests : IDisposable
     }
 
     [Fact]
-    public async Task Going_back_to_release_replaces_current_and_keeps_the_build_folders()
+    public async Task A_failed_first_build_resumes_in_build_mode()
+    {
+        var play = _setup.Runner.Respond;
+        _setup.Runner.Respond = spec => spec.Arguments is ["--build", _, "--parallel", _] ? new FakeProcessResult(1) : play(spec);
+
+        await Assert.ThrowsAsync<StepFailedException>(() => _setup.InstallAsync(AnyPS5Mode.Build));
+
+        Assert.Null(_setup.Installer.ReadRecord());
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.RequestedMode);
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
+        Assert.Equal(
+            new InstallModeChoice(AnyPS5Mode.Build, "unfinished install"),
+            InstallModes.Resolve(null, _setup.Installer.RequestedMode, _setup.Installer.ReadRecord()));
+    }
+
+    [Fact]
+    public async Task A_cancelled_switch_to_build_resumes_in_build_mode()
+    {
+        await _setup.InstallAsync(AnyPS5Mode.Release);
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var play = _setup.Runner.Respond;
+        _setup.Runner.Respond = spec =>
+        {
+            if (spec.Arguments is ["--build", _, "--parallel", _])
+            {
+                cancellation.Cancel();
+            }
+
+            return play(spec);
+        };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _setup.Installer.InstallAsync(AnyPS5Mode.Build, cancellationToken: cancellation.Token));
+
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.RequestedMode);
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
+        Assert.Equal(AnyPS5Mode.Build, InstallModes.Resolve(null, _setup.Installer.RequestedMode, _setup.Installer.ReadRecord()).Mode);
+    }
+
+    [Fact]
+    public async Task A_successful_install_forgets_the_requested_mode()
     {
         await _setup.InstallAsync(AnyPS5Mode.Build);
 
+        Assert.False(File.Exists(_setup.Paths.RequestedModeFile));
+        Assert.Null(_setup.Installer.RequestedMode);
+    }
+
+    [Fact]
+    public async Task Going_back_to_release_replaces_current_and_keeps_the_build_folders()
+    {
+        await _setup.InstallAsync(AnyPS5Mode.Build);
+        TestFiles.Write(Path.Combine(_setup.Paths.RootDirectory, "stray", "left.txt"), "by the build");
+
+        Assert.Equal("Remove the other mode's files", _setup.Installer.CreateSteps(AnyPS5Mode.Release)[0].Name);
         await _setup.InstallAsync(AnyPS5Mode.Release);
+
+        Assert.False(Directory.Exists(Path.Combine(_setup.Paths.RootDirectory, "stray")));
 
         Assert.Equal(AnyPS5TestSetup.RelinkerContent, File.ReadAllBytes(_setup.Paths.Relinker));
         Assert.False(File.Exists(Path.Combine(_setup.Paths.Libs, "libstdc++-6.dll")));

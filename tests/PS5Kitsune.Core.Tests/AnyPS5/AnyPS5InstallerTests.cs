@@ -1,5 +1,6 @@
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.IO;
+using PS5Kitsune.Core.Pipeline;
 
 namespace PS5Kitsune.Core.Tests.AnyPS5;
 
@@ -179,10 +180,94 @@ public sealed class AnyPS5InstallerTests : IDisposable
         await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Mode = AnyPS5Mode.Build }, TestContext.Current.CancellationToken);
         TestFiles.Write(Path.Combine(Current, "libs", "libTracyClient.dll"), "left by the other mode");
 
+        Assert.Equal("Remove the other mode's files", _setup.Installer.CreateSteps(AnyPS5Mode.Release)[0].Name);
         await _setup.InstallAsync();
 
         Assert.False(File.Exists(Path.Combine(Current, "libs", "libTracyClient.dll")));
         Assert.Equal(AnyPS5InstallStatus.Installed, _setup.Installer.GetState(AnyPS5Mode.Release).Status);
+    }
+
+    [Fact]
+    public async Task A_locked_file_of_the_other_mode_fails_the_clear_step_and_keeps_the_record()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to delete a file that is open.");
+        }
+
+        await _setup.InstallAsync();
+        var record = _setup.Installer.ReadRecord()!;
+        await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Mode = AnyPS5Mode.Build }, TestContext.Current.CancellationToken);
+        var locked = Path.Combine(Current, "libs", "libTracyClient.dll");
+        TestFiles.Write(locked, "left by the other mode");
+
+        using (new FileStream(locked, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            var exception = await Assert.ThrowsAsync<StepFailedException>(() => _setup.InstallAsync());
+
+            Assert.Equal("Remove the other mode's files", exception.StepName);
+            Assert.True(File.Exists(_setup.Paths.RecordFile));
+        }
+
+        await _setup.InstallAsync();
+
+        Assert.False(File.Exists(locked));
+        Assert.Equal(AnyPS5InstallStatus.Installed, _setup.Installer.GetState(AnyPS5Mode.Release).Status);
+    }
+
+    [Fact]
+    public async Task The_same_mode_lists_no_clear_step()
+    {
+        await _setup.InstallAsync();
+
+        Assert.Equal("Install Python", _setup.Installer.CreateSteps(AnyPS5Mode.Release)[0].Name);
+    }
+
+    [Fact]
+    public async Task A_requested_mode_file_decides_the_current_mode()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_setup.Paths.RequestedModeFile)!);
+        await File.WriteAllTextAsync(_setup.Paths.RequestedModeFile, "build", TestContext.Current.CancellationToken);
+
+        Assert.Equal(_temp.Combine("anyps5", "state", "requested-mode"), _setup.Paths.RequestedModeFile);
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.RequestedMode);
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
+    }
+
+    [Fact]
+    public async Task An_unknown_requested_mode_is_ignored()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_setup.Paths.RequestedModeFile)!);
+        await File.WriteAllTextAsync(_setup.Paths.RequestedModeFile, "nightly", TestContext.Current.CancellationToken);
+
+        Assert.Null(_setup.Installer.RequestedMode);
+        Assert.Equal(AnyPS5Mode.Release, _setup.Installer.CurrentMode);
+    }
+
+    [Fact]
+    public async Task A_mode_without_a_source_is_incomplete_instead_of_throwing()
+    {
+        var releaseOnly = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time);
+        await _setup.InstallAsync();
+        var record = _setup.Installer.ReadRecord()!;
+        await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Mode = AnyPS5Mode.Build }, TestContext.Current.CancellationToken);
+
+        var state = releaseOnly.GetState(releaseOnly.CurrentMode);
+
+        Assert.Equal(AnyPS5Mode.Build, releaseOnly.CurrentMode);
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, state.Status);
+        Assert.Equal(AnyPS5Mode.Build, state.Record?.Mode);
+    }
+
+    [Fact]
+    public async Task A_requested_mode_without_a_source_is_incomplete_instead_of_throwing()
+    {
+        var releaseOnly = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time);
+        Directory.CreateDirectory(Path.GetDirectoryName(_setup.Paths.RequestedModeFile)!);
+        await File.WriteAllTextAsync(_setup.Paths.RequestedModeFile, "build", TestContext.Current.CancellationToken);
+
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, releaseOnly.GetState(AnyPS5Mode.Build).Status);
+        Assert.Throws<InvalidOperationException>(() => releaseOnly.CreateSteps(AnyPS5Mode.Build));
     }
 
     [Fact]

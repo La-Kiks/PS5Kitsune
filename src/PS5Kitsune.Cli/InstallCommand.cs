@@ -21,7 +21,7 @@ internal static class InstallCommand
             var installer = services.GetRequiredService<AnyPS5Installer>();
             var profile = services.GetRequiredService<AnyPS5Profile>();
             var context = services.GetRequiredService<CommandContext>();
-            var choice = InstallModes.Resolve(parseResult.GetValue(modeOption), installer.ReadRecord());
+            var choice = InstallModes.Resolve(parseResult.GetValue(modeOption), installer.RequestedMode, installer.ReadRecord());
             var root = services.GetRequiredService<DataLayout>().Root;
             var origin = context.ProfileOrigin == ProfileOrigin.Override ? "override" : "embedded";
             var modeName = InstallModes.Name(choice.Mode);

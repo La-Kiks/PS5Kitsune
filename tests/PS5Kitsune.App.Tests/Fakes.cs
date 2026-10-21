@@ -64,6 +64,8 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5Mode CurrentMode { get; set; } = AnyPS5Mode.Release;
 
+    public AnyPS5Mode? RequestedMode { get; set; }
+
     public AnyPS5Mode? InstalledMode { get; private set; }
 
     public AnyPS5InstallRecord? ReadRecord() => State.Record;
