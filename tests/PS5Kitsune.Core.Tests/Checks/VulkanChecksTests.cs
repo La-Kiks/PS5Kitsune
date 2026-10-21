@@ -54,6 +54,14 @@ public sealed class VulkanChecksTests
     }
 
     [Fact]
+    public void Several_gpus_without_the_features_say_these_gpus()
+    {
+        var result = new VulkanFeaturesCheck().Evaluate(With(TestFacts.Probe(TestFacts.IrisXe, TestFacts.IrisXe with { Name = "Other" })));
+
+        Assert.Contains("Games cannot render on these GPUs.", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Intel_igpu_plus_nvidia_names_the_usable_gpu()
     {
         var result = new VulkanFeaturesCheck().Evaluate(With(TestFacts.Probe(TestFacts.IrisXe, TestFacts.GeForce)));
@@ -86,7 +94,7 @@ public sealed class VulkanChecksTests
         var result = new NvidiaDriverCheck().Evaluate(With(TestFacts.Probe(bad)));
 
         Assert.Equal(CheckStatus.Warning, result.Status);
-        Assert.Contains("610.47", result.Summary, StringComparison.Ordinal);
+        Assert.Equal("NVIDIA GeForce RTX 3050 Laptop GPU uses driver 610.47, known to crash AnyPS5 games.", result.Summary);
     }
 
     [Fact]
@@ -116,6 +124,14 @@ public sealed class VulkanChecksTests
     }
 
     [Fact]
+    public void A_folder_named_dzn_does_not_make_a_manifest_a_dozen_one()
+    {
+        var facts = TestFacts.Healthy() with { VulkanDriverManifests = [Path.Combine("C:", "Users", "dzn", "Drivers", "amd_icd64.json")] };
+
+        Assert.Equal(CheckStatus.Ok, new DozenCheck().Evaluate(facts).Status);
+    }
+
+    [Fact]
     public void A_dozen_gpu_is_info()
     {
         var dozen = TestFacts.Radeon with { Name = "Microsoft Direct3D12 (AMD Radeon)", DriverId = "MesaDozen" };
@@ -124,14 +140,14 @@ public sealed class VulkanChecksTests
     }
 
     [Fact]
-    public void A_retry_without_dozen_says_it_crashed()
+    public void A_retry_without_dozen_explains_the_two_probes()
     {
         var probe = TestFacts.Probe(TestFacts.Radeon) with { Status = VulkanProbeStatus.SucceededWithoutDozen };
 
         var result = new DozenCheck().Evaluate(With(probe));
 
         Assert.Equal(CheckStatus.Info, result.Status);
-        Assert.Contains("crash", result.Summary, StringComparison.Ordinal);
+        Assert.Equal("The first Vulkan probe failed and the second, with Dozen disabled, succeeded; the launcher will disable Dozen when it starts a game.", result.Summary);
     }
 
     [Fact]

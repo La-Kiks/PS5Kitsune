@@ -44,6 +44,14 @@ public sealed class StorageChecksTests
     }
 
     [Fact]
+    public void Free_space_just_under_the_threshold_never_shows_as_the_threshold()
+    {
+        var result = new DiskSpaceCheck().Evaluate(TestFacts.Healthy() with { FreeDiskBytes = (5L << 30) - 1 });
+
+        Assert.Contains("4.9 GiB", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Unknown_disk_space_is_info()
     {
         var result = new DiskSpaceCheck().Evaluate(TestFacts.Healthy() with { FreeDiskBytes = null });

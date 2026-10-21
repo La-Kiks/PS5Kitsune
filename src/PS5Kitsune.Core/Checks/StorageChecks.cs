@@ -19,12 +19,13 @@ public sealed class DiskSpaceCheck : SystemCheck
         }
 
         var free = bytes / GiB;
+        var shown = Math.Floor(free * 10) / 10;
         var needed = facts.Limits.MinFreeDiskGiB;
         return free >= needed
-            ? Result(CheckStatus.Ok, string.Create(CultureInfo.InvariantCulture, $"{free:0.0} GiB free on the data folder's drive."))
+            ? Result(CheckStatus.Ok, string.Create(CultureInfo.InvariantCulture, $"{shown:0.0} GiB free on the data folder's drive."))
             : Result(
                 CheckStatus.Warning,
-                string.Create(CultureInfo.InvariantCulture, $"{free:0.0} GiB free on the data folder's drive; AnyPS5 and a game need about {needed} GiB."),
+                string.Create(CultureInfo.InvariantCulture, $"{shown:0.0} GiB free on the data folder's drive; AnyPS5 and a game need about {needed} GiB."),
                 "Free some space, or choose a data folder on another drive.");
     }
 }

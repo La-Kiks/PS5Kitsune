@@ -52,7 +52,7 @@ public sealed class VulkanFeaturesCheck : SystemCheck
         {
             return Result(
                 CheckStatus.Warning,
-                $"{string.Join("; ", lacking)}. Games cannot render on this GPU.",
+                $"{string.Join("; ", lacking)}. {(gpus.Count == 1 ? "Games cannot render on this GPU." : "Games cannot render on these GPUs.")}",
                 "Games can still run with Lavapipe, a slower software renderer that the launcher will offer.");
         }
 
@@ -80,10 +80,10 @@ public sealed class DozenCheck : SystemCheck
         ArgumentNullException.ThrowIfNull(facts);
         if (facts.Vulkan.Status == VulkanProbeStatus.SucceededWithoutDozen)
         {
-            return Result(CheckStatus.Info, "Dozen made Vulkan enumeration crash; it was disabled for the check and the launcher will disable it when it starts a game.");
+            return Result(CheckStatus.Info, "The first Vulkan probe failed and the second, with Dozen disabled, succeeded; the launcher will disable Dozen when it starts a game.");
         }
 
-        var installed = facts.VulkanDriverManifests.Any(manifest => manifest.Contains("dzn", StringComparison.OrdinalIgnoreCase))
+        var installed = facts.VulkanDriverManifests.Any(manifest => Path.GetFileName(manifest).Contains("dzn", StringComparison.OrdinalIgnoreCase))
             || (facts.Vulkan.Report?.Gpus.Any(gpu => gpu.IsDozen) ?? false);
         return installed
             ? Result(CheckStatus.Info, "Dozen is installed. It can crash Vulkan enumeration; the launcher can disable it when it starts a game.")
@@ -114,6 +114,6 @@ public sealed class NvidiaDriverCheck : SystemCheck
         var bad = nvidia.FirstOrDefault(gpu => gpu.DriverInfo is { } version && facts.Limits.NvidiaBadDrivers.Contains(version));
         return bad is null
             ? Result(CheckStatus.Ok, $"Driver {string.Join(", ", nvidia.Select(gpu => gpu.DriverInfo ?? "unknown"))}.")
-            : Result(CheckStatus.Warning, $"{bad.Name} uses driver {bad.DriverInfo}, known to crash AnyPS5 games (610.47 crashes in nvgpucomp64.dll).", "Install another NVIDIA driver version.");
+            : Result(CheckStatus.Warning, $"{bad.Name} uses driver {bad.DriverInfo}, known to crash AnyPS5 games.", "Install another NVIDIA driver version.");
     }
 }
