@@ -20,9 +20,13 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
     [ObservableProperty]
     public partial string Verdict { get; private set; } = "";
 
-    /// <summary>Null while checking; colors the verdict banner.</summary>
+    /// <summary>Null while checking.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BannerStatus))]
     public partial CheckStatus? Overall { get; private set; }
+
+    /// <summary>Colors the verdict banner: <see cref="Overall"/> with Info shown as Ok, because cpu-vendor is always Info.</summary>
+    public CheckStatus? BannerStatus => Overall == CheckStatus.Info ? CheckStatus.Ok : Overall;
 
     [RelayCommand]
     private async Task CheckAsync(CancellationToken cancellationToken)

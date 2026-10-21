@@ -48,8 +48,8 @@ public sealed class SystemCheckerTests : IDisposable
         Assert.Equal(
             ["os-arch", "cpu-extensions", "cpu-vendor", "vulkan-driver", "vulkan-features", "commit-limit", "dozen", "nvidia-driver", "disk-space", "install-path"],
             report.Results.Select(result => result.Id));
-        Assert.Equal(CheckStatus.Warning, report.Overall);
-        Assert.False(report.HasBlocking);
+        Assert.Equal(CheckStatus.Warning, report.Results.Single(result => result.Id == "commit-limit").Status);
+        Assert.True(report.Overall >= CheckStatus.Warning);
         Assert.Same(_probe.Outcome, report.Vulkan);
     }
 

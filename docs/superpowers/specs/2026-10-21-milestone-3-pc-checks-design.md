@@ -111,7 +111,7 @@ The NVIDIA driver version is read from `driverInfo` ("610.47" on NVIDIA), becaus
 - Exit codes: **0** with no blocking result (warnings allowed), **2** with at least one. 1 (error) and 130 (cancelled) keep their meaning.
 - Logs to `logs/check-<date>.log`.
 
-**`install`** runs the same `SystemChecker` before its first step and prints only the non-OK lines. A blocking result stops it with exit code 2 before anything is downloaded; warnings are printed and the install continues. `add` and `run` do not run the checks.
+**`install`** runs the same `SystemChecker` before its first step and prints only the Warning and Blocking lines (cpu-vendor is always Info). A blocking result stops it with exit code 2 before anything is downloaded; warnings are printed and the install continues. `add` and `run` do not run the checks.
 
 ## Screen (Avalonia)
 
@@ -145,4 +145,4 @@ This replaces the roadmap's criterion ("an Intel Iris Xe laptop reports `shaderI
 1. On the AMD laptop (Ryzen 7 7730U, Radeon iGPU), `ps5kitsune check` and the screen show the same results, with no blocking result. The commit limit may be a warning, depending on the page file.
 2. On an Intel + NVIDIA PC (available in a few days), the probe sees both GPUs; if the iGPU lacks `shaderInt64` it is reported and the NVIDIA GPU is named as usable. The result is recorded in the architecture. This run may happen after the PR is merged: the logic is covered by the fixtures, the run confirms it on real hardware.
 
-**2026-10-21, AMD laptop:** `check` exit 0; os-arch OK, cpu-extensions OK, cpu-vendor Info (AMD), vulkan-driver OK (AMD Radeon (TM) Graphics), vulkan-features OK, commit-limit OK (18,333 MiB available; limit 13,824 MiB), dozen OK, nvidia-driver OK, disk-space OK, install-path OK. The screen: pending the user's confirmation. Intel + NVIDIA run: pending.
+**2026-10-21, AMD laptop:** `check` exit 0; os-arch OK, cpu-extensions OK, cpu-vendor Info (AMD), vulkan-driver OK (AMD Radeon (TM) Graphics), vulkan-features OK, commit-limit OK (18,333 MiB available; limit 13,824 MiB), dozen OK, nvidia-driver OK, disk-space OK, install-path OK. The screen shows the same statuses (confirmed by the user, 2026-10-21; the verdict banner was blue because cpu-vendor is always Info, fixed to green). Intel + NVIDIA run: pending.

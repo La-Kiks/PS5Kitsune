@@ -32,6 +32,23 @@ public sealed class SystemCheckViewModelTests
         Assert.Equal([Radeon.Describe()], viewModel.Gpus);
     }
 
+    [Theory]
+    [InlineData(CheckStatus.Ok, CheckStatus.Ok)]
+    [InlineData(CheckStatus.Info, CheckStatus.Ok)]
+    [InlineData(CheckStatus.Warning, CheckStatus.Warning)]
+    [InlineData(CheckStatus.Blocking, CheckStatus.Blocking)]
+    public async Task The_banner_shows_Info_as_Ok(CheckStatus worst, CheckStatus banner)
+    {
+        var report = new SystemCheckReport([new CheckResult("a", "A", worst, "s")], Report().Vulkan);
+        var viewModel = new SystemCheckViewModel(new FakeChecker(() => Task.FromResult(report)), _platform);
+        Assert.Null(viewModel.BannerStatus);
+
+        await viewModel.CheckCommand.ExecuteAsync(null);
+
+        Assert.Equal(worst, viewModel.Overall);
+        Assert.Equal(banner, viewModel.BannerStatus);
+    }
+
     [Fact]
     public async Task Is_checking_until_the_checker_answers()
     {
