@@ -7,6 +7,7 @@ using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.App.Views;
+using PS5Kitsune.Core;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Platform.Windows;
@@ -21,11 +22,10 @@ public sealed partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         var platform = PlatformServices.Detect();
-        var profile = ProfileLoader.LoadEmbedded();
         var settings = new AppSettingsStore(platform.SettingsDirectory);
         var loaded = settings.Load();
         var sessions = new SessionHost(
-            root => RootSession.Create(root, platform, profile),
+            root => RootSession.Create(root, platform, ProfileLoader.LoadActive(new DataLayout(root)).Profile),
             DataRoots.Resolve(null, loaded.Settings, platform.DefaultDataRoot));
         if (loaded.Problem is { } problem)
         {
