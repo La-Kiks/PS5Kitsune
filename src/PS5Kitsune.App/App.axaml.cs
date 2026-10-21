@@ -25,11 +25,15 @@ public sealed partial class App : Application
         services.AddPS5KitsuneLogging(layout.Logs, "app", console: false);
         services.AddPlatform(platform).AddPS5KitsuneCore(layout, ProfileLoader.LoadEmbedded());
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<SystemCheckViewModel>();
         _services = services.BuildServiceProvider();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow { DataContext = _services.GetRequiredService<MainWindowViewModel>() };
+            var viewModel = _services.GetRequiredService<MainWindowViewModel>();
+            var window = new MainWindow { DataContext = viewModel };
+            window.Opened += (_, _) => viewModel.SystemCheck.CheckCommand.Execute(null);
+            desktop.MainWindow = window;
             desktop.Exit += (_, _) => _services.Dispose();
         }
 

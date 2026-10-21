@@ -48,6 +48,7 @@ dotnet test --solution PS5Kitsune.slnx -c Release
 | `src/PS5Kitsune.Cli` | `ps5kitsune` command-line tool |
 | `src/PS5Kitsune.App` | Avalonia desktop app |
 | `tests/PS5Kitsune.Core.Tests` | Unit tests |
+| `tests/PS5Kitsune.App.Tests` | View model tests |
 | `tests/PS5Kitsune.Platform.Windows.Tests` | Windows tests (skipped on Linux) |
 
 ## License
