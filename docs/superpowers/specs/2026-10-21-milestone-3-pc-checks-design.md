@@ -67,12 +67,12 @@ Thresholds depend on the AnyPS5 version, so they go into the profile, in a new `
 | `vulkan-driver` | Vulkan driver and GPUs | Probe succeeded with at least one GPU | Blocking: probe failed, loader missing, or no GPU |
 | `vulkan-features` | `shaderInt64` and `bufferDeviceAddress` per GPU | At least one GPU has both; when several GPUs exist and only some qualify, the summary names the usable one | Warning when no GPU has both, naming each GPU and the missing feature: Lavapipe (software rendering, slow) will let games run and comes with the launcher |
 | `commit-limit` | RAM + page file | ≥ `commitLimitMiB` | Warning with the current value and `Fix = OpenPerformanceSettings`; no automatic change |
-| `dozen` | Dozen (D3D12 over Vulkan) driver | No manifest name contains `dzn` and the probe did not need the retry | Info when present: it can crash enumeration and will be disabled at launch; the text says so when the probe needed the retry |
+| `dozen` | Dozen (D3D12 over Vulkan) driver | No manifest name contains `dzn`, no GPU reports driver `MesaDozen`, and the probe did not need the retry | Info when present: it can crash enumeration and will be disabled at launch; the text says so when the probe needed the retry |
 | `nvidia-driver` | NVIDIA driver known to crash | No NVIDIA GPU's `driverInfo` is in `nvidiaBadDrivers` | Warning: 610.47 crashes in `nvgpucomp64.dll`, update the driver |
 | `disk-space` | Free space on the data root's drive | ≥ `minFreeDiskGiB` | Warning with the free space |
 | `install-path` | Data root path | ASCII only, no spaces | Blocking: WinLibs and CMake fail otherwise; choose another root with `--root` |
 
-The Vulkan checks are skipped (`Info`, "not checked") when `vulkan-driver` is blocking, so a failed probe produces one blocking line rather than four.
+`vulkan-features` and `nvidia-driver` are skipped (`Info`, "not checked") when `vulkan-driver` is blocking, so a failed probe produces one blocking line rather than three. `dozen` is still evaluated: it reads the manifests and may explain the failure.
 
 ## Isolated Vulkan probe
 
@@ -106,7 +106,7 @@ The NVIDIA driver version is read from `driverInfo` ("610.47" on NVIDIA), becaus
 
 **`ps5kitsune check [--root]`**
 
-- One line per check: `[OK]`, `[INFO]`, `[WARN]` or `[BLOCK]`, the title and the summary. A non-OK line is followed by an indented `→ action` line; for the commit limit it names the command to run, `SystemPropertiesPerformance.exe`.
+- One line per check: `[OK]`, `[INFO]`, `[WARN]` or `[BLOCK]`, the title and the summary. A non-OK line is followed by an indented `-> action` line (ASCII: the console's default code page can garble an arrow); for the commit limit it names the command to run, `SystemPropertiesPerformance.exe`.
 - Then the GPUs the probe found: name, driver, `shaderInt64`, `bufferDeviceAddress`.
 - Exit codes: **0** with no blocking result (warnings allowed), **2** with at least one. 1 (error) and 130 (cancelled) keep their meaning.
 - Logs to `logs/check-<date>.log`.
@@ -132,11 +132,11 @@ The first real screen; milestone 4 adds the full navigation.
 - **Iris Xe case** from a probe JSON fixture: an Intel iGPU with `shaderInt64: false` gives a `vulkan-features` warning mentioning Lavapipe and no blocking result. A second fixture, Intel iGPU without `shaderInt64` plus an NVIDIA GPU with both features, gives OK with a summary naming the NVIDIA GPU.
 - `VulkanProbeRunner` with a fake `IProcessRunner`: valid JSON; first attempt crashes and second succeeds (`SucceededWithoutDozen`, and the second spec sets `VK_LOADER_DRIVERS_DISABLE`); both crash (`Failed`); timeout.
 - The overall status is the worst one; the Vulkan checks are skipped when the driver check is blocking; the profile loader reads the `checks` section.
-- `SystemCheckViewModel` with a fake checker: loading state, then results and verdict.
+- `SystemCheckViewModel` with a fake checker, in a new `tests/PS5Kitsune.App.Tests` project: loading state, then results and verdict.
 
 **Platform.Windows.Tests:** `GetCommitLimitBytes()` returns more than 0; `GetVulkanDriverManifests()` does not throw when the key is missing.
 
-**Real probe:** a test runs the real `ps5kitsune --probe-vulkan` and only checks that the JSON parses. On the Ubuntu CI it expects valid JSON (`loaderFound: false` there), with no assertion about hardware.
+**Real probe:** a Core test calls `VulkanProbe.Run()` in-process and checks that its JSON round-trips; on the Ubuntu CI there is usually no loader (`loaderFound: false`), and nothing is asserted about hardware. `ps5kitsune --probe-vulkan` itself is run by hand in the manual verification.
 
 ## Criterion
 

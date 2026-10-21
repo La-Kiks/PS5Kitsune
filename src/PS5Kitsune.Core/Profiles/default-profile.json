@@ -33,5 +33,10 @@
   "relinker": {
     "windowsArgs": [ "--windows", "--registry" ],
     "intelArg": "--to-intel"
+  },
+  "checks": {
+    "commitLimitMiB": 13824,
+    "minFreeDiskGiB": 5,
+    "nvidiaBadDrivers": [ "610.47" ]
   }
 }
