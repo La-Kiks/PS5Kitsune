@@ -77,13 +77,26 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
             return;
         }
 
-        var root = Path.GetFullPath(chosen);
-        if (DataRoots.Prepare(root) is { } problem)
+        string root;
+        try
         {
-            RootError = problem;
+            root = Path.GetFullPath(chosen);
+            if (DataRoots.Prepare(root) is { } problem)
+            {
+                RootError = problem;
+                return;
+            }
+
+            sessions.ChangeRoot(root);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            RootError = $"Cannot use {chosen}: {exception.Message}";
             return;
         }
 
+        // The session is replaced first: a refused change must not leave a saved setting for a root that was not applied.
+        RootError = null;
         try
         {
             await settings.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, root)).ConfigureAwait(true);
@@ -91,11 +104,8 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             RootError = $"Cannot save the setting: {exception.Message}";
-            return;
         }
 
-        sessions.ChangeRoot(root);
-        RootError = null;
         Refresh();
     }
 }

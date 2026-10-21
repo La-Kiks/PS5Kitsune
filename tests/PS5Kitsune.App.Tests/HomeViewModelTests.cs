@@ -1,3 +1,4 @@
+using System.Globalization;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.ViewModels;
@@ -52,6 +53,7 @@ public sealed class HomeViewModelTests : IDisposable
 
         Assert.Equal("AnyPS5 v0.1.2 is installed", viewModel.StateTitle);
         Assert.Contains("test-profile", viewModel.StateDetail, StringComparison.Ordinal);
+        Assert.Contains(Record.InstalledAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), viewModel.StateDetail, StringComparison.Ordinal);
         Assert.Equal("Verify / repair", viewModel.ActionText);
     }
 
@@ -125,6 +127,36 @@ public sealed class HomeViewModelTests : IDisposable
 
         Assert.Equal(_temp.Combine("root"), viewModel.DataRoot);
         Assert.StartsWith("Cannot use ", viewModel.RootError, StringComparison.Ordinal);
+        Assert.False(File.Exists(_settings.FilePath));
+    }
+
+    [Fact]
+    public async Task A_failed_save_says_why_and_keeps_the_new_root()
+    {
+        await File.WriteAllTextAsync(_temp.Combine("settings"), "x", TestContext.Current.CancellationToken);
+        var viewModel = Create();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Cannot save the setting", viewModel.RootError, StringComparison.Ordinal);
+        Assert.Equal(_temp.Combine("other"), viewModel.DataRoot);
+        Assert.Equal(_temp.Combine("other"), _sessions.Current.Layout.Root);
+    }
+
+    [Fact]
+    public async Task A_refused_change_keeps_the_root_and_the_setting()
+    {
+        var viewModel = Create();
+        var first = _sessions.Current;
+        _sessions.IsBusy = true;
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Cannot use ", viewModel.RootError, StringComparison.Ordinal);
+        Assert.Equal(_temp.Combine("root"), viewModel.DataRoot);
+        Assert.Same(first, _sessions.Current);
         Assert.False(File.Exists(_settings.FilePath));
     }
 
