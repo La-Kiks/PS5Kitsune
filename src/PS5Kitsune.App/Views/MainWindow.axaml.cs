@@ -6,6 +6,7 @@ namespace PS5Kitsune.App.Views;
 public sealed partial class MainWindow : Window
 {
     private bool _closeConfirmed;
+    private bool _closePending;
 
     public MainWindow() => InitializeComponent();
 
@@ -15,7 +16,11 @@ public sealed partial class MainWindow : Window
         if (!_closeConfirmed && DataContext is MainWindowViewModel { IsInstallRunning: true } viewModel)
         {
             e.Cancel = true;
-            _ = ConfirmAndCloseAsync(viewModel);
+            if (!_closePending)
+            {
+                _closePending = true;
+                _ = ConfirmAndCloseAsync(viewModel);
+            }
         }
 
         base.OnClosing(e);
@@ -23,10 +28,20 @@ public sealed partial class MainWindow : Window
 
     private async Task ConfirmAndCloseAsync(MainWindowViewModel viewModel)
     {
-        if (await viewModel.ConfirmCloseAsync().ConfigureAwait(true))
+        try
         {
-            _closeConfirmed = true;
-            Close();
+            if (await viewModel.ConfirmCloseAsync().ConfigureAwait(true))
+            {
+                _closeConfirmed = true;
+                Close();
+                return;
+            }
         }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The window stays open; the install keeps running.
+        }
+
+        _closePending = false;
     }
 }
