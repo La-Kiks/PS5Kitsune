@@ -185,15 +185,18 @@ Layout under `anyps5\`: `source\` (git clone), `build\` (CMake build folder, out
 | 5 | Configure the build | `cmake -S source -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DCMAKE_MAKE_PROGRAM=<ninja> -DCMAKE_C_COMPILER=<gcc> -DCMAKE_CXX_COMPILER=<g++>` | `state\configure.done` = commit |
 | 6 | Compile AnyPS5 | `cmake --build build --parallel N` | `state\compile.done` = commit |
 | 7 | Build the libraries | `cmake --build build --target libs --parallel N` | `state\libs.done` = commit |
-| 8 | Copy the build | See below | every target file exists with the size and SHA-256 of its source |
+| 8 | Copy the build | See below | the build produced the relinker, at least one `.prx`, `import_audit.py` and `unwrap_self.py`, and every target file exists with the size and SHA-256 of its source |
 
 - The commit is fetched by SHA at depth 1, so the clone stays small. The `remote.origin.url` setting is rewritten on every run, so a rerun after any interruption needs no special case.
 - `BUILD_TESTING` is `OFF`, so the `libs` target is not part of `all` and is built separately (step 7).
 - The compiler and `ninja` paths are full WinLibs paths with forward slashes, and `-DCMAKE_MAKE_PROGRAM` names Ninja, so CMake does not depend on `PATH` to find them.
 - Every git and CMake command runs with the build environment: `tools\winlibs\mingw64\bin` and `tools\mingit\cmd` prepended to the child's `PATH`, and `SSL_CERT_FILE` set to MinGit's CA bundle (`ucrt64\etc\ssl\certs\ca-bundle.crt`, else `mingw64\...`). This avoids error 60 when CMake downloads FFmpeg. The app's own environment is never changed.
 - Parallel jobs: `N = max(1, min(logical processors, physical RAM in GiB / 2))`. GCC can use about 2 GiB per job on large C++ files.
-- Copy step: `build\core\relinker\relinker.exe` goes to `current\relinker.exe`; `build\core\libs\libs\*.prx` plus `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` from WinLibs go to `current\libs\`; `source\tools\` and `source\core\libs\prx\` go to `current\scripts\`. These folders are mirrored. The result is identical in layout to a release install.
-- Switching modes: if `install.json` records the other mode, the installer empties `current\` first, so a release's `libTracyClient.dll` cannot linger next to a build. `source\`, `build\` and `state\` are kept, so going back to build mode is incremental.
+- Copy step: `build\core\relinker\relinker.exe` goes to `current\relinker.exe`; `build\core\libs\libs\*.prx` plus `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` from WinLibs go to `current\libs\`; `source\tools\` and `source\core\libs\prx\` go to `current\scripts\`. These folders are mirrored. The result is identical in layout to a release install. The step first checks that the build produced the relinker, at least one `.prx`, `source\tools\import_audit.py` and `source\tools\unwrap_self.py`, and fails before copying anything when one is missing.
+- Switching modes: if `install.json` records the other mode, the install starts with a "Remove the other mode's files" step that empties `current\`, so a release's `libTracyClient.dll` cannot linger next to a build. It deletes `install.json` last: a locked file fails the step like any other, and the next run finds the record and clears again. `source\`, `build\` and `state\` are kept, so going back to build mode is incremental.
+- Mode of a plain `install`: `--mode`, else the mode of an unfinished install, else the mode of `install.json`, else release. The installer writes the requested mode to `state\requested-mode` before the first step and deletes it once every step succeeded, so an install cancelled or failed before `install.json` is written resumes in the same mode (`Mode: build (unfinished install)`). The file is outside `current\`, so the clear step never deletes it. A mode the active profile does not support is reported right after the opening lines, before the PC check.
+- Tool output: every git and CMake line, stdout and stderr, goes to the log file at Debug. The console shows the build's progress every 10 % and, once, each line that looks like an error (`error:`, `fatal:`, `CMake Error`, `FAILED:`).
+- The app shows a build install on Home ("built from source") but repairs or updates it only from the command line (`ps5kitsune install`) until milestone 5b: its action is disabled in build mode.
 - Resume: an interruption during step 6 leaves no `compile.done`. The next run skips steps 1 to 5 and Ninja recompiles only what is missing.
 - Update: a new commit in the profile makes every marker stale. Steps 3 to 8 run again, and CMake and Ninja reuse `build\` incrementally.
 - AnyPS5's CI configures with `BUILD_TESTING=ON` and ccache, and puts WinLibs first on `PATH`. PS5Kitsune uses neither `BUILD_TESTING=ON` nor ccache. WinLibs r7 ships CMake 4.3.1 and Ninja 1.13.2, so the fallback to the official zips is not needed.
@@ -361,7 +364,7 @@ C:\PS5Kitsune\
 ├── anyps5\
 │   ├── source\                  git clone, fetched by SHA (build mode)
 │   ├── build\                   CMake build folder (build mode)
-│   ├── state\                   one marker per build step, holding the commit (build mode)
+│   ├── state\                   one marker per build step, holding the commit (build mode); requested-mode while an install is unfinished
 │   └── current\
 │       ├── relinker.exe
 │       ├── libs\                .prx + 3 DLLs, ready to copy

@@ -151,7 +151,7 @@ The data root source is one of `--root`, `saved setting` or `default`. The mode 
 
 ## Tool output
 
-- Every line from git and CMake goes to the log file: stdout at Debug, as today, and stderr at Information.
+- Every line from git and CMake goes to the log file at Debug, stdout and stderr alike (see refinement 15).
 - `StepProgress` gains an optional `Fraction(int Done, int Total)`. `NinjaProgress.TryParse` reads it from lines such as `[123/2400] Building CXX object …`.
 - The console shows the fraction as a single progress line that overwrites itself, like downloads. Other lines reach the console only when they come from stderr and contain `error:`, `fatal:` or `CMake Error`. The log keeps everything.
 
@@ -218,3 +218,8 @@ Run by the user on their PC after the tests pass, on an empty root:
 8. The network integration test is `[Fact(Explicit = true)]`, so neither the default run nor CI runs it.
 9. `BuildMarkers.Clear` ignores a missing marker file, so a first run, where `anyps5\state` does not exist yet, works.
 10. The `install` command's log arguments are computed into locals first (analyzer CA1873).
+11. An interrupted install resumes in its mode: `InstallAsync` writes `anyps5\state\requested-mode` before the first step and deletes it after the last one succeeds. `RequestedMode` comes before the record in `CurrentMode`, and `InstallModes.Resolve` uses it with the source `unfinished install`.
+12. `GetState` returns Incomplete for a mode the active profile does not support, so Home never throws on a build record; `CreateSteps` and `InstallAsync` still throw, and `install` reports the unavailable mode before the PC check.
+13. Until 5b, Home shows a build install ("built from source", or "The AnyPS5 build is incomplete") with its action disabled, and points to `ps5kitsune install`, so the app never replaces a build with a release.
+14. Clearing `current` on a mode switch is the first step, "Remove the other mode's files", listed only when `install.json` records the other mode; it deletes `install.json` last, so a locked file fails as a step and a retry clears again. The copy step also requires the relinker, a `.prx`, `import_audit.py` and `unwrap_self.py` before copying.
+15. Tool stderr is logged at Debug like stdout: at Information it reached the console for every tool. Error-like lines still reach the console once, through the step's progress messages.
