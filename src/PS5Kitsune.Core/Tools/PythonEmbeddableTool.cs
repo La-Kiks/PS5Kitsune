@@ -26,7 +26,7 @@ public sealed class PythonEmbeddableTool(
 
     public string Executable => Path.Combine(InstallDirectory, "python" + platform.ExecutableSuffix);
 
-    protected override string RequiredFile => Executable;
+    protected override IEnumerable<string> RequiredFiles => [Executable];
 
     /// <summary>A command running <paramref name="script"/> with <paramref name="arguments"/>; the script's exit code is the process exit code.</summary>
     public ProcessSpec CreateScriptSpec(string script, IEnumerable<string> arguments) =>

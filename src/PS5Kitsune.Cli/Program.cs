@@ -25,4 +25,7 @@ var rootCommand = new RootCommand("PS5Kitsune: installer and launcher for AnyPS5
 };
 rootCommand.Options.Add(rootOption);
 
-return await rootCommand.Parse(args).InvokeAsync();
+// Ctrl+C cancels the command, which then waits for git, CMake and Ninja to stop and logs the cancellation.
+// The default 2-second timeout cut that short and ended the process with the log unflushed.
+var invocation = new InvocationConfiguration { ProcessTerminationTimeout = TimeSpan.FromSeconds(30) };
+return await rootCommand.Parse(args).InvokeAsync(invocation);

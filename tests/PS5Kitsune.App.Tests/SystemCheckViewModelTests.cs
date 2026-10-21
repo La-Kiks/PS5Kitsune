@@ -1,6 +1,7 @@
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
 
@@ -204,6 +205,6 @@ public sealed class SystemCheckViewModelTests
 
     private sealed class FakeChecker(Func<CancellationToken, Task<SystemCheckReport>> answer) : ISystemChecker
     {
-        public Task<SystemCheckReport> RunAsync(CancellationToken cancellationToken = default) => answer(cancellationToken);
+        public Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default) => answer(cancellationToken);
     }
 }

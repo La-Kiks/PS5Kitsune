@@ -1,12 +1,11 @@
 using System.Text.Json;
 using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Pipeline;
-using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Core.AnyPS5.Steps;
 
-/// <summary>Writes install.json last. Done when it describes this profile's install.</summary>
-public sealed class WriteInstallRecordStep(AnyPS5Profile profile, AnyPS5Paths paths, TimeProvider time) : IStep
+/// <summary>Writes install.json last. Done when it describes the source's install, whatever its schema version.</summary>
+public sealed class WriteInstallRecordStep(IAnyPS5Source source, AnyPS5Paths paths, TimeProvider time) : IStep
 {
     public string Name => "Record the install";
 
@@ -14,8 +13,9 @@ public sealed class WriteInstallRecordStep(AnyPS5Profile profile, AnyPS5Paths pa
     {
         try
         {
+            var expected = source.CreateRecord(default);
             return JsonFiles.Read<AnyPS5InstallRecord>(paths.RecordFile) is { } record
-                && record with { InstalledAt = default } == Expected(default);
+                && record with { InstalledAt = default, SchemaVersion = expected.SchemaVersion } == expected;
         }
         catch (JsonException)
         {
@@ -24,13 +24,5 @@ public sealed class WriteInstallRecordStep(AnyPS5Profile profile, AnyPS5Paths pa
     }
 
     public Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken) =>
-        JsonFiles.WriteAsync(paths.RecordFile, Expected(time.GetLocalNow()), cancellationToken);
-
-    private AnyPS5InstallRecord Expected(DateTimeOffset installedAt) => new(
-        AnyPS5InstallRecord.CurrentSchemaVersion,
-        profile.Id,
-        profile.Source.Kind,
-        profile.Source.Version,
-        profile.AssetUrl(ProfileAssetKeys.UnwrapScript),
-        installedAt);
+        JsonFiles.WriteAsync(paths.RecordFile, source.CreateRecord(time.GetLocalNow()), cancellationToken);
 }

@@ -56,18 +56,30 @@ internal delegate Task InstallBehavior(IProgress<StepProgress>? progress, Action
 
 internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installer
 {
+    /// <summary>The names CreateSteps returns; a test changes them between runs.</summary>
+    public string[] StepNames { get; set; } = stepNames;
+
     public AnyPS5InstallState State { get; set; } = new(AnyPS5InstallStatus.NotInstalled, null);
 
     public InstallBehavior Install { get; set; } = (_, _, _) => Task.CompletedTask;
 
     public int Runs { get; private set; }
 
-    public IReadOnlyList<IStep> CreateSteps() => [.. stepNames.Select(name => new NamedStep(name))];
+    public AnyPS5Mode CurrentMode { get; set; } = AnyPS5Mode.Release;
 
-    public AnyPS5InstallState GetState() => State;
+    public AnyPS5Mode? RequestedMode { get; set; }
 
-    public Task InstallAsync(IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
+    public AnyPS5Mode? InstalledMode { get; private set; }
+
+    public AnyPS5InstallRecord? ReadRecord() => State.Record;
+
+    public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. StepNames.Select(name => new NamedStep(name))];
+
+    public AnyPS5InstallState GetState(AnyPS5Mode mode) => State;
+
+    public Task InstallAsync(AnyPS5Mode mode, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
     {
+        InstalledMode = mode;
         Runs++;
         return Install(progress, onEvent, cancellationToken);
     }

@@ -9,6 +9,13 @@ public static class DataRoots
         return cliRoot ?? (string.IsNullOrWhiteSpace(settings.DataRoot) ? defaultRoot : settings.DataRoot);
     }
 
+    /// <summary>Where <see cref="Resolve"/> takes the root from: "--root", "saved setting" or "default".</summary>
+    public static string Describe(string? cliRoot, AppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return cliRoot is not null ? "--root" : string.IsNullOrWhiteSpace(settings.DataRoot) ? "default" : "saved setting";
+    }
+
     /// <summary>Creates the folder if needed and checks a file can be written in it.</summary>
     /// <returns>Null when the folder can be used, else a message for the user.</returns>
     public static string? Prepare(string path)

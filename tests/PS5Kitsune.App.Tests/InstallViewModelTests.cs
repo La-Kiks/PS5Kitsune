@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Pipeline;
 
 namespace PS5Kitsune.App.Tests;
@@ -13,7 +14,17 @@ public sealed class InstallViewModelTests
     private readonly List<bool> _busy = [];
 
     private InstallViewModel Create() =>
-        new(_installer, "C:/root/logs/app.log", _platform, new InlineDispatcher(), _navigator, new FakePages(), _busy.Add);
+        new(_installer, AnyPS5Mode.Release, "C:/root/logs/app.log", _platform, new InlineDispatcher(), _navigator, new FakePages(), _busy.Add);
+
+    [Fact]
+    public async Task Installs_in_the_mode_it_was_created_with()
+    {
+        var viewModel = Create();
+
+        await viewModel.RunAsync();
+
+        Assert.Equal(AnyPS5Mode.Release, _installer.InstalledMode);
+    }
 
     [Fact]
     public void Lists_the_steps_before_starting()
@@ -70,6 +81,30 @@ public sealed class InstallViewModelTests
         Assert.False(viewModel.HasFailed);
         Assert.Equal("done", _navigator.CurrentPage);
         Assert.Equal(2, _installer.Runs);
+    }
+
+    [Fact]
+    public async Task Retry_rebuilds_the_rows_when_the_step_list_got_shorter()
+    {
+        _installer.StepNames = ["Remove the other mode's files", "Install Python", "Download the relinker"];
+        _installer.Install = (_, _, _) => throw new StepFailedException("Download the relinker", new IOException("disk full"));
+        var viewModel = Create();
+
+        await viewModel.RunAsync();
+
+        Assert.Equal(3, viewModel.Steps.Count);
+
+        _installer.StepNames = ["Install Python", "Download the relinker"];
+        _installer.Install = (_, onEvent, _) =>
+        {
+            onEvent!(new StepEvent(StepEventKind.Skipped, "Install Python", 1, 2));
+            onEvent(new StepEvent(StepEventKind.Completed, "Download the relinker", 2, 2, TimeSpan.Zero));
+            return Task.CompletedTask;
+        };
+        await viewModel.RetryCommand.ExecuteAsync(null);
+
+        Assert.Equal(["Install Python", "Download the relinker"], viewModel.Steps.Select(step => step.Name));
+        Assert.Equal([InstallStepState.Skipped, InstallStepState.Done], viewModel.Steps.Select(step => step.State));
     }
 
     [Fact]

@@ -33,6 +33,17 @@ public sealed class DataRootsTests : IDisposable
     }
 
     [Fact]
+    public void Describes_where_the_root_comes_from()
+    {
+        var saved = AppSettings.Default with { DataRoot = @"D:\Saved" };
+
+        Assert.Equal("--root", DataRoots.Describe(@"E:\Cli", saved));
+        Assert.Equal("saved setting", DataRoots.Describe(null, saved));
+        Assert.Equal("default", DataRoots.Describe(null, AppSettings.Default));
+        Assert.Equal("default", DataRoots.Describe(null, AppSettings.Default with { DataRoot = "  " }));
+    }
+
+    [Fact]
     public void Prepare_creates_a_writable_folder()
     {
         var root = _temp.Combine("new", "root");

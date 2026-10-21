@@ -21,13 +21,20 @@ internal static class CommandHost
         var layout = new DataLayout(DataRoots.Resolve(rootOverride?.FullName, settings.Settings, platform.DefaultDataRoot));
         var services = new ServiceCollection();
         var logFile = services.AddPS5KitsuneLogging(layout.Logs, runName, console: true);
-        services.AddPlatform(platform).AddPS5KitsuneCore(layout, ProfileLoader.LoadEmbedded());
+        var active = ProfileLoader.LoadActive(layout);
+        services.AddPlatform(platform).AddPS5KitsuneCore(layout, active.Profile);
+        services.AddSingleton(new CommandContext(DataRoots.Describe(rootOverride?.FullName, settings.Settings), active.Origin));
 
         await using var provider = services.BuildServiceProvider();
         var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("ps5kitsune");
         if (settings.Problem is { } problem)
         {
             logger.SettingsIgnored(problem);
+        }
+
+        if (active.Problem is { } profileProblem)
+        {
+            logger.ProfileIgnored(profileProblem);
         }
 
         try

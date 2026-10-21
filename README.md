@@ -23,11 +23,30 @@ The command-line tool installs AnyPS5, adds a game and runs it:
 ```powershell
 ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
 ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.2
+ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
 ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ```
 
 Every command takes `--root <data root>`; without it, the CLI uses the data folder chosen in the app, else `C:\PS5Kitsune`. `check` and `install` exit with code 2 when a check is blocking.
+
+### Build mode
+
+`ps5kitsune install --mode release|build` picks how AnyPS5 is installed. Release mode downloads the published release. Build mode downloads MinGit and WinLibs, fetches the profile's commit and compiles it. It needs more disk space (10 GiB checked) and a first run of about 12 minutes on an 8-thread laptop. An interrupted build resumes where it stopped, and a new commit builds incrementally.
+
+Without `--mode`, the CLI resumes an unfinished install in the mode it was started in, else uses the mode of the current install, else `release`. The command starts with three lines that say what it will use:
+
+```text
+Data root: C:\PS5Kitsune (saved setting)
+Profile: doom-validated-2026-10 (embedded)
+Mode: build (current install)
+```
+
+The data root comes from `--root`, `saved setting` or `default`. The mode comes from `--mode`, `unfinished install`, `current install` or `default`. If the active profile cannot build (no `build` section), the command stops right after these lines and suggests `--mode release`.
+
+Switching modes starts with a "Remove the other mode's files" step that empties `anyps5\current`; the clone and the build folder are kept, so going back to build mode is incremental. The console shows the steps, the build progress and the compiler's error lines; the full git and CMake output is in the log under `<root>\logs`.
+
+To build another commit, copy the profile to `<root>\profiles\override.json`, change `build.commit`, then run `ps5kitsune install`. A valid override replaces the embedded profile (the second line then says `override`). An invalid one is ignored, with a warning in the log. The app's Install page installs in release mode until the build UI arrives. The app's Home page shows a build install, but repairs or updates it only from the command line (`ps5kitsune install`) until then.
 
 ## What PS5Kitsune does not do
 

@@ -108,7 +108,10 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
   "schemaVersion": 1,
   "id": "doom-validated-2026-10",
   "source": { "kind": "release", "tag": "v0.1.2" },
-  "alternateSource": { "kind": "commit", "sha": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd" },
+  "build": {
+    "repository": "https://github.com/boykopovar/AnyPS5.git",
+    "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
+  },
   "assets": {
     "relinker": { "name": "relinker-{tag}.exe", "sha256": "88cc311d…" },
     "libs":     { "name": "prx-windows-{tag}.zip", "sha256": "b26e507e…" }
@@ -123,7 +126,8 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 }
 ```
 
-- **Resolution order:** profile embedded in the app → profile downloaded from the PS5Kitsune repository (checked on demand) → local override `<root>\profiles\override.json`. The most recent valid one wins; the user sees which one is active.
+- **`build` section:** `repository` uses HTTPS and `commit` is 40 lowercase hex characters. Build mode installs that commit.
+- **Resolution order:** the profile embedded in the app, or a valid local override `<root>\profiles\override.json`, which replaces it for both the CLI and the app. An override that cannot be read or is invalid is ignored, with a warning in the log. The profile downloaded from the PS5Kitsune repository (checked on demand) is still to come; the most recent valid one will then win, and the user will see which one is active.
 - **"Latest" mode:** a synthetic profile that follows the latest release or `main`, with no pinned hash, flagged as untested in the UI and in game records.
 - **Updating the default profile:** the maintainer validates a new tag or commit with DOOM and publishes the profile; users see "new validated version available" and affected games are marked "needs reconversion".
 
@@ -145,7 +149,7 @@ Each check returns OK, Warning or Blocking, with an explanation and an action. T
 | Commit limit (RAM + page file) | `GlobalMemoryStatusEx`: a game can commit up to 13,824 MiB | Warning + button opening `SystemPropertiesPerformance.exe`; no automatic change |
 | Dozen driver (D3D12 over Vulkan) present | Vulkan driver manifests in the registry, and the probe's `driverId` (`MesaDozen`) | Info: can crash enumeration, can be disabled at launch in V3 |
 | NVIDIA driver known to crash | Driver version read by the probe | Warning: 610.47 crashes in `nvgpucomp64.dll` (see `USAGE.md`); version list in the profile |
-| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB for release mode; to revisit after measuring a build at milestone 5) |
+| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB) in release mode, or `checks.buildMinFreeDiskGiB` (10 GiB) in build mode: a built root measured 3.2 GB (tools 1.1 GB, build 0.9 GB, source 0.5 GB, current 0.3 GB, downloads 0.3 GB), plus room for a game and for the build folder to grow |
 | Install path | No spaces, ASCII only | Blocking: WinLibs and CMake fail otherwise |
 
 ### Portable tools
@@ -155,8 +159,8 @@ All tools go into `<root>\tools\`, downloaded from their official source, verifi
 | Tool | Mode | Source | Notes |
 | --- | --- | --- | --- |
 | Embeddable Python 3.14 | Both | Official python.org zip (`python-3.14.x-embed-amd64.zip`); the scripts need 3.9 or newer | Enough for the scripts (standard library only); no pip, no venv. No more Microsoft Store alias to work around |
-| MinGit | Build | Official Git for Windows zip | Provides `git` and the CA bundle for `SSL_CERT_FILE` |
-| WinLibs GCC 15.2.0 r7 | Build | `winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-14.0.0-r7.zip` | Only supported Windows toolchain (BUILD.md). Includes CMake and Ninja: BUILD.md mentions "the WinLibs CMake" and CI installs nothing else. To confirm at first extraction; otherwise official CMake (≥ 3.22.1) and Ninja zips |
+| MinGit 2.56.0.2 | Build | Official Git for Windows zip (`MinGit-2.56.0.2-64-bit.zip`) | Provides `git` and the CA bundle for `SSL_CERT_FILE`. The bundle is under `ucrt64`, with `mingw64` as the fallback |
+| WinLibs GCC 15.2.0 r7 | Build | `winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-14.0.0-r7.zip` | Only supported Windows toolchain (BUILD.md). Includes CMake 4.3.1 and Ninja 1.13.2 (checked in the r7 release notes), so no other zip is needed |
 | Mesa (Lavapipe) | On demand | `pal1000/mesa-dist-win` release | 7z archive, extracted with SharpCompress |
 
 ### Getting AnyPS5
@@ -170,11 +174,32 @@ All tools go into `<root>\tools\`, downloaded from their official source, verifi
 
 **Build mode**
 
-1. `git clone`, checkout the profile's commit, then `git submodule update --init --recursive` (with `--depth 1` for submodules, as CI does).
-2. Configure with `SSL_CERT_FILE` set **by default** to MinGit's bundle, which avoids error 60 when downloading FFmpeg. The app tries `ucrt64\etc\ssl\certs\ca-bundle.crt` then `mingw64\…`, as AnyPS5's CI does.
-3. `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++`, then `cmake --build build --parallel`, then `cmake --build build --target libs --parallel`. `BUILD_TESTING` stays `OFF`, so the `libs` target is mandatory.
-4. The relinker is at `build\core\relinker\relinker.exe`, confirmed by `tools/package_release.py`. Copy `build\core\libs\libs\*.prx` and the 3 WinLibs DLLs (`libgcc_s_seh-1.dll`, `libstdc++-6.dll`, `libwinpthread-1.dll`) into `anyps5\current\libs`. That folder is then identical to a release's.
-5. Updating later: checkout the profile's new commit, submodules, incremental build. The app records the built commit.
+Layout under `anyps5\`: `source\` (git clone), `build\` (CMake build folder, outside the clone), `state\` (one marker per step, holding the commit) and `current\` (the same for both modes). A marker is written after its step succeeds, never before. A missing marker, or one holding another commit, means the step is not done.
+
+| # | Step | Execution | Done when |
+| --- | --- | --- | --- |
+| 1 | Install MinGit | `MinGitTool.InstallAsync` | tool installed |
+| 2 | Install WinLibs | `WinLibsTool.InstallAsync` | tool installed |
+| 3 | Get the AnyPS5 source | In `source\`: `git init`, `git config core.longpaths true`, `git config remote.origin.url <repository>`, `git fetch --depth 1 origin <sha>`, `git checkout --detach --force <sha>` | `state\checkout.done` = commit |
+| 4 | Update the submodules | `git submodule sync --recursive`, then `git submodule update --init --recursive --depth 1 --force` | `state\submodules.done` = commit |
+| 5 | Configure the build | `cmake -S source -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DCMAKE_MAKE_PROGRAM=<ninja> -DCMAKE_C_COMPILER=<gcc> -DCMAKE_CXX_COMPILER=<g++>` | `state\configure.done` = commit |
+| 6 | Compile AnyPS5 | `cmake --build build --parallel N` | `state\compile.done` = commit |
+| 7 | Build the libraries | `cmake --build build --target libs --parallel N` | `state\libs.done` = commit |
+| 8 | Copy the build | See below | the build produced the relinker, at least one `.prx`, `import_audit.py` and `unwrap_self.py`, and every target file exists with the size and SHA-256 of its source |
+
+- The commit is fetched by SHA at depth 1, so the clone stays small. The `remote.origin.url` setting is rewritten on every run, so a rerun after any interruption needs no special case.
+- `BUILD_TESTING` is `OFF`, so the `libs` target is not part of `all` and is built separately (step 7).
+- The compiler and `ninja` paths are full WinLibs paths with forward slashes, and `-DCMAKE_MAKE_PROGRAM` names Ninja, so CMake does not depend on `PATH` to find them.
+- Every git and CMake command runs with the build environment: the child's `PATH` is `tools\winlibs\mingw64\bin`, `tools\mingit\cmd`, the inherited entries without `%LOCALAPPDATA%\Microsoft\WindowsApps` (the WSL and Store app aliases), then `tools\mingit\usr\bin` last (it also holds `find` and `sort`, which must not shadow Windows' own). The reason: libusb-cmake's `gen-describe.ps1` needs a non-WSL `bash.exe`, MinGit ships only `usr\bin\sh.exe` (GNU bash), so the install copies it to `bash.exe` and the WSL alias is kept off the `PATH`. `SSL_CERT_FILE` is set to MinGit's CA bundle (`ucrt64\etc\ssl\certs\ca-bundle.crt`, else `mingw64\...`). This avoids error 60 when CMake downloads FFmpeg. The app's own environment is never changed.
+- Parallel jobs: `N = max(1, min(logical processors, physical RAM in GiB / 2))`. GCC can use about 2 GiB per job on large C++ files.
+- Copy step: `build\core\relinker\relinker.exe` goes to `current\relinker.exe`; `build\core\libs\libs\*.prx` plus `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` from WinLibs go to `current\libs\`; `source\tools\` and `source\core\libs\prx\` go to `current\scripts\`. These folders are mirrored. The result is identical in layout to a release install. The step first checks that the build produced the relinker, at least one `.prx`, `source\tools\import_audit.py` and `source\tools\unwrap_self.py`, and fails before copying anything when one is missing.
+- Switching modes: if `install.json` records the other mode, the install starts with a "Remove the other mode's files" step that empties `current\`, so a release's `libTracyClient.dll` cannot linger next to a build. It deletes `install.json` last: a locked file fails the step like any other, and the next run finds the record and clears again. `source\`, `build\` and `state\` are kept, so going back to build mode is incremental.
+- Mode of a plain `install`: `--mode`, else the mode of an unfinished install, else the mode of `install.json`, else release. The installer writes the requested mode to `state\requested-mode` before the first step and deletes it once every step succeeded, so an install cancelled or failed before `install.json` is written resumes in the same mode (`Mode: build (unfinished install)`). The file is outside `current\`, so the clear step never deletes it. A mode the active profile does not support is reported right after the opening lines, before the PC check.
+- Tool output: every git and CMake line, stdout and stderr, goes to the log file at Debug. The console shows the build's progress every 10 % and, once, each line that looks like an error (`error:`, `fatal:`, `CMake Error`, `FAILED:`).
+- The app shows a build install on Home ("built from source") but repairs or updates it only from the command line (`ps5kitsune install`) until milestone 5b: its action is disabled in build mode.
+- Resume: an interruption during step 6 leaves no `compile.done`. The next run skips steps 1 to 5 and Ninja recompiles only what is missing.
+- Update: a new commit in the profile makes every marker stale. Steps 3 to 8 run again, and CMake and Ninja reuse `build\` incrementally.
+- AnyPS5's CI configures with `BUILD_TESTING=ON` and ccache, and puts WinLibs first on `PATH`. PS5Kitsune uses neither `BUILD_TESTING=ON` nor ccache. WinLibs r7 ships CMake 4.3.1 and Ninja 1.13.2, so the fallback to the official zips is not needed.
 
 Each step is an `IStep`: on failure, the user resumes from the failed step without redoing the 20-minute build.
 
@@ -337,7 +362,9 @@ C:\PS5Kitsune\
 │   └── override.json            local override (optional)
 ├── fonts\                       Noto fonts, passed via ANYPS5_SYSTEM_FONTS
 ├── anyps5\
-│   ├── source\                  git clone (build mode)
+│   ├── source\                  git clone, fetched by SHA (build mode)
+│   ├── build\                   CMake build folder (build mode)
+│   ├── state\                   one marker per build step, holding the commit (build mode); requested-mode while an install is unfinished
 │   └── current\
 │       ├── relinker.exe
 │       ├── libs\                .prx + 3 DLLs, ready to copy
@@ -362,6 +389,28 @@ C:\PS5Kitsune\
 ```
 
 The data root itself is chosen on the app's home screen and saved in `%LOCALAPPDATA%\PS5Kitsune\settings.json` (`{ "schemaVersion": 1, "dataRoot": "…" }`), outside the root. The CLI reads the same file: `--root`, then the saved root, then `C:\PS5Kitsune`. When the user changes the root on Home, the app replaces the session first and saves the setting second: a refused change leaves `settings.json` untouched, and a failed save keeps the new root for this run and shows "Cannot save the setting".
+
+### Install record (`install.json`)
+
+`anyps5\current\install.json` records what is installed, for both modes.
+
+```json
+{
+  "schemaVersion": 2,
+  "profile": "doom-validated-2026-10",
+  "mode": "build",
+  "version": "3fd1cc3",
+  "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa",
+  "unwrapScript": null,
+  "installedAt": "2026-10-22T09:00:00+02:00"
+}
+```
+
+- `mode`: `release` or `build`.
+- `version`: the tag in release mode, the first 7 characters of the commit in build mode.
+- `commit`: null in release mode.
+- `unwrapScript`: the profile's URL in release mode, null in build mode, where the script comes from the clone.
+- The reader accepts schemas 1 and 2, and counts a schema 1 record as installed. The installer writes schema 2.
 
 ### Game record (`game.json`)
 
@@ -392,7 +441,6 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 | --- | --- | --- |
 | AnyPS5 options, paths or messages change | Broken steps or diagnostics | Pinned profile by default; commands and patterns in the profile, updated without recompiling the app |
 | User picks the "latest" profile | Untested behavior | Flagged in the UI and in `game.json`; one-click return to the validated profile |
-| WinLibs turns out not to include CMake/Ninja | Configuration impossible | Fall back to official CMake and Ninja zips, declared in the profile |
 | Antivirus quarantines generated executables | Conversion or launch fails with no clear reason | Detect the missing file, explain the exclusion to add. Bitdefender Advanced Threat Defense is a known case (see `BUILD.md`) |
 | SmartScreen on the unsigned app | Distrust on first launch | Document; consider signing for wide distribution |
 | Only one free test game (DOOM) | Edge cases not covered | Fake folders in unit tests; user feedback later; the community [blocker map](https://alxcbtw.github.io/anyps5-roadmap/) as a reference |
@@ -413,7 +461,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 | `param.json` | `titleName` is in `localizedParameters.<language>`, not at the top level |
 | `anyps5-input.ini` | Beside the game exe, or the path given by `ANYPS5_INPUT_CONFIG` |
 | Fonts | `anyps5-fonts\` beside the exe, or `ANYPS5_SYSTEM_FONTS` |
-| Still to confirm | CMake/Ninja included in WinLibs (at extraction); Mesa 7z format (at the Lavapipe milestone) |
+| Still to confirm | Mesa 7z format (at the Lavapipe milestone) |
 
 ### Legal framework
 
@@ -430,7 +478,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
 - [x] Default mode of the first profile: **release `v0.1.2`**, which runs DOOM for PS5 (validated 2026-10-20 with milestone 2's CLI; audit orange: 361 implemented, 3 stubs, 0 absent)
-- [ ] Disk space threshold, to measure at the first full build
+- [x] Build mode disk space threshold: **`buildMinFreeDiskGiB` = 10 GiB**, from the build measured on 2026-10-21 (root of 3.2 GB)
 - [ ] Check for new profiles at startup, or only on demand
 
 Decided at review: portable tools without winget, pinned profile by default, copy (not move) the game by default, isolated Vulkan probe, game launched detached from the launcher.
@@ -447,8 +495,10 @@ The order follows "end to end first, screens second": each milestone ends with a
    - Criterion: `ps5kitsune check` and the check screen agree on the AMD reference laptop, with no blocking result; on an Intel + NVIDIA PC the probe sees both GPUs and names the usable one. A GPU without `shaderInt64` (the Iris Xe case) is covered by tests from probe fixtures.
 4. **V1b — Install screens, release mode.** Home, mode choice, progress, profile status.
    - Criterion: install from the UI on an empty root, identical to the CLI result.
-5. **V1c — Build mode.** MinGit, WinLibs, clone at the profile's commit, configure with `SSL_CERT_FILE`, build, `libs`, resume via `IsAlreadyDone()`.
-   - Criterion: full build with no intervention on a clean PC; an interruption mid-build resumes without redoing everything; then an incremental update to another commit.
+5. **V1c — Build mode**, in two parts.
+   - **5a — Build mode, Core and CLI.** MinGit, WinLibs, fetch at the profile's commit, configure with `SSL_CERT_FILE`, build, `libs`, resume via `IsAlreadyDone()`, `install --mode`, `override.json`. Spec: [milestone 5a](superpowers/specs/2026-10-21-milestone-5a-build-mode-design.md).
+     - Criterion: `ps5kitsune install --mode build` finishes with no intervention on a clean PC; an interruption mid-build resumes without redoing everything; then an incremental update to another commit.
+   - **5b — Build mode UI.** The Build card on Mode, the Tools screen, and the build progress on Install.
 6. **V2 — Add-a-game screens.** On top of milestone 2's logic: summary, options, progress, verdict, Reconvert.
    - Criterion: DOOM added from the UI, green audit; Reconvert keeps `data\` and `_trophy\`.
 7. **V3 — Launcher.** Library, detached launch with log, per-game settings, Lavapipe (Mesa 7z), fonts, error diagnosis.

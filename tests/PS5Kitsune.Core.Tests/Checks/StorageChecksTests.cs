@@ -1,4 +1,6 @@
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Core.Tests.Checks;
 
@@ -14,6 +16,23 @@ public sealed class StorageChecksTests
         var result = new InstallPathCheck().Evaluate(TestFacts.Healthy() with { DataRoot = root });
 
         Assert.Equal(expected, result.Status);
+    }
+
+    [Fact]
+    public void Build_mode_needs_the_build_threshold()
+    {
+        var facts = TestFacts.Healthy() with
+        {
+            Mode = AnyPS5Mode.Build,
+            FreeDiskBytes = 10L << 30,
+            Limits = new CheckThresholds { MinFreeDiskGiB = 5, BuildMinFreeDiskGiB = 15 },
+        };
+
+        var result = new DiskSpaceCheck().Evaluate(facts);
+
+        Assert.Equal(CheckStatus.Warning, result.Status);
+        Assert.Contains("15 GiB", result.Summary, StringComparison.Ordinal);
+        Assert.Contains("built from source", result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -8,6 +8,8 @@ public static class ProfileLoader
 {
     private const string EmbeddedResourceName = "PS5Kitsune.Core.Profiles.default-profile.json";
 
+    public const string OverrideFileName = "override.json";
+
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     /// <summary>The profile shipped inside the app.</summary>
@@ -16,6 +18,30 @@ public static class ProfileLoader
         using var stream = typeof(ProfileLoader).Assembly.GetManifestResourceStream(EmbeddedResourceName)
             ?? throw new InvalidProfileException($"Embedded resource {EmbeddedResourceName} is missing.");
         return Load(stream);
+    }
+
+    /// <summary>
+    /// The override in the data root's profiles folder when it is valid, else the embedded profile.
+    /// An override that cannot be read or validated is ignored, and <see cref="ActiveProfile.Problem"/> says why.
+    /// </summary>
+    public static ActiveProfile LoadActive(DataLayout layout)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        var path = Path.Combine(layout.Profiles, OverrideFileName);
+        if (!File.Exists(path))
+        {
+            return new ActiveProfile(LoadEmbedded(), ProfileOrigin.Embedded, null);
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return new ActiveProfile(Load(stream), ProfileOrigin.Override, null);
+        }
+        catch (Exception exception) when (exception is InvalidProfileException or IOException or UnauthorizedAccessException)
+        {
+            return new ActiveProfile(LoadEmbedded(), ProfileOrigin.Embedded, $"Ignored {path}: {exception.Message} Using the embedded profile.");
+        }
     }
 
     /// <exception cref="InvalidProfileException">The JSON is malformed or fails validation.</exception>
@@ -66,9 +92,18 @@ public static class ProfileLoader
             RequireHttps(profile.Id, $"tool {name}", tool.Url);
         }
 
-        if (profile.Checks.CommitLimitMiB <= 0 || profile.Checks.MinFreeDiskGiB < 0)
+        if (profile.Build is { } build)
         {
-            throw new InvalidProfileException($"Profile {profile.Id}: checks.commitLimitMiB must be positive and checks.minFreeDiskGiB not negative.");
+            RequireHttps(profile.Id, "build repository", build.Repository);
+            if (build.Commit.Length != 40 || !build.Commit.All(char.IsAsciiHexDigitLower))
+            {
+                throw new InvalidProfileException($"Profile {profile.Id}: build.commit needs a full lowercase hex SHA, got \"{build.Commit}\".");
+            }
+        }
+
+        if (profile.Checks.CommitLimitMiB <= 0 || profile.Checks.MinFreeDiskGiB < 0 || profile.Checks.BuildMinFreeDiskGiB < 0)
+        {
+            throw new InvalidProfileException($"Profile {profile.Id}: checks.commitLimitMiB must be positive, checks.minFreeDiskGiB and checks.buildMinFreeDiskGiB not negative.");
         }
     }
 

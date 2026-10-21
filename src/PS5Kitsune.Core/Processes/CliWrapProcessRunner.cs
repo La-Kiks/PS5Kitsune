@@ -32,7 +32,17 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var result = await command.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+
+        // CliWrap's cancellation may stop only the direct child; Ninja's g++ and cc1plus would keep running.
+        // So the command runs without CliWrap's token, and cancellation kills the whole tree.
+        var task = command.ExecuteAsync(CancellationToken.None);
+        CommandResult result;
+        using (cancellationToken.Register(() => KillTree(spec.FileName, task.ProcessId)))
+        {
+            result = await task.ConfigureAwait(false);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         if (spec.Quiet)
         {
             LogFinishedQuietly(spec.FileName, result.ExitCode, stopwatch.Elapsed);
@@ -46,10 +56,32 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
 
         void Forward(OutputSource source, string text)
         {
+            // Debug only: the log file keeps every line, and a step reports the lines that matter through its progress.
             LogOutput(spec.FileName, text);
             onOutput?.Invoke(new OutputLine(source, text));
         }
     }
+
+    private void KillTree(string fileName, int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            process.Kill(entireProcessTree: true);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+        {
+            // Already exited, so there is nothing left to stop.
+        }
+        catch (Exception exception) when (exception is AggregateException or NotSupportedException or System.ComponentModel.Win32Exception)
+        {
+            // Runs inside a cancellation callback, so it must not throw: log and keep going.
+            LogKillFailed(fileName, exception.Message);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not stop every process started by {FileName}: {Reason}")]
+    private partial void LogKillFailed(string fileName, string reason);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Running {FileName} {Arguments}")]
     private partial void LogStarting(string fileName, IReadOnlyList<string> arguments);

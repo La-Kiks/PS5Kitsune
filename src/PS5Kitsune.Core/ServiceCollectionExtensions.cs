@@ -1,10 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.AnyPS5.Build;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Downloads;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Processes;
@@ -43,6 +45,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<StepRunner>();
         services.AddSingleton<AnyPS5Paths>();
+        services.AddSingleton<IAnyPS5Source, ReleaseSource>();
+        if (profile.Build is not null && profile.Tools.ContainsKey(MinGitTool.ToolId) && profile.Tools.ContainsKey(WinLibsTool.ToolId))
+        {
+            services.AddSingleton<IAnyPS5Source, BuildSource>();
+        }
         services.AddSingleton<AnyPS5Installer>();
         services.AddSingleton<IAnyPS5Installer>(provider => provider.GetRequiredService<AnyPS5Installer>());
         services.AddSingleton<GameSourceResolver>();
@@ -50,12 +57,26 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GameImporter>();
         services.AddSingleton<GameLibrary>();
 
-        if (profile.Tools.TryGetValue(PythonEmbeddableTool.ToolId, out var python))
-        {
-            services.AddSingleton(provider => ActivatorUtilities.CreateInstance<PythonEmbeddableTool>(provider, python));
-            services.AddSingleton<IPortableTool>(provider => provider.GetRequiredService<PythonEmbeddableTool>());
-        }
+        AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);
+        AddTool<MinGitTool>(services, profile, MinGitTool.ToolId);
+        AddTool<WinLibsTool>(services, profile, WinLibsTool.ToolId);
+        services.AddSingleton<BuildEnvironment>();
+        services.AddSingleton<IFreeSpace, DriveFreeSpace>();
+        services.AddSingleton<BuildPaths>();
+        services.AddSingleton<BuildMarkers>();
+        services.AddSingleton<BuildCommands>();
 
         return services;
+    }
+
+    /// <summary>Registers a tool the profile declares, as itself and as <see cref="IPortableTool"/>, so 'tools list' shows it.</summary>
+    private static void AddTool<TTool>(IServiceCollection services, AnyPS5Profile profile, string id)
+        where TTool : class, IPortableTool
+    {
+        if (profile.Tools.TryGetValue(id, out var definition))
+        {
+            services.AddSingleton(provider => ActivatorUtilities.CreateInstance<TTool>(provider, definition));
+            services.AddSingleton<IPortableTool>(provider => provider.GetRequiredService<TTool>());
+        }
     }
 }

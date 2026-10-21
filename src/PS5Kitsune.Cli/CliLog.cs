@@ -82,6 +82,21 @@ internal static partial class CliLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "{Problem}")]
     public static partial void SettingsIgnored(this ILogger logger, string problem);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Problem}")]
+    public static partial void ProfileIgnored(this ILogger logger, string problem);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Data root: {Root} ({Source})")]
+    public static partial void DataRootUsed(this ILogger logger, string root, string source);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Profile: {Profile} ({Origin})")]
+    public static partial void ProfileUsed(this ILogger logger, string profile, string origin);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Mode: {Mode} ({Source})")]
+    public static partial void ModeUsed(this ILogger logger, string mode, string source);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Problem} Run 'ps5kitsune install --mode release' to install the release instead.")]
+    public static partial void ModeUnavailable(this ILogger logger, string problem);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Installation stopped before downloading anything. Fix the blocking problems above, then run 'ps5kitsune install' again; 'ps5kitsune check' shows every check.")]
     public static partial void InstallBlocked(this ILogger logger);
 }
