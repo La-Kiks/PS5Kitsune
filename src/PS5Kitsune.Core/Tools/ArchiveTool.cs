@@ -20,13 +20,13 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
 
     protected string InstallDirectory => layout.ToolDirectory(Id);
 
-    /// <summary>Path of a file that must exist once the tool is extracted.</summary>
-    protected abstract string RequiredFile { get; }
+    /// <summary>Files that must exist once the tool is extracted.</summary>
+    protected abstract IEnumerable<string> RequiredFiles { get; }
 
     public bool IsInstalled()
     {
         var marker = Path.Combine(InstallDirectory, MarkerFileName);
-        if (!File.Exists(marker) || !File.Exists(RequiredFile))
+        if (!File.Exists(marker) || !RequiredFiles.All(File.Exists))
         {
             return false;
         }

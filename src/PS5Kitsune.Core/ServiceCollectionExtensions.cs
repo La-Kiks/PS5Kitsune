@@ -50,12 +50,22 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GameImporter>();
         services.AddSingleton<GameLibrary>();
 
-        if (profile.Tools.TryGetValue(PythonEmbeddableTool.ToolId, out var python))
-        {
-            services.AddSingleton(provider => ActivatorUtilities.CreateInstance<PythonEmbeddableTool>(provider, python));
-            services.AddSingleton<IPortableTool>(provider => provider.GetRequiredService<PythonEmbeddableTool>());
-        }
+        AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);
+        AddTool<MinGitTool>(services, profile, MinGitTool.ToolId);
+        AddTool<WinLibsTool>(services, profile, WinLibsTool.ToolId);
+        services.AddSingleton<BuildEnvironment>();
 
         return services;
+    }
+
+    /// <summary>Registers a tool the profile declares, as itself and as <see cref="IPortableTool"/>, so 'tools list' shows it.</summary>
+    private static void AddTool<TTool>(IServiceCollection services, AnyPS5Profile profile, string id)
+        where TTool : class, IPortableTool
+    {
+        if (profile.Tools.TryGetValue(id, out var definition))
+        {
+            services.AddSingleton(provider => ActivatorUtilities.CreateInstance<TTool>(provider, definition));
+            services.AddSingleton<IPortableTool>(provider => provider.GetRequiredService<TTool>());
+        }
     }
 }
