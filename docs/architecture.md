@@ -110,7 +110,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
   "source": { "kind": "release", "tag": "v0.1.2" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
-    "commit": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd"
+    "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
   },
   "assets": {
     "relinker": { "name": "relinker-{tag}.exe", "sha256": "88cc311d…" },
@@ -399,8 +399,8 @@ The data root itself is chosen on the app's home screen and saved in `%LOCALAPPD
   "schemaVersion": 2,
   "profile": "doom-validated-2026-10",
   "mode": "build",
-  "version": "48d61f5",
-  "commit": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd",
+  "version": "3fd1cc3",
+  "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa",
   "unwrapScript": null,
   "installedAt": "2026-10-22T09:00:00+02:00"
 }

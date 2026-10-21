@@ -31,7 +31,7 @@ Milestone 5 is split in two:
   ```json
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
-    "commit": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd"
+    "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
   }
   ```
 
@@ -114,8 +114,8 @@ Before running the steps, the installer reads `install.json`. If it records the 
   "schemaVersion": 2,
   "profile": "doom-validated-2026-10",
   "mode": "build",
-  "version": "48d61f5",
-  "commit": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd",
+  "version": "3fd1cc3",
+  "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa",
   "unwrapScript": null,
   "installedAt": "2026-10-22T09:00:00+02:00"
 }
@@ -228,7 +228,7 @@ Run by the user on their PC after the tests pass, on an empty root:
 
 ## Criterion result
 
-Run by the user on 2026-10-21 on the AMD laptop (8 threads, so 7 parallel jobs), against commit `48d61f5`:
+Run by the user on 2026-10-21 on the AMD laptop (8 threads, so 7 parallel jobs), against commit `48d61f5`, then `3fd1cc3` for the bonus:
 
 1. **Clean build: passed after one fix.** The first run failed at "Build the libraries" on libusb-cmake's `bash.exe` lookup (refinement 16). After the fix, a plain `install` resumed at that step (`Mode: build (unfinished install)`) and finished. A second clean root then built with no intervention.
    - Durations: tools 24 s, source and submodules 75 s, configure 99 s (it downloads FFmpeg), compile 122 s, libraries 395 s, copy 2 s. That is about 12 minutes in all.
@@ -242,6 +242,12 @@ Run by the user on 2026-10-21 on the AMD laptop (8 threads, so 7 parallel jobs),
    - Submodules took 18 s instead of 70 s and configure 11 s instead of 97 s. Compile took 78 s (364 units), and the libraries took 435 s.
    - The total was about 9 minutes against 12. The libraries rebuild almost fully because the new commit changes code they share, so the update is shorter but not much shorter.
    - Removing the override and running `install` again went back to `48d61f5` incrementally.
-4. **Bonus, DOOM with the built `current`:** not run yet.
+4. **Bonus, DOOM with the built `current`: passed once the build commit was changed.**
+   - With `48d61f5`, `add` gave orange (360 implemented, 4 stubs, 0 absent), but DOOM aborted at startup: libkernel threw "Thread destructor callback is already registered".
+   - Release v0.1.3 from AnyPS5's CI (commit `3fd1cc3`, 2026-10-20) ran DOOM with the same audit. Our build of `3fd1cc3` also ran it to a clean exit (code 0). So the crash belongs to commit `48d61f5`, not to build mode.
+   - Removing the 233 `.prx` that `tools/package_release.py` does not ship at `48d61f5` did not change the crash, so the copy step is not the cause.
+   - The profile's `build.commit` is now `3fd1cc3`, the commit validated with DOOM. The extra stub against v0.1.2 is `sceSystemServiceLoadExec`, a stub in AnyPS5's source at both commits.
+
+Lesson: a build commit is validated by running DOOM on it, not by the audit alone. `48d61f5` came from the architecture study and was never run.
 
 Seen during the run, for 5b: a sub-build that runs its own Ninja interleaves its `[n/m]` counter with the main one in the console progress.

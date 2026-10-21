@@ -5,7 +5,7 @@
   "source": { "kind": "release", "tag": "v0.1.2", "publishedAt": "2026-10-14T08:56:52Z" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
-    "commit": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd"
+    "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
   },
   "assets": {
     "relinker": {

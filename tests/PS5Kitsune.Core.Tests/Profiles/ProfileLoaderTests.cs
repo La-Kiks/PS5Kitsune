@@ -158,7 +158,7 @@ public sealed class ProfileLoaderTests
         var profile = ProfileLoader.LoadEmbedded();
 
         Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5.git"), profile.Build?.Repository);
-        Assert.Equal("48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd", profile.Build?.Commit);
+        Assert.Equal("3fd1cc393b8512c2e989860053f30dee5a8cd1aa", profile.Build?.Commit);
         Assert.Equal("da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be", profile.Tools["mingit"].Sha256);
         Assert.Equal("cb2fbad6162540cdf5e1facdce08d4dac359e8cf64f7f696a99274291763b815", profile.Tools["winlibs"].Sha256);
         Assert.Equal(10, profile.Checks.BuildMinFreeDiskGiB);
