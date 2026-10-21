@@ -152,3 +152,17 @@ On the AMD laptop:
 4. "Back" returns to the previous page through the navigator's back stack. The PC check runs by itself only the first time its page is entered, or after a cancelled check.
 5. Root helpers live in a static `DataRoots` class in Core: `Resolve` and `Prepare`.
 6. `AppSettingsStore.Load()` returns the settings and an optional problem text, which the host logs once logging exists.
+
+## Criterion result
+
+**2026-10-21, AMD laptop (run by the user):**
+
+1. App, root changed on Home to an empty `C:\PS5KitTest`, then Install AnyPS5 → PC check (no blocking result) → Mode (Release v0.1.2, published October 14, 2026) → Install → Done. Step states go from blank to running to done; "Open log" opens the session's log. Home then shows AnyPS5 v0.1.2 installed.
+2. `ps5kitsune install` with no `--root`: every step is "already done", so the CLI picked the root saved by the app.
+3. `ps5kitsune install --root C:\PS5KTestCli`, then `diff -r` of both roots: `tools\` identical; `anyps5\current\` identical (1,566 files with `tools\`) except `install.json`, which differs only in `installedAt`.
+4. Cancel during "Download the libraries": Home shows the install as incomplete; resuming skips the finished steps.
+5. Closing the window during an install asks for confirmation; Cancel keeps the install running, Quit closes after the step stops.
+
+The criterion "install from the UI on an empty root, identical to the CLI result" is met.
+
+**Feedback for later:** on the Install page, the step list and the log say much the same thing; the window style needs a pass later, starting with a less black background (the logo's dark color, or a Palenight-like palette).
