@@ -8,6 +8,7 @@ public sealed class BuildToolsTests : IDisposable
 {
     private static readonly byte[] MinGitArchive = TestFiles.ZipBytes(
         ("cmd/git.exe", "git"u8.ToArray()),
+        ("usr/bin/sh.exe", "bash"u8.ToArray()),
         ("ucrt64/etc/ssl/certs/ca-bundle.crt", "certs"u8.ToArray()));
 
     private static readonly byte[] WinLibsArchive = TestFiles.ZipBytes(
@@ -46,6 +47,29 @@ public sealed class BuildToolsTests : IDisposable
         Assert.True(tool.IsInstalled());
         Assert.Equal(_temp.Combine("tools", "mingit", "cmd", "git.exe"), tool.Executable);
         Assert.Equal(_temp.Combine("tools", "mingit", "ucrt64", "etc", "ssl", "certs", "ca-bundle.crt"), tool.CaBundle);
+    }
+
+    [Fact]
+    public async Task MinGit_gets_a_bash_exe_copied_from_sh_exe()
+    {
+        var tool = MinGit();
+
+        await tool.InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(_temp.Combine("tools", "mingit", "usr", "bin"), tool.ShellDirectory);
+        Assert.Equal("bash", await File.ReadAllTextAsync(Path.Combine(tool.ShellDirectory, "bash.exe"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task MinGit_is_not_installed_without_bash_exe()
+    {
+        var tool = MinGit();
+        await tool.InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
+        Assert.True(tool.IsInstalled());
+
+        File.Delete(Path.Combine(tool.ShellDirectory, "bash.exe"));
+
+        Assert.False(tool.IsInstalled());
     }
 
     [Fact]
@@ -90,17 +114,19 @@ public sealed class BuildToolsTests : IDisposable
     }
 
     [Fact]
-    public async Task The_build_environment_puts_the_tools_first_and_sets_the_CA_bundle()
+    public async Task The_build_environment_orders_the_path_and_sets_the_CA_bundle()
     {
         var mingit = MinGit();
         var winlibs = WinLibs();
         await mingit.InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var apps = Path.Combine("C:", "Users", "x", "AppData", "Local", "Microsoft", "WindowsApps");
+        var inherited = string.Join(Path.PathSeparator, Path.Combine("C:", "Windows"), apps + Path.DirectorySeparatorChar, Path.Combine("C:", "Tools"));
 
-        var variables = new BuildEnvironment(mingit, winlibs).Variables();
+        var variables = new BuildEnvironment(mingit, winlibs).Variables(inherited, apps);
 
-        var path = variables["PATH"]!.Split(Path.PathSeparator);
-        Assert.Equal(winlibs.Bin, path[0]);
-        Assert.Equal(mingit.CommandDirectory, path[1]);
+        Assert.Equal(
+            [winlibs.Bin, mingit.CommandDirectory, Path.Combine("C:", "Windows"), Path.Combine("C:", "Tools"), mingit.ShellDirectory],
+            variables["PATH"]!.Split(Path.PathSeparator));
         Assert.Equal(mingit.CaBundle, variables["SSL_CERT_FILE"]);
     }
 

@@ -60,6 +60,7 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
 
         // ExtractToDirectory rejects entries that would land outside the target folder.
         await ZipFile.ExtractToDirectoryAsync(archive, staging, cancellationToken).ConfigureAwait(false);
+        PrepareExtracted(staging);
         await File.WriteAllTextAsync(
             Path.Combine(staging, MarkerFileName),
             JsonSerializer.Serialize(new ToolMarker(Id, Definition.Version, Definition.Sha256)),
@@ -71,6 +72,11 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
         }
 
         Directory.Move(staging, InstallDirectory);
+    }
+
+    /// <summary>Adjusts the extracted files in the staging folder, before the marker is written and the folder is swapped in.</summary>
+    protected virtual void PrepareExtracted(string directory)
+    {
     }
 
     public abstract Task<string> GetVersionAsync(CancellationToken cancellationToken = default);

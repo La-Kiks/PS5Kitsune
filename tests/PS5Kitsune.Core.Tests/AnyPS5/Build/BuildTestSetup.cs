@@ -26,7 +26,7 @@ internal sealed class BuildTestSetup
         MinGit = new MinGitTool(unused, Layout, Platform, new FakeDownloader(), Runner);
         WinLibs = new WinLibsTool(unused, Layout, Platform, new FakeDownloader(), Runner);
         var caBundle = Path.Combine(Layout.ToolDirectory(MinGitTool.ToolId), "ucrt64", "etc", "ssl", "certs", "ca-bundle.crt");
-        foreach (var file in (string[])[MinGit.Executable, caBundle, WinLibs.Gcc, WinLibs.Gxx, WinLibs.CMake, WinLibs.Ninja, .. WinLibs.RuntimeDlls])
+        foreach (var file in (string[])[MinGit.Executable, Path.Combine(MinGit.ShellDirectory, "bash" + Platform.ExecutableSuffix), caBundle, WinLibs.Gcc, WinLibs.Gxx, WinLibs.CMake, WinLibs.Ninja, .. WinLibs.RuntimeDlls])
         {
             TestFiles.Write(file, Path.GetFileName(file));
         }

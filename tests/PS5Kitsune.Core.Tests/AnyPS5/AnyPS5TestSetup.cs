@@ -15,6 +15,7 @@ internal sealed class AnyPS5TestSetup
 
     public static readonly byte[] MinGitArchive = TestFiles.ZipBytes(
         ("cmd/git.exe", "git"u8.ToArray()),
+        ("usr/bin/sh.exe", "bash"u8.ToArray()),
         ("ucrt64/etc/ssl/certs/ca-bundle.crt", "certs"u8.ToArray()));
 
     public static readonly byte[] WinLibsArchive = TestFiles.ZipBytes(

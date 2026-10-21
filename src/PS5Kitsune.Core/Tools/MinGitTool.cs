@@ -3,7 +3,11 @@ using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Core.Tools;
 
-/// <summary>The official MinGit zip: git for build mode, and the CA bundle CMake needs to download over HTTPS.</summary>
+/// <summary>
+/// The official MinGit zip: git for build mode, and the CA bundle CMake needs to download over HTTPS.
+/// MinGit ships no <c>bash.exe</c>, only <c>usr\bin\sh.exe</c>, which is GNU bash. libusb-cmake's gen-describe.ps1 looks for a
+/// non-WSL <c>bash.exe</c> and otherwise falls back to the WSL alias, so installing copies <c>sh.exe</c> to <c>bash.exe</c>.
+/// </summary>
 public sealed class MinGitTool(
     ToolDefinition definition,
     DataLayout layout,
@@ -19,6 +23,9 @@ public sealed class MinGitTool(
     public string CommandDirectory => Path.Combine(InstallDirectory, "cmd");
 
     public string Executable => Path.Combine(CommandDirectory, "git" + platform.ExecutableSuffix);
+
+    /// <summary>MinGit's <c>usr\bin</c>: holds the <c>bash.exe</c> copy. Goes last on the build PATH, as it also holds find, sort and cmp.</summary>
+    public string ShellDirectory => Path.Combine(InstallDirectory, "usr", "bin");
 
     /// <summary>The CA bundle, under ucrt64 (MinGit 2.56) or mingw64 (older MinGit), as AnyPS5's CI looks for it.</summary>
     /// <exception cref="InvalidOperationException">Neither file exists.</exception>
@@ -36,7 +43,13 @@ public sealed class MinGitTool(
         }
     }
 
-    protected override IEnumerable<string> RequiredFiles => [Executable];
+    protected override IEnumerable<string> RequiredFiles => [Executable, ShellPath("bash")];
+
+    protected override void PrepareExtracted(string directory)
+    {
+        var bin = Path.Combine(directory, "usr", "bin");
+        File.Copy(Path.Combine(bin, "sh" + platform.ExecutableSuffix), Path.Combine(bin, "bash" + platform.ExecutableSuffix), overwrite: true);
+    }
 
     public override async Task<string> GetVersionAsync(CancellationToken cancellationToken = default)
     {
@@ -52,4 +65,6 @@ public sealed class MinGitTool(
 
         return output[VersionPrefix.Length..];
     }
+
+    private string ShellPath(string name) => Path.Combine(ShellDirectory, name + platform.ExecutableSuffix);
 }
