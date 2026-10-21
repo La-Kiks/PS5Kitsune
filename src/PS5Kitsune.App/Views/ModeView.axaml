@@ -12,7 +12,10 @@
     <StackPanel Spacing="16">
       <TextBlock Text="How should AnyPS5 be installed?" FontSize="20" FontWeight="SemiBold" />
       <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-        <Border Padding="20" CornerRadius="6" BorderThickness="2" BorderBrush="{DynamicResource SystemAccentColor}">
+        <Border Padding="20" CornerRadius="6" BorderThickness="2">
+          <Border.BorderBrush>
+            <SolidColorBrush Color="{DynamicResource SystemAccentColor}" />
+          </Border.BorderBrush>
           <StackPanel Spacing="6">
             <TextBlock Text="{Binding ReleaseTitle}" FontSize="16" FontWeight="SemiBold" />
             <TextBlock Text="{Binding PublishedText}" Opacity="0.85" />
