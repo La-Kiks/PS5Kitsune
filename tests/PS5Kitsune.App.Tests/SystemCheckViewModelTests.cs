@@ -16,7 +16,7 @@ public sealed class SystemCheckViewModelTests
         ],
         new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(true, null, [Radeon]), null));
 
-    private readonly RecordingPlatform _platform = new();
+    private readonly TestPlatform _platform = new();
 
     [Fact]
     public async Task Shows_the_results_and_the_verdict()
@@ -107,28 +107,5 @@ public sealed class SystemCheckViewModelTests
     private sealed class FakeChecker(Func<Task<SystemCheckReport>> answer) : ISystemChecker
     {
         public Task<SystemCheckReport> RunAsync(CancellationToken cancellationToken = default) => answer();
-    }
-
-    private sealed class RecordingPlatform : IPlatform
-    {
-        public List<CheckFix> OpenedFixes { get; } = [];
-
-        public string Name => "Test";
-
-        public string DefaultDataRoot => "unused";
-
-        public string SettingsDirectory => "unused";
-
-        public string ExecutableSuffix => ".exe";
-
-        public ulong? GetCommitLimitBytes() => null;
-
-        public IReadOnlyList<string> GetVulkanDriverManifests() => [];
-
-        public void OpenFix(CheckFix fix) => OpenedFixes.Add(fix);
-
-        public List<string> OpenedPaths { get; } = [];
-
-        public void OpenPath(string path) => OpenedPaths.Add(path);
     }
 }
