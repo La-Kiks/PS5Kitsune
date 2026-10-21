@@ -46,6 +46,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<StepRunner>();
         services.AddSingleton<AnyPS5Paths>();
         services.AddSingleton<IAnyPS5Source, ReleaseSource>();
+        if (profile.Build is not null && profile.Tools.ContainsKey(MinGitTool.ToolId) && profile.Tools.ContainsKey(WinLibsTool.ToolId))
+        {
+            services.AddSingleton<IAnyPS5Source, BuildSource>();
+        }
         services.AddSingleton<AnyPS5Installer>();
         services.AddSingleton<IAnyPS5Installer>(provider => provider.GetRequiredService<AnyPS5Installer>());
         services.AddSingleton<GameSourceResolver>();

@@ -188,7 +188,9 @@ public sealed class AnyPS5InstallerTests : IDisposable
     [Fact]
     public void A_mode_without_a_source_is_refused()
     {
-        var exception = Assert.Throws<InvalidOperationException>(() => _setup.Installer.CreateSteps(AnyPS5Mode.Build));
+        var releaseOnly = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => releaseOnly.CreateSteps(AnyPS5Mode.Build));
 
         Assert.Contains("build", exception.Message, StringComparison.Ordinal);
     }
