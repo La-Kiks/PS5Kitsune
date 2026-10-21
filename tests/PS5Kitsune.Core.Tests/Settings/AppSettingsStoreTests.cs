@@ -53,5 +53,21 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.Contains("schema version 7", load.Problem, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("PS5")]
+    public async Task An_empty_or_relative_data_root_gives_the_defaults_and_a_problem(string dataRoot)
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        var json = $$"""{ "schemaVersion": {{AppSettings.CurrentSchemaVersion}}, "dataRoot": "{{dataRoot}}" }""";
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), json, TestContext.Current.CancellationToken);
+
+        var load = Store.Load();
+
+        Assert.Equal(AppSettings.Default, load.Settings);
+        Assert.Contains("invalid dataRoot", load.Problem, StringComparison.Ordinal);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

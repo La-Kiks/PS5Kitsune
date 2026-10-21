@@ -24,6 +24,14 @@ public sealed class DataRootsTests : IDisposable
         Assert.Equal("default", DataRoots.Resolve(null, AppSettings.Default, "default"));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void A_blank_saved_root_counts_as_unset(string saved)
+    {
+        Assert.Equal("default", DataRoots.Resolve(null, new AppSettings(1, saved), "default"));
+    }
+
     [Fact]
     public void Prepare_creates_a_writable_folder()
     {

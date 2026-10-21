@@ -19,9 +19,15 @@ public sealed class AppSettingsStore(string settingsDirectory)
                 return new AppSettingsLoad(AppSettings.Default, null);
             }
 
-            return settings.SchemaVersion == AppSettings.CurrentSchemaVersion
-                ? new AppSettingsLoad(settings, null)
-                : new AppSettingsLoad(AppSettings.Default, $"{FilePath} has schema version {settings.SchemaVersion}; using the default settings.");
+            if (settings.SchemaVersion != AppSettings.CurrentSchemaVersion)
+            {
+                return new AppSettingsLoad(AppSettings.Default, $"{FilePath} has schema version {settings.SchemaVersion}; using the default settings.");
+            }
+
+            // A relative root would resolve against each process's own current directory.
+            return settings.DataRoot is not null && (string.IsNullOrWhiteSpace(settings.DataRoot) || !Path.IsPathFullyQualified(settings.DataRoot))
+                ? new AppSettingsLoad(AppSettings.Default, $"{FilePath} has an invalid dataRoot \"{settings.DataRoot}\"; using the default settings.")
+                : new AppSettingsLoad(settings, null);
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {

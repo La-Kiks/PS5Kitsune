@@ -6,7 +6,7 @@ public static class DataRoots
     public static string Resolve(string? cliRoot, AppSettings settings, string defaultRoot)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return cliRoot ?? settings.DataRoot ?? defaultRoot;
+        return cliRoot ?? (string.IsNullOrWhiteSpace(settings.DataRoot) ? defaultRoot : settings.DataRoot);
     }
 
     /// <summary>Creates the folder if needed and checks a file can be written in it.</summary>
