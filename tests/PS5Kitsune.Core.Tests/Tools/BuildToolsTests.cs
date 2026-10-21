@@ -119,13 +119,14 @@ public sealed class BuildToolsTests : IDisposable
         var mingit = MinGit();
         var winlibs = WinLibs();
         await mingit.InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var apps = Path.Combine("C:", "Users", "x", "AppData", "Local", "Microsoft", "WindowsApps");
-        var inherited = string.Join(Path.PathSeparator, Path.Combine("C:", "Windows"), apps + Path.DirectorySeparatorChar, Path.Combine("C:", "Tools"));
+        // Rooted in the temp folder: a drive letter would hold the PATH separator on Linux.
+        var apps = _temp.Combine("Users", "x", "AppData", "Local", "Microsoft", "WindowsApps");
+        var inherited = string.Join(Path.PathSeparator, _temp.Combine("Windows"), apps + Path.DirectorySeparatorChar, _temp.Combine("Tools"));
 
         var variables = new BuildEnvironment(mingit, winlibs).Variables(inherited, apps);
 
         Assert.Equal(
-            [winlibs.Bin, mingit.CommandDirectory, Path.Combine("C:", "Windows"), Path.Combine("C:", "Tools"), mingit.ShellDirectory],
+            [winlibs.Bin, mingit.CommandDirectory, _temp.Combine("Windows"), _temp.Combine("Tools"), mingit.ShellDirectory],
             variables["PATH"]!.Split(Path.PathSeparator));
         Assert.Equal(mingit.CaBundle, variables["SSL_CERT_FILE"]);
     }
