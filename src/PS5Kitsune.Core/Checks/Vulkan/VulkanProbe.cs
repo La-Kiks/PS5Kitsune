@@ -141,7 +141,7 @@ public static unsafe class VulkanProbe
             properties.VendorID,
             DeviceType(properties.DeviceType),
             FormatVersion(properties.ApiVersion),
-            has12 ? DriverName(driver.DriverID) : null,
+            has12 ? DriverIdName(driver.DriverID) : null,
             has12 ? Text(driver.DriverName) : null,
             has12 ? Text(driver.DriverInfo) : null,
             features2.Features.ShaderInt64,
@@ -149,7 +149,7 @@ public static unsafe class VulkanProbe
     }
 
     // Silk.NET names the values "DriverIDAmdProprietary"; the report uses the Vulkan spec names ("AmdProprietary").
-    private static string DriverName(DriverId id) => id.ToString().Replace("DriverID", "", StringComparison.Ordinal);
+    internal static string DriverIdName(DriverId id) => id.ToString().Replace("DriverID", "", StringComparison.Ordinal);
 
     private static string Text(byte* nullTerminated) => Marshal.PtrToStringUTF8((nint)nullTerminated) ?? "";
 

@@ -1,4 +1,5 @@
 using PS5Kitsune.Core.Checks.Vulkan;
+using Silk.NET.Vulkan;
 
 namespace PS5Kitsune.Core.Tests.Checks;
 
@@ -60,6 +61,16 @@ public sealed class VulkanProbeTests
         var gpu = new VulkanGpu("Microsoft Direct3D12", 0x1414, "integrated", "1.2.0", "MesaDozen", "Dozen", "Mesa 24", true, true);
 
         Assert.True(gpu.IsDozen);
+    }
+
+    // Silk.NET declares each value twice (DriverIDMesaDozen is an obsolete alias of MesaDozen, same number), so ToString() may return either spelling.
+    [Theory]
+    [InlineData(DriverId.MesaDozen, "MesaDozen")]
+    [InlineData(DriverId.NvidiaProprietary, "NvidiaProprietary")]
+    [InlineData(DriverId.AmdProprietary, "AmdProprietary")]
+    public void Driver_ids_use_the_vulkan_spec_names(DriverId id, string expected)
+    {
+        Assert.Equal(expected, VulkanProbe.DriverIdName(id));
     }
 
     // Runs the real probe in this process: on a machine whose driver crashes enumeration this test crashes too,
