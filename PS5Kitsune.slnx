@@ -6,6 +6,7 @@
     <Project Path="src/PS5Kitsune.Platform.Windows/PS5Kitsune.Platform.Windows.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/PS5Kitsune.App.Tests/PS5Kitsune.App.Tests.csproj" />
     <Project Path="tests/PS5Kitsune.Core.Tests/PS5Kitsune.Core.Tests.csproj" />
     <Project Path="tests/PS5Kitsune.Platform.Windows.Tests/PS5Kitsune.Platform.Windows.Tests.csproj" />
   </Folder>

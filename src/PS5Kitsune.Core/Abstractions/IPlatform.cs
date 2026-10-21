@@ -1,3 +1,5 @@
+using PS5Kitsune.Core.Checks;
+
 namespace PS5Kitsune.Core.Abstractions;
 
 /// <summary>
@@ -16,4 +18,13 @@ public interface IPlatform
 
     /// <summary>Suffix of native executables: ".exe" on Windows, empty on Linux.</summary>
     string ExecutableSuffix { get; }
+
+    /// <summary>Memory the OS can commit (RAM + page file), in bytes; null where the OS has no such limit.</summary>
+    ulong? GetCommitLimitBytes();
+
+    /// <summary>Registered Vulkan driver manifests (ICD JSON paths); empty when none are registered this way.</summary>
+    IReadOnlyList<string> GetVulkanDriverManifests();
+
+    /// <summary>Opens what the user needs to apply a check's fix, for example a settings dialog.</summary>
+    void OpenFix(CheckFix fix);
 }

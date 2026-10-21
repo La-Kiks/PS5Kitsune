@@ -102,5 +102,37 @@ public sealed class ProfileLoaderTests
             """));
     }
 
+    [Fact]
+    public void Embedded_profile_has_check_thresholds()
+    {
+        var checks = ProfileLoader.LoadEmbedded().Checks;
+
+        Assert.Equal(13824, checks.CommitLimitMiB);
+        Assert.Equal(5, checks.MinFreeDiskGiB);
+        Assert.Contains("610.47", checks.NvidiaBadDrivers);
+    }
+
+    [Fact]
+    public void A_profile_without_checks_gets_the_default_thresholds()
+    {
+        var profile = Load("""
+            { "schemaVersion": 1, "id": "minimal", "source": { "kind": "release", "tag": "v1" } }
+            """);
+
+        Assert.Equal(13824, profile.Checks.CommitLimitMiB);
+        Assert.Equal(5, profile.Checks.MinFreeDiskGiB);
+        Assert.Empty(profile.Checks.NvidiaBadDrivers);
+    }
+
+    [Fact]
+    public void Rejects_a_non_positive_commit_limit()
+    {
+        var exception = Assert.Throws<InvalidProfileException>(() => Load("""
+            { "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" }, "checks": { "commitLimitMiB": 0 } }
+            """));
+
+        Assert.Contains("commitLimitMiB", exception.Message, StringComparison.Ordinal);
+    }
+
     private static AnyPS5Profile Load(string json) => ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes(json)));
 }

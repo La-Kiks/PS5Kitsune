@@ -65,6 +65,11 @@ public static class ProfileLoader
             RequireSha256(profile.Id, $"tool {name}", tool.Sha256);
             RequireHttps(profile.Id, $"tool {name}", tool.Url);
         }
+
+        if (profile.Checks.CommitLimitMiB <= 0 || profile.Checks.MinFreeDiskGiB < 0)
+        {
+            throw new InvalidProfileException($"Profile {profile.Id}: checks.commitLimitMiB must be positive and checks.minFreeDiskGiB not negative.");
+        }
     }
 
     private static void RequireSha256(string profileId, string what, string value)

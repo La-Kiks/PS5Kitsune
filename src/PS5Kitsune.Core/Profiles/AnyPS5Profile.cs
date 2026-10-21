@@ -27,6 +27,9 @@ public sealed record AnyPS5Profile
 
     public RelinkerOptions Relinker { get; init; } = new();
 
+    /// <summary>PC check thresholds; a profile without a "checks" section gets the defaults.</summary>
+    public CheckThresholds Checks { get; init; } = new();
+
     /// <exception cref="InvalidProfileException">The profile has no asset named <paramref name="key"/>.</exception>
     public ProfileAsset Asset(string key) =>
         Assets.TryGetValue(key, out var asset) ? asset : throw new InvalidProfileException($"Profile {Id} has no asset \"{key}\".");
@@ -71,4 +74,17 @@ public sealed record RelinkerOptions
     public IReadOnlyList<string> WindowsArgs { get; init; } = [];
 
     public string? IntelArg { get; init; }
+}
+
+/// <summary>PC check thresholds that depend on the AnyPS5 version.</summary>
+public sealed record CheckThresholds
+{
+    /// <summary>Memory a game can commit; RAM + page file must reach it.</summary>
+    public long CommitLimitMiB { get; init; } = 13824;
+
+    /// <summary>Free space wanted on the data root's drive for AnyPS5 and a game.</summary>
+    public long MinFreeDiskGiB { get; init; } = 5;
+
+    /// <summary>NVIDIA driver versions, as Vulkan's driverInfo reports them, known to crash AnyPS5 games.</summary>
+    public IReadOnlyList<string> NvidiaBadDrivers { get; init; } = [];
 }

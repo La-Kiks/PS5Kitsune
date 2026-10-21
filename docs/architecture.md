@@ -95,7 +95,7 @@ Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the
 
 ### Isolated Vulkan probe
 
-Vulkan enumeration can crash the process (Dozen driver, some D3D12 drivers, see `USAGE.md`). So it **never runs in the UI process**: the app relaunches itself as `PS5Kitsune.exe --probe-vulkan`, which queries Vulkan via Silk.NET and writes JSON (GPUs, `shaderInt64`, `bufferDeviceAddress`, driver version). A probe crash becomes a result ("Vulkan enumeration failed") and triggers a second attempt with `VK_LOADER_DRIVERS_DISABLE='*dzn*'`. `vulkaninfo` is not used: it ships with the Vulkan SDK and is missing on most PCs.
+Vulkan enumeration can crash the process (Dozen driver, some D3D12 drivers, see `USAGE.md`). So it **never runs in the UI process**: the app relaunches itself as `PS5Kitsune.exe --probe-vulkan`, which queries Vulkan via Silk.NET and writes JSON (GPUs, `shaderInt64`, `bufferDeviceAddress`, driver version). A probe crash becomes a result ("Vulkan enumeration failed") and triggers a second attempt with `VK_LOADER_DRIVERS_DISABLE='*dzn*'`. `vulkaninfo` is not used: it ships with the Vulkan SDK and is missing on most PCs. Both executables handle `--probe-vulkan` before anything else starts (`PS5Kitsune.exe` and `ps5kitsune.exe`); the parent waits 15 seconds at most per attempt. The thresholds (commit limit, disk space, NVIDIA drivers) live in the profile's `checks` section.
 
 The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and will be the first Linux deliverable.
 
@@ -143,9 +143,9 @@ Each check returns OK, Warning or Blocking, with an explanation and an action. T
 | Vulkan driver and GPUs | Isolated probe (see above) | Blocking if no driver |
 | `shaderInt64` and `bufferDeviceAddress` per GPU | Same probe, feature by feature | Warning: offer Lavapipe (Mesa download in V1, activation in V3) |
 | Commit limit (RAM + page file) | `GlobalMemoryStatusEx`: a game can commit up to 13,824 MiB | Warning + button opening `SystemPropertiesPerformance.exe`; no automatic change |
-| Dozen driver (D3D12 over Vulkan) present | List of Vulkan driver manifests | Info: can crash enumeration, can be disabled at launch in V3 |
+| Dozen driver (D3D12 over Vulkan) present | Vulkan driver manifests in the registry, and the probe's `driverId` (`MesaDozen`) | Info: can crash enumeration, can be disabled at launch in V3 |
 | NVIDIA driver known to crash | Driver version read by the probe | Warning: 610.47 crashes in `nvgpucomp64.dll` (see `USAGE.md`); version list in the profile |
-| Free disk space | `DriveInfo` on the install folder | Warning; threshold to measure at the first build (open point) |
+| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB for release mode; to revisit after measuring a build at milestone 5) |
 | Install path | No spaces, ASCII only | Blocking: WinLibs and CMake fail otherwise |
 
 ### Portable tools
@@ -440,7 +440,7 @@ The order follows "end to end first, screens second": each milestone ends with a
 2. **End-to-end CLI path.** Profile release mode, DOOM folder preparation, ELF/SELF check and `unwrap_self.py`, relinker, JSON audit, `game.json`, launch with the log written to a file. No screens.
    - Criterion: `ps5kitsune install`, then `ps5kitsune add <DOOM folder>`, then `ps5kitsune run PPSA…` runs DOOM. This milestone validates the first profile and tells whether release `v0.1.2` is enough or a build is needed.
 3. **V1a — PC checks.** Isolated Vulkan probe, CPU, commit limit, disk, path; check screen.
-   - Criterion: an Intel Iris Xe laptop reports `shaderInt64` as a warning with the Lavapipe suggestion.
+   - Criterion: `ps5kitsune check` and the check screen agree on the AMD reference laptop, with no blocking result; on an Intel + NVIDIA PC the probe sees both GPUs and names the usable one. A GPU without `shaderInt64` (the Iris Xe case) is covered by tests from probe fixtures.
 4. **V1b — Install screens, release mode.** Home, mode choice, progress, profile status.
    - Criterion: install from the UI on an empty root, identical to the CLI result.
 5. **V1c — Build mode.** MinGit, WinLibs, clone at the profile's commit, configure with `SSL_CERT_FILE`, build, `libs`, resume via `IsAlreadyDone()`.

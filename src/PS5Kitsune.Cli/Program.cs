@@ -1,5 +1,13 @@
 using System.CommandLine;
 using PS5Kitsune.Cli;
+using PS5Kitsune.Core.Checks.Vulkan;
+
+// The Vulkan probe child (see VulkanProbeRunner): nothing else is loaded, so a crashing driver only takes this process down.
+if (args is [VulkanProbeRunner.ProbeArgument])
+{
+    Console.Out.Write(VulkanProbe.Run().ToJson());
+    return 0;
+}
 
 var rootOption = new Option<DirectoryInfo?>("--root")
 {
@@ -9,6 +17,7 @@ var rootOption = new Option<DirectoryInfo?>("--root")
 
 var rootCommand = new RootCommand("PS5Kitsune: installer and launcher for AnyPS5.")
 {
+    CheckCommand.Create(rootOption),
     InstallCommand.Create(rootOption),
     AddCommand.Create(rootOption),
     RunCommand.Create(rootOption),

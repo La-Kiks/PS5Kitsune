@@ -60,4 +60,25 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Stopped following the log. {Name} is still running (PID {ProcessId}). Log: {LogFile}")]
     public static partial void StoppedFollowing(this ILogger logger, string name, int processId, string logFile);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[{Badge}] {Title}: {Summary}")]
+    public static partial void CheckPassed(this ILogger logger, string badge, string title, string summary);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[WARN] {Title}: {Summary}")]
+    public static partial void CheckWarning(this ILogger logger, string title, string summary);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "[BLOCK] {Title}: {Summary}")]
+    public static partial void CheckBlocking(this ILogger logger, string title, string summary);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "    -> {Action}")]
+    public static partial void CheckAction(this ILogger logger, string action);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "GPU: {Description}")]
+    public static partial void GpuFound(this ILogger logger, string description);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Verdict}")]
+    public static partial void CheckVerdict(this ILogger logger, string verdict);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Installation stopped before downloading anything. Fix the blocking problems above, then run 'ps5kitsune install' again; 'ps5kitsune check' shows every check.")]
+    public static partial void InstallBlocked(this ILogger logger);
 }
