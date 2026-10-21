@@ -143,3 +143,12 @@ On the AMD laptop:
 2. `ps5kitsune install` with no `--root`: every step is "already done". The done-checks compare the profile's hashes, so the CLI sees the same install.
 3. `ps5kitsune install --root <another empty root>`, then compare both trees and `install.json` (all fields but `installedAt`).
 4. Cancel during a download, check that Home shows "incomplete", resume, and check that finished steps are skipped. Close the window during an install and confirm.
+
+## Refinements from the implementation plan
+
+1. `IAnyPS5Installer` (Core) is extracted from `AnyPS5Installer` (`CreateSteps`, `GetState`, `InstallAsync`) so the app's view models can be tested with a fake. `IsInstalled()` keeps its implementation, which gives the same answer.
+2. No app-level container: `App.axaml.cs` is a plain composition root. Only `RootSession` builds a `ServiceProvider`.
+3. `IPlatform.SettingsDirectory` already existed, unused, under Roaming `ApplicationData`; it moves to `LocalApplicationData`.
+4. "Back" returns to the previous page through the navigator's back stack. The PC check runs by itself only the first time its page is entered, or after a cancelled check.
+5. Root helpers live in a static `DataRoots` class in Core: `Resolve` and `Prepare`.
+6. `AppSettingsStore.Load()` returns the settings and an optional problem text, which the host logs once logging exists.
