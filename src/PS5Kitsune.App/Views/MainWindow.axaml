@@ -8,8 +8,20 @@
         Icon="/Assets/kitsune.ico"
         Width="860" Height="680" MinWidth="600" MinHeight="480">
   <Window.DataTemplates>
+    <DataTemplate DataType="vm:HomeViewModel">
+      <views:HomeView />
+    </DataTemplate>
     <DataTemplate DataType="vm:SystemCheckViewModel">
       <views:SystemCheckView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:ModeViewModel">
+      <views:ModeView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:InstallViewModel">
+      <views:InstallView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:DoneViewModel">
+      <views:DoneView />
     </DataTemplate>
   </Window.DataTemplates>
 
@@ -20,11 +32,11 @@
         <TextBlock Grid.Column="0" Text="Platform" FontWeight="SemiBold" />
         <TextBlock Grid.Column="1" Text="{Binding Platform}" />
         <TextBlock Grid.Column="2" Text="Data root" FontWeight="SemiBold" />
-        <TextBlock Grid.Column="3" Text="{Binding DataRoot}" />
+        <TextBlock Grid.Column="3" Text="{Binding DataRoot}" TextTrimming="CharacterEllipsis" />
         <TextBlock Grid.Column="4" Text="Profile" FontWeight="SemiBold" />
         <TextBlock Grid.Column="5" Text="{Binding Profile}" TextTrimming="CharacterEllipsis" />
       </Grid>
     </StackPanel>
-    <ContentControl Content="{Binding CurrentPage}" />
+    <ContentControl Content="{Binding Navigator.CurrentPage}" />
   </DockPanel>
 </Window>

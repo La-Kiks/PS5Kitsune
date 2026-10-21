@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Checks;
@@ -5,7 +6,7 @@ using PS5Kitsune.Core.Checks;
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>One check on the PC check screen.</summary>
-public sealed partial class CheckRowViewModel(CheckResult result, IPlatform platform)
+public sealed partial class CheckRowViewModel(CheckResult result, IPlatform platform) : ObservableObject
 {
     public string Title => result.Title;
 
@@ -27,12 +28,16 @@ public sealed partial class CheckRowViewModel(CheckResult result, IPlatform plat
 
     public bool HasFix => result.Fix is not null;
 
+    /// <summary>Why the fix could not be opened; null when it opened.</summary>
+    [ObservableProperty]
+    public partial string? FixError { get; private set; }
+
     [RelayCommand]
     private void OpenFix()
     {
         if (result.Fix is { } fix)
         {
-            platform.OpenFix(fix);
+            FixError = PathOpener.TryRun(() => platform.OpenFix(fix));
         }
     }
 }

@@ -17,6 +17,11 @@
       </Grid>
     </Border>
 
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="Back" Command="{Binding BackCommand}" />
+      <Button Content="Continue" Classes="accent" Command="{Binding ContinueCommand}" />
+    </StackPanel>
+
     <Expander DockPanel.Dock="Bottom" Header="Detected GPUs" Margin="0,12,0,0" HorizontalAlignment="Stretch">
       <ItemsControl ItemsSource="{Binding Gpus}">
         <ItemsControl.ItemTemplate>
@@ -40,6 +45,8 @@
                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Opacity="0.85" />
                 <TextBlock Text="{Binding Action}" IsVisible="{Binding HasAction}" TextWrapping="Wrap" FontStyle="Italic" />
+                <TextBlock Text="{Binding FixError}" IsVisible="{Binding FixError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                           Foreground="#C42B1C" TextWrapping="Wrap" />
               </StackPanel>
               <Button Grid.Column="2" Content="Open performance settings" VerticalAlignment="Top"
                       Command="{Binding OpenFixCommand}" IsVisible="{Binding HasFix}" />

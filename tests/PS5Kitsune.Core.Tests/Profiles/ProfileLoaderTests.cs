@@ -125,6 +125,24 @@ public sealed class ProfileLoaderTests
     }
 
     [Fact]
+    public void Embedded_profile_has_the_release_date()
+    {
+        var profile = ProfileLoader.LoadEmbedded();
+
+        Assert.Equal(new DateTimeOffset(2026, 10, 14, 8, 56, 52, TimeSpan.Zero), profile.Source.PublishedAt);
+    }
+
+    [Fact]
+    public void The_release_date_is_optional()
+    {
+        var profile = Load("""
+            { "schemaVersion": 1, "id": "no-date", "source": { "kind": "release", "tag": "v1" } }
+            """);
+
+        Assert.Null(profile.Source.PublishedAt);
+    }
+
+    [Fact]
     public void Rejects_a_non_positive_commit_limit()
     {
         var exception = Assert.Throws<InvalidProfileException>(() => Load("""

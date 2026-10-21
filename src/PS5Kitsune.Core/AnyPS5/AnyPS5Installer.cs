@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5.Steps;
 using PS5Kitsune.Core.IO;
@@ -18,7 +19,7 @@ public sealed class AnyPS5Installer(
     PythonEmbeddableTool python,
     IDownloader downloader,
     StepRunner stepRunner,
-    TimeProvider time)
+    TimeProvider time) : IAnyPS5Installer
 {
     public IReadOnlyList<IStep> CreateSteps()
     {
@@ -43,6 +44,42 @@ public sealed class AnyPS5Installer(
 
     /// <summary>True when every install step is done: files present with the profile's hashes and install.json written.</summary>
     public bool IsInstalled() => CreateSteps().All(step => step.IsAlreadyDone());
+
+    public AnyPS5InstallState GetState()
+    {
+        var steps = CreateSteps();
+        var done = steps.Count(IsDone);
+        var record = ReadRecord();
+        var status = done == steps.Count ? AnyPS5InstallStatus.Installed
+            : done == 0 && record is null ? AnyPS5InstallStatus.NotInstalled
+            : AnyPS5InstallStatus.Incomplete;
+        return new AnyPS5InstallState(status, record);
+    }
+
+    /// <summary>A done-check that throws (a locked or unreadable file) counts as not done; the install reports the error.</summary>
+    private static bool IsDone(IStep step)
+    {
+        try
+        {
+            return step.IsAlreadyDone();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private AnyPS5InstallRecord? ReadRecord()
+    {
+        try
+        {
+            return JsonFiles.Read<AnyPS5InstallRecord>(paths.RecordFile);
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     public Task InstallAsync(IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default) =>
         stepRunner.RunAsync(CreateSteps(), progress, onEvent, cancellationToken);

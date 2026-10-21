@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PS5Kitsune.App.ViewModels"
+             x:Class="PS5Kitsune.App.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+  <StackPanel Spacing="24" MaxWidth="680" HorizontalAlignment="Left">
+    <Border Padding="20" CornerRadius="6" BorderThickness="1" BorderBrush="#40808080">
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding StateTitle}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding StateDetail}" TextWrapping="Wrap" Opacity="0.85" />
+        <Button Content="{Binding ActionText}" Command="{Binding StartCommand}" Classes="accent" Margin="0,8,0,0" />
+      </StackPanel>
+    </Border>
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="Data folder" FontWeight="SemiBold" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBlock Text="{Binding DataRoot}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        <Button Grid.Column="1" Content="Change…" Command="{Binding ChangeRootCommand}" />
+      </Grid>
+      <TextBlock Text="{Binding RootError}" IsVisible="{Binding RootError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Foreground="#C42B1C" TextWrapping="Wrap" />
+      <TextBlock Text="Tools, AnyPS5 and games go here. The path must be ASCII with no spaces." Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <StackPanel Spacing="6">
+      <TextBlock Text="AnyPS5 profile" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding ProfileText}" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

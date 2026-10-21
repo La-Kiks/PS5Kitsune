@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace PS5Kitsune.Core.Pipeline;
 
 /// <summary>
-/// Runs steps in order, skips those already done, and stops at the first failure.
+/// Runs steps in order, skips those already done, and stops at the first failure or at cancellation.
 /// Logs every step at Information level (the CLI console shows them); <c>onEvent</c> is for the UI.
 /// </summary>
 public sealed partial class StepRunner(ILogger<StepRunner> logger)
@@ -19,22 +19,26 @@ public sealed partial class StepRunner(ILogger<StepRunner> logger)
             cancellationToken.ThrowIfCancellationRequested();
             var step = steps[index];
             var number = index + 1;
-            if (step.IsAlreadyDone())
-            {
-                LogSkipped(number, steps.Count, step.Name);
-                onEvent?.Invoke(new StepEvent(StepEventKind.Skipped, step.Name, number, steps.Count));
-                continue;
-            }
-
-            LogStarted(number, steps.Count, step.Name);
-            onEvent?.Invoke(new StepEvent(StepEventKind.Started, step.Name, number, steps.Count));
             var stopwatch = Stopwatch.StartNew();
             try
             {
+                // Inside the try: a done-check reads files, and an exception there is this step's failure.
+                if (step.IsAlreadyDone())
+                {
+                    LogSkipped(number, steps.Count, step.Name);
+                    onEvent?.Invoke(new StepEvent(StepEventKind.Skipped, step.Name, number, steps.Count));
+                    continue;
+                }
+
+                LogStarted(number, steps.Count, step.Name);
+                onEvent?.Invoke(new StepEvent(StepEventKind.Started, step.Name, number, steps.Count));
+                stopwatch.Restart();
                 await step.ExecuteAsync(progress, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                LogCancelled(number, steps.Count, step.Name, stopwatch.Elapsed.TotalSeconds);
+                onEvent?.Invoke(new StepEvent(StepEventKind.Cancelled, step.Name, number, steps.Count, stopwatch.Elapsed));
                 throw;
             }
             catch (Exception exception)
@@ -57,6 +61,9 @@ public sealed partial class StepRunner(ILogger<StepRunner> logger)
 
     [LoggerMessage(Level = LogLevel.Information, Message = "[{Number}/{Count}] {Step}: done in {Seconds:0.0} s")]
     private partial void LogCompleted(int number, int count, string step, double seconds);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "[{Number}/{Count}] {Step}: cancelled after {Seconds:0.0} s")]
+    private partial void LogCancelled(int number, int count, string step, double seconds);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "[{Number}/{Count}] {Step}: failed after {Seconds:0.0} s")]
     private partial void LogFailed(Exception exception, int number, int count, string step, double seconds);

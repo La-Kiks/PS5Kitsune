@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "doom-validated-2026-10",
   "validated": true,
-  "source": { "kind": "release", "tag": "v0.1.2" },
+  "source": { "kind": "release", "tag": "v0.1.2", "publishedAt": "2026-10-14T08:56:52Z" },
   "alternateSource": { "kind": "commit", "sha": "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd" },
   "assets": {
     "relinker": {

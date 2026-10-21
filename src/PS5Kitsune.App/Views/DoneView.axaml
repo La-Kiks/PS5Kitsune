@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PS5Kitsune.App.ViewModels"
+             x:Class="PS5Kitsune.App.Views.DoneView"
+             x:DataType="vm:DoneViewModel">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
+      <Button Content="Open log" Command="{Binding OpenLogCommand}" />
+      <Button Content="Back to home" Classes="accent" Command="{Binding BackHomeCommand}" />
+    </StackPanel>
+
+    <StackPanel Spacing="12">
+      <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="Adding games from the app comes in a later version; until then, use 'ps5kitsune add'." TextWrapping="Wrap" Opacity="0.85" />
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
+        <TextBlock Text="Relinker" FontWeight="SemiBold" />
+        <SelectableTextBlock Grid.Column="1" Text="{Binding Relinker}" TextWrapping="Wrap" />
+        <TextBlock Grid.Row="1" Text="Libraries" FontWeight="SemiBold" />
+        <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Libs}" TextWrapping="Wrap" />
+      </Grid>
+      <TextBlock Text="{Binding OpenError}" IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                 Foreground="#C42B1C" TextWrapping="Wrap" />
+    </StackPanel>
+  </DockPanel>
+</UserControl>

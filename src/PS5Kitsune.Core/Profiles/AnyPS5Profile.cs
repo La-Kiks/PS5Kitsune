@@ -44,7 +44,8 @@ public sealed record AnyPS5Profile
 }
 
 /// <param name="Kind">"release" (uses <paramref name="Tag"/>) or "commit" (uses <paramref name="Sha"/>).</param>
-public sealed record ProfileSource(string Kind, string? Tag = null, string? Sha = null)
+/// <param name="PublishedAt">When the release was published, shown on the Mode screen; null when unknown.</param>
+public sealed record ProfileSource(string Kind, string? Tag = null, string? Sha = null, DateTimeOffset? PublishedAt = null)
 {
     /// <summary>The tag of a release, the SHA of a commit.</summary>
     public string Version => Tag ?? Sha ?? "unknown";

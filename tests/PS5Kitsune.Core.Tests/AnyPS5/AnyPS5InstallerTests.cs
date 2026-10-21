@@ -84,5 +84,60 @@ public sealed class AnyPS5InstallerTests : IDisposable
         Assert.True(_setup.Installer.IsInstalled());
     }
 
+    [Fact]
+    public void An_empty_root_is_not_installed()
+    {
+        var state = _setup.Installer.GetState();
+
+        Assert.Equal(AnyPS5InstallStatus.NotInstalled, state.Status);
+        Assert.Null(state.Record);
+    }
+
+    [Fact]
+    public async Task A_complete_install_is_installed_with_its_record()
+    {
+        await _setup.InstallAsync();
+
+        var state = _setup.Installer.GetState();
+
+        Assert.Equal(AnyPS5InstallStatus.Installed, state.Status);
+        Assert.Equal("v0.1.2", state.Record?.Version);
+        Assert.Equal("test-profile", state.Record?.Profile);
+    }
+
+    [Fact]
+    public async Task A_missing_file_makes_the_install_incomplete()
+    {
+        await _setup.InstallAsync();
+        File.Delete(_setup.Paths.Relinker);
+
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, _setup.Installer.GetState().Status);
+    }
+
+    [Fact]
+    public async Task A_record_for_another_tag_makes_the_install_incomplete()
+    {
+        await _setup.InstallAsync();
+        var record = JsonFiles.Read<AnyPS5InstallRecord>(_setup.Paths.RecordFile)!;
+        await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Version = "v0.1.1" }, TestContext.Current.CancellationToken);
+
+        var state = _setup.Installer.GetState();
+
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, state.Status);
+        Assert.Equal("v0.1.1", state.Record?.Version);
+    }
+
+    [Fact]
+    public async Task An_unreadable_record_is_ignored()
+    {
+        await _setup.InstallAsync();
+        await File.WriteAllTextAsync(_setup.Paths.RecordFile, "{ not json", TestContext.Current.CancellationToken);
+
+        var state = _setup.Installer.GetState();
+
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, state.Status);
+        Assert.Null(state.Record);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

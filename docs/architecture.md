@@ -91,7 +91,7 @@ PS5Kitsune/
 
 ### Resuming steps
 
-Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the file exists, its hash is right, the clone's commit matches the profile) rather than on a state journal. If the user deletes a folder by hand, the step is simply redone. The `StepRunner` skips completed steps and resumes at the first one that is not. A done-check never trusts a file an external tool may leave half-written: tool outputs are moved into place or confirmed by a marker written after success. The copy steps still compare sizes after an in-place copy; copying to a temporary file and moving it is a follow-up.
+Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the file exists, its hash is right, the clone's commit matches the profile) rather than on a state journal. If the user deletes a folder by hand, the step is simply redone. The `StepRunner` skips completed steps and resumes at the first one that is not. A done-check never trusts a file an external tool may leave half-written: tool outputs are moved into place or confirmed by a marker written after success. The copy steps still compare sizes after an in-place copy; copying to a temporary file and moving it is a follow-up. A done-check that throws counts as that step's failure; a cancellation emits a `Cancelled` event for the running step.
 
 ### Isolated Vulkan probe
 
@@ -186,6 +186,8 @@ Each step is an `IStep`: on failure, the user resumes from the failed step witho
 4. **Tools** (build mode): what is present, what is missing, download size, "Download what's missing" button.
 5. **Install**: steps ticked as they complete, scrolling log, Cancel button.
 6. **Done**: relinker and libs paths, "Open log" button, continue to V2.
+
+Milestone 4 implements Home, PC check, Mode (build shown as coming later), Install and Done. The Tools screen comes with build mode.
 
 ## V2 — Add a game
 
@@ -316,7 +318,7 @@ Everything is in readable JSON files, no database. Each game carries its own rec
 
 | Content | Windows | Linux |
 | --- | --- | --- |
-| App settings | `%APPDATA%\PS5Kitsune\settings.json` | `~/.config/ps5kitsune/settings.json` |
+| App settings | `%LOCALAPPDATA%\PS5Kitsune\settings.json` | `~/.config/ps5kitsune/settings.json` |
 | Data root (tools, AnyPS5, games) | `C:\PS5Kitsune\` by default, configurable, no spaces | `~/.local/share/ps5kitsune/` |
 
 The default root is not under `%LOCALAPPDATA%`, because the Windows user name may contain a space, which breaks WinLibs and CMake.
@@ -358,6 +360,8 @@ C:\PS5Kitsune\
 ├── library.json                 library index
 └── logs\                        installer logs
 ```
+
+The data root itself is chosen on the app's home screen and saved in `%LOCALAPPDATA%\PS5Kitsune\settings.json` (`{ "schemaVersion": 1, "dataRoot": "…" }`), outside the root. The CLI reads the same file: `--root`, then the saved root, then `C:\PS5Kitsune`. When the user changes the root on Home, the app replaces the session first and saves the setting second: a refused change leaves `settings.json` untouched, and a failed save keeps the new root for this run and shows "Cannot save the setting".
 
 ### Game record (`game.json`)
 
