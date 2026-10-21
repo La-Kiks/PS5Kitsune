@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Processes;
@@ -40,5 +41,33 @@ public sealed class CliWrapProcessRunnerTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Null(Environment.GetEnvironmentVariable("PS5KITSUNE_TEST_VARIABLE"));
+    }
+
+    [Theory]
+    [InlineData(false, LogLevel.Information)]
+    [InlineData(true, LogLevel.Debug)]
+    public async Task Logs_the_start_and_the_exit_at_Information_unless_the_spec_is_quiet(bool quiet, LogLevel expected)
+    {
+        var logger = new CapturingLogger();
+        var runner = new CliWrapProcessRunner(logger);
+
+        await runner.RunAsync(new ProcessSpec("dotnet", ["--version"]) { Quiet = quiet }, cancellationToken: TestContext.Current.CancellationToken);
+
+        var lifecycle = logger.Entries.Where(entry => entry.Message.StartsWith("Running ", StringComparison.Ordinal) || entry.Message.Contains(" exited with code ", StringComparison.Ordinal)).ToList();
+        Assert.Equal(2, lifecycle.Count);
+        Assert.All(lifecycle, entry => Assert.Equal(expected, entry.Level));
+    }
+
+    private sealed class CapturingLogger : ILogger<CliWrapProcessRunner>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception)));
     }
 }

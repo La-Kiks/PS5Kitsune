@@ -13,6 +13,9 @@ public sealed record ProcessSpec(string FileName, IReadOnlyList<string> Argument
 {
     public string? WorkingDirectory { get; init; }
 
+    /// <summary>Logs start and exit at Debug: for internal helpers such as the Vulkan probe.</summary>
+    public bool Quiet { get; init; }
+
     /// <summary>Variables set (or removed, when null) for the child process only.</summary>
     public IReadOnlyDictionary<string, string?> Environment { get; init; } = new Dictionary<string, string?>();
 }

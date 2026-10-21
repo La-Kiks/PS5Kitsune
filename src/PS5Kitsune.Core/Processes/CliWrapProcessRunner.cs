@@ -22,10 +22,26 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
             command = command.WithWorkingDirectory(spec.WorkingDirectory);
         }
 
-        LogStarting(spec.FileName, spec.Arguments);
+        if (spec.Quiet)
+        {
+            LogStartingQuietly(spec.FileName, spec.Arguments);
+        }
+        else
+        {
+            LogStarting(spec.FileName, spec.Arguments);
+        }
+
         var stopwatch = Stopwatch.StartNew();
         var result = await command.ExecuteAsync(cancellationToken).ConfigureAwait(false);
-        LogFinished(spec.FileName, result.ExitCode, stopwatch.Elapsed);
+        if (spec.Quiet)
+        {
+            LogFinishedQuietly(spec.FileName, result.ExitCode, stopwatch.Elapsed);
+        }
+        else
+        {
+            LogFinished(spec.FileName, result.ExitCode, stopwatch.Elapsed);
+        }
+
         return new ProcessResult(result.ExitCode, stopwatch.Elapsed);
 
         void Forward(OutputSource source, string text)
@@ -43,4 +59,10 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
 
     [LoggerMessage(Level = LogLevel.Information, Message = "{FileName} exited with code {ExitCode} after {Duration}")]
     private partial void LogFinished(string fileName, int exitCode, TimeSpan duration);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Running {FileName} {Arguments}")]
+    private partial void LogStartingQuietly(string fileName, IReadOnlyList<string> arguments);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{FileName} exited with code {ExitCode} after {Duration}")]
+    private partial void LogFinishedQuietly(string fileName, int exitCode, TimeSpan duration);
 }

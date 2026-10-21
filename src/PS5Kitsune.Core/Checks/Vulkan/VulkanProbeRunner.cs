@@ -85,6 +85,7 @@ public sealed partial class VulkanProbeRunner : IVulkanProbeRunner
     {
         var spec = new ProcessSpec(_executable, [ProbeArgument])
         {
+            Quiet = true,
             Environment = withoutDozen
                 ? new Dictionary<string, string?> { [DisableDriversVariable] = DozenPattern }
                 : new Dictionary<string, string?>(),

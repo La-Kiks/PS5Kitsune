@@ -29,6 +29,7 @@ public sealed class VulkanProbeRunnerTests
         Assert.Equal("probe.exe", call.FileName);
         Assert.Equal(["--probe-vulkan"], call.Arguments);
         Assert.Empty(call.Environment);
+        Assert.True(call.Quiet);
     }
 
     [Fact]
