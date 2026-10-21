@@ -13,8 +13,11 @@ public sealed class DataLayout(string root)
 
     public string Profiles => Path.Combine(Root, "profiles");
 
+    /// <summary>The AnyPS5 install and, in build mode, its clone, build folder and step markers.</summary>
+    public string AnyPS5 => Path.Combine(Root, "anyps5");
+
     /// <summary>The AnyPS5 install used to convert games: relinker, libs, scripts.</summary>
-    public string AnyPS5Current => Path.Combine(Root, "anyps5", "current");
+    public string AnyPS5Current => Path.Combine(AnyPS5, "current");
 
     public string Games => Path.Combine(Root, "games");
 
