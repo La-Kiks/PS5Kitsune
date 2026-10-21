@@ -8,17 +8,21 @@ public sealed class OutputTail(int capacity = 20)
     private readonly Queue<string> _lines = new();
     private readonly Lock _lock = new();
 
-    /// <summary>Pass as the output callback of <see cref="IProcessRunner.RunAsync"/>.</summary>
+    /// <summary>Pass as the output callback of <see cref="IProcessRunner.RunAsync"/>: keeps the error output only.</summary>
     public void Collect(OutputLine line)
     {
-        if (line.Source != OutputSource.StandardError)
+        if (line.Source == OutputSource.StandardError)
         {
-            return;
+            Add(line.Text);
         }
+    }
 
+    /// <summary>Keeps a line whatever its source; build tools print compiler errors on the standard output.</summary>
+    public void Add(string text)
+    {
         lock (_lock)
         {
-            _lines.Enqueue(line.Text);
+            _lines.Enqueue(text);
             if (_lines.Count > capacity)
             {
                 _lines.Dequeue();

@@ -32,7 +32,17 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
         }
 
         var stopwatch = Stopwatch.StartNew();
-        var result = await command.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+
+        // CliWrap's cancellation may stop only the direct child; Ninja's g++ and cc1plus would keep running.
+        // So the command runs without CliWrap's token, and cancellation kills the whole tree.
+        var task = command.ExecuteAsync(CancellationToken.None);
+        CommandResult result;
+        using (cancellationToken.Register(() => KillTree(task.ProcessId)))
+        {
+            result = await task.ConfigureAwait(false);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
         if (spec.Quiet)
         {
             LogFinishedQuietly(spec.FileName, result.ExitCode, stopwatch.Elapsed);
@@ -46,10 +56,34 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
 
         void Forward(OutputSource source, string text)
         {
-            LogOutput(spec.FileName, text);
+            if (source == OutputSource.StandardError && !spec.Quiet)
+            {
+                LogErrorOutput(spec.FileName, text);
+            }
+            else
+            {
+                LogOutput(spec.FileName, text);
+            }
+
             onOutput?.Invoke(new OutputLine(source, text));
         }
     }
+
+    private static void KillTree(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            process.Kill(entireProcessTree: true);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Already exited.
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[{FileName}] {Text}")]
+    private partial void LogErrorOutput(string fileName, string text);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Running {FileName} {Arguments}")]
     private partial void LogStarting(string fileName, IReadOnlyList<string> arguments);
