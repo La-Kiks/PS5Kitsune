@@ -37,7 +37,7 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
         // So the command runs without CliWrap's token, and cancellation kills the whole tree.
         var task = command.ExecuteAsync(CancellationToken.None);
         CommandResult result;
-        using (cancellationToken.Register(() => KillTree(task.ProcessId)))
+        using (cancellationToken.Register(() => KillTree(spec.FileName, task.ProcessId)))
         {
             result = await task.ConfigureAwait(false);
         }
@@ -69,18 +69,26 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
         }
     }
 
-    private static void KillTree(int processId)
+    private void KillTree(string fileName, int processId)
     {
         try
         {
             using var process = Process.GetProcessById(processId);
             process.Kill(entireProcessTree: true);
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {
-            // Already exited.
+            // Already exited, so there is nothing left to stop.
+        }
+        catch (Exception exception) when (exception is AggregateException or NotSupportedException or System.ComponentModel.Win32Exception)
+        {
+            // Runs inside a cancellation callback, so it must not throw: log and keep going.
+            LogKillFailed(fileName, exception.Message);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not stop every process started by {FileName}: {Reason}")]
+    private partial void LogKillFailed(string fileName, string reason);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "[{FileName}] {Text}")]
     private partial void LogErrorOutput(string fileName, string text);
