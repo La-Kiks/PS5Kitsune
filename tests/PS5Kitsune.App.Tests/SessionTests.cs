@@ -45,12 +45,17 @@ public sealed partial class SessionTests : IDisposable
             firstLog = first.LogFile;
         }
 
+        // The disposed session released its file: nothing else can hold it open.
+        using (new FileStream(firstLog, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+        }
+
         using var second = RootSession.Create(_temp.Combine("b"), new TestPlatform(), profile);
         Write(second.Get<ILogger<SessionTests>>(), "second session");
 
         Assert.StartsWith(_temp.Combine("a", "logs"), firstLog, StringComparison.Ordinal);
         Assert.StartsWith(_temp.Combine("b", "logs"), second.LogFile, StringComparison.Ordinal);
-        Assert.Contains("first session", ReadLog(firstLog), StringComparison.Ordinal);
+        Assert.Contains("first session", File.ReadAllText(firstLog), StringComparison.Ordinal);
         Assert.Contains("second session", ReadLog(second.LogFile), StringComparison.Ordinal);
     }
 

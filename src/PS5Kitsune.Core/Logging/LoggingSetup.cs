@@ -28,11 +28,15 @@ public static class LoggingSetup
             configuration.AddRule(NLogLevel.Info, NLogLevel.Fatal, new ConsoleTarget("console") { Layout = "${message}" });
         }
 
+        // One factory per call, owned by the container: disposing the provider closes this run's files
+        // without touching another run's configuration.
+        var factory = new NLog.LogFactory { Configuration = configuration };
+        services.AddSingleton(_ => factory);
         services.AddLogging(builder =>
         {
             builder.ClearProviders();
             builder.SetMinimumLevel(LogLevel.Debug);
-            builder.AddNLog(configuration);
+            builder.AddNLog(provider => provider.GetRequiredService<NLog.LogFactory>());
         });
         return logFile;
     }
