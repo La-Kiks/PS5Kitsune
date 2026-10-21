@@ -10,7 +10,7 @@ namespace PS5Kitsune.App.Tests;
 
 public sealed class HomeViewModelTests : IDisposable
 {
-    private static readonly AnyPS5InstallRecord Record = new(1, "test-profile", "release", "v0.1.2", new Uri("https://example.test/u.py"), new DateTimeOffset(2026, 10, 21, 9, 0, 0, TimeSpan.Zero));
+    private static readonly AnyPS5InstallRecord Record = new(1, "test-profile", AnyPS5Mode.Release, "v0.1.2", null, new Uri("https://example.test/u.py"), new DateTimeOffset(2026, 10, 21, 9, 0, 0, TimeSpan.Zero));
 
     private readonly TempDirectory _temp = new();
     private readonly FakeInstaller _installer = new();

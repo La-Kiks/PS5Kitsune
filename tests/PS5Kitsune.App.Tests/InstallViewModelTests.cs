@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Pipeline;
 
 namespace PS5Kitsune.App.Tests;
@@ -13,7 +14,17 @@ public sealed class InstallViewModelTests
     private readonly List<bool> _busy = [];
 
     private InstallViewModel Create() =>
-        new(_installer, "C:/root/logs/app.log", _platform, new InlineDispatcher(), _navigator, new FakePages(), _busy.Add);
+        new(_installer, AnyPS5Mode.Release, "C:/root/logs/app.log", _platform, new InlineDispatcher(), _navigator, new FakePages(), _busy.Add);
+
+    [Fact]
+    public async Task Installs_in_the_mode_it_was_created_with()
+    {
+        var viewModel = Create();
+
+        await viewModel.RunAsync();
+
+        Assert.Equal(AnyPS5Mode.Release, _installer.InstalledMode);
+    }
 
     [Fact]
     public void Lists_the_steps_before_starting()

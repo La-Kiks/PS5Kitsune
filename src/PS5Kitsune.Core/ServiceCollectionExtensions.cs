@@ -43,6 +43,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<StepRunner>();
         services.AddSingleton<AnyPS5Paths>();
+        services.AddSingleton<IAnyPS5Source, ReleaseSource>();
         services.AddSingleton<AnyPS5Installer>();
         services.AddSingleton<IAnyPS5Installer>(provider => provider.GetRequiredService<AnyPS5Installer>());
         services.AddSingleton<GameSourceResolver>();

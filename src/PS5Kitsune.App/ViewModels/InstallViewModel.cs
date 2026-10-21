@@ -16,6 +16,7 @@ namespace PS5Kitsune.App.ViewModels;
 public sealed partial class InstallViewModel : ObservableObject, INavigationAware
 {
     private readonly IAnyPS5Installer _installer;
+    private readonly AnyPS5Mode _mode;
     private readonly string _logFile;
     private readonly IPlatform _platform;
     private readonly IUiDispatcher _ui;
@@ -27,16 +28,17 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
     private bool _started;
 
     /// <param name="busyChanged">Told true when the install starts and false when it stops, so the data root cannot change meanwhile.</param>
-    public InstallViewModel(IAnyPS5Installer installer, string logFile, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, Action<bool>? busyChanged = null)
+    public InstallViewModel(IAnyPS5Installer installer, AnyPS5Mode mode, string logFile, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, Action<bool>? busyChanged = null)
     {
         _installer = installer;
+        _mode = mode;
         _logFile = logFile;
         _platform = platform;
         _ui = ui;
         _navigator = navigator;
         _pages = pages;
         _busyChanged = busyChanged;
-        Steps = [.. installer.CreateSteps().Select(step => new InstallStepViewModel(step.Name))];
+        Steps = [.. installer.CreateSteps(mode).Select(step => new InstallStepViewModel(step.Name))];
     }
 
     public ObservableCollection<InstallStepViewModel> Steps { get; }
@@ -106,7 +108,7 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         _busyChanged?.Invoke(true);
         try
         {
-            await _installer.InstallAsync(new UiProgress(this), stepEvent => _ui.Post(() => Apply(stepEvent)), cancellation.Token).ConfigureAwait(true);
+            await _installer.InstallAsync(_mode, new UiProgress(this), stepEvent => _ui.Post(() => Apply(stepEvent)), cancellation.Token).ConfigureAwait(true);
             _ui.Post(() => _navigator.GoTo(_pages.Done()));
         }
         catch (OperationCanceledException)

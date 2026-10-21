@@ -1,3 +1,4 @@
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.ViewModels;
@@ -67,7 +68,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     private InstallViewModel StartRunningInstall()
     {
         _installer.Install = (_, _, cancellationToken) => Task.Delay(Timeout.Infinite, cancellationToken);
-        var install = new InstallViewModel(_installer, "app.log", new TestPlatform(), new InlineDispatcher(), _navigator, new FakePages());
+        var install = new InstallViewModel(_installer, AnyPS5Mode.Release, "app.log", new TestPlatform(), new InlineDispatcher(), _navigator, new FakePages());
         _navigator.GoTo(install);
         return install;
     }

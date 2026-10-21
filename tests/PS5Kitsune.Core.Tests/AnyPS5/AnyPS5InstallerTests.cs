@@ -43,7 +43,7 @@ public sealed class AnyPS5InstallerTests : IDisposable
         var record = JsonFiles.Read<AnyPS5InstallRecord>(Path.Combine(Current, "install.json"));
 
         Assert.Equal(
-            new AnyPS5InstallRecord(1, "test-profile", "release", "v0.1.2", AnyPS5TestSetup.UnwrapScriptUrl, _setup.Time.GetLocalNow()),
+            new AnyPS5InstallRecord(2, "test-profile", AnyPS5Mode.Release, "v0.1.2", null, AnyPS5TestSetup.UnwrapScriptUrl, _setup.Time.GetLocalNow()),
             record);
     }
 
@@ -87,7 +87,7 @@ public sealed class AnyPS5InstallerTests : IDisposable
     [Fact]
     public void An_empty_root_is_not_installed()
     {
-        var state = _setup.Installer.GetState();
+        var state = _setup.Installer.GetState(AnyPS5Mode.Release);
 
         Assert.Equal(AnyPS5InstallStatus.NotInstalled, state.Status);
         Assert.Null(state.Record);
@@ -98,7 +98,7 @@ public sealed class AnyPS5InstallerTests : IDisposable
     {
         await _setup.InstallAsync();
 
-        var state = _setup.Installer.GetState();
+        var state = _setup.Installer.GetState(AnyPS5Mode.Release);
 
         Assert.Equal(AnyPS5InstallStatus.Installed, state.Status);
         Assert.Equal("v0.1.2", state.Record?.Version);
@@ -111,7 +111,7 @@ public sealed class AnyPS5InstallerTests : IDisposable
         await _setup.InstallAsync();
         File.Delete(_setup.Paths.Relinker);
 
-        Assert.Equal(AnyPS5InstallStatus.Incomplete, _setup.Installer.GetState().Status);
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, _setup.Installer.GetState(AnyPS5Mode.Release).Status);
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public sealed class AnyPS5InstallerTests : IDisposable
         var record = JsonFiles.Read<AnyPS5InstallRecord>(_setup.Paths.RecordFile)!;
         await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Version = "v0.1.1" }, TestContext.Current.CancellationToken);
 
-        var state = _setup.Installer.GetState();
+        var state = _setup.Installer.GetState(AnyPS5Mode.Release);
 
         Assert.Equal(AnyPS5InstallStatus.Incomplete, state.Status);
         Assert.Equal("v0.1.1", state.Record?.Version);
@@ -133,11 +133,63 @@ public sealed class AnyPS5InstallerTests : IDisposable
         await _setup.InstallAsync();
         await File.WriteAllTextAsync(_setup.Paths.RecordFile, "{ not json", TestContext.Current.CancellationToken);
 
-        var state = _setup.Installer.GetState();
+        var state = _setup.Installer.GetState(AnyPS5Mode.Release);
 
         Assert.Equal(AnyPS5InstallStatus.Incomplete, state.Status);
         Assert.Null(state.Record);
     }
 
     public void Dispose() => _temp.Dispose();
+
+    [Fact]
+    public async Task A_schema_1_record_still_counts_as_installed()
+    {
+        await _setup.InstallAsync();
+        await File.WriteAllTextAsync(_setup.Paths.RecordFile, $$"""
+            {
+              "schemaVersion": 1, "profile": "test-profile", "mode": "release", "version": "v0.1.2",
+              "unwrapScript": "{{AnyPS5TestSetup.UnwrapScriptUrl}}", "installedAt": "2026-10-20T12:00:00+00:00"
+            }
+            """, TestContext.Current.CancellationToken);
+
+        var state = _setup.Installer.GetState(AnyPS5Mode.Release);
+
+        Assert.Equal(AnyPS5InstallStatus.Installed, state.Status);
+        Assert.Equal(AnyPS5Mode.Release, state.Record?.Mode);
+        Assert.Null(state.Record?.Commit);
+    }
+
+    [Fact]
+    public async Task The_current_mode_comes_from_the_record()
+    {
+        Assert.Equal(AnyPS5Mode.Release, _setup.Installer.CurrentMode);
+        await _setup.InstallAsync();
+        var record = _setup.Installer.ReadRecord()!;
+        await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Mode = AnyPS5Mode.Build }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
+        Assert.Equal(AnyPS5InstallStatus.Incomplete, _setup.Installer.GetState(AnyPS5Mode.Release).Status);
+    }
+
+    [Fact]
+    public async Task Installing_another_mode_empties_current_first()
+    {
+        await _setup.InstallAsync();
+        var record = _setup.Installer.ReadRecord()!;
+        await JsonFiles.WriteAsync(_setup.Paths.RecordFile, record with { Mode = AnyPS5Mode.Build }, TestContext.Current.CancellationToken);
+        TestFiles.Write(Path.Combine(Current, "libs", "libTracyClient.dll"), "left by the other mode");
+
+        await _setup.InstallAsync();
+
+        Assert.False(File.Exists(Path.Combine(Current, "libs", "libTracyClient.dll")));
+        Assert.Equal(AnyPS5InstallStatus.Installed, _setup.Installer.GetState(AnyPS5Mode.Release).Status);
+    }
+
+    [Fact]
+    public void A_mode_without_a_source_is_refused()
+    {
+        var exception = Assert.Throws<InvalidOperationException>(() => _setup.Installer.CreateSteps(AnyPS5Mode.Build));
+
+        Assert.Contains("build", exception.Message, StringComparison.Ordinal);
+    }
 }

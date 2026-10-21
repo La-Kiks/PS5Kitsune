@@ -21,7 +21,7 @@ internal static class InstallCommand
                 return CheckReportPrinter.BlockingExitCode;
             }
 
-            await services.GetRequiredService<AnyPS5Installer>().InstallAsync(new ConsoleStepProgress(), cancellationToken: cancellationToken);
+            await services.GetRequiredService<AnyPS5Installer>().InstallAsync(AnyPS5Mode.Release, new ConsoleStepProgress(), cancellationToken: cancellationToken);
             var version = services.GetRequiredService<AnyPS5Profile>().Source.Version;
             var directory = services.GetRequiredService<AnyPS5Paths>().RootDirectory;
             logger.AnyPS5Ready(version, directory);

@@ -42,7 +42,8 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     {
         var session = sessions.Current;
         var profile = session.Get<AnyPS5Profile>();
-        var state = session.Get<IAnyPS5Installer>().GetState();
+        var installer = session.Get<IAnyPS5Installer>();
+        var state = installer.GetState(installer.CurrentMode);
         DataRoot = session.Layout.Root;
         ProfileText = $"{profile.Id} ({(profile.Validated ? "validated" : "not validated yet")})";
         Status = state.Status;

@@ -7,7 +7,7 @@ namespace PS5Kitsune.App.Tests;
 
 public sealed class DoneViewModelTests
 {
-    private static readonly AnyPS5InstallRecord Record = new(1, "test-profile", "release", "v0.1.2", new Uri("https://example.test/u.py"), DateTimeOffset.UnixEpoch);
+    private static readonly AnyPS5InstallRecord Record = new(1, "test-profile", AnyPS5Mode.Release, "v0.1.2", null, new Uri("https://example.test/u.py"), DateTimeOffset.UnixEpoch);
 
     private readonly TestPlatform _platform = new();
     private readonly Navigator _navigator = new();

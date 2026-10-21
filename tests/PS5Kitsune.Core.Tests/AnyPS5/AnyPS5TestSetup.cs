@@ -63,7 +63,8 @@ internal sealed class AnyPS5TestSetup
 
         PythonTool = new PythonEmbeddableTool(Profile.Tools[PythonEmbeddableTool.ToolId], Layout, Platform, Downloader, Runner);
         Paths = new AnyPS5Paths(Layout, Platform);
-        Installer = new AnyPS5Installer(Profile, Paths, Layout, PythonTool, Downloader, StepRunner, Time);
+        ReleaseSource = new ReleaseSource(Profile, Paths, Layout, Downloader);
+        Installer = new AnyPS5Installer([ReleaseSource], PythonTool, Paths, StepRunner, Time);
     }
 
     public DataLayout Layout { get; }
@@ -84,7 +85,9 @@ internal sealed class AnyPS5TestSetup
 
     public StepRunner StepRunner { get; } = new(NullLogger<StepRunner>.Instance);
 
+    public ReleaseSource ReleaseSource { get; }
+
     public AnyPS5Installer Installer { get; }
 
-    public Task InstallAsync() => Installer.InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
+    public Task InstallAsync(AnyPS5Mode mode = AnyPS5Mode.Release) => Installer.InstallAsync(mode, cancellationToken: TestContext.Current.CancellationToken);
 }

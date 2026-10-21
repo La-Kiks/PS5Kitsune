@@ -22,8 +22,8 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
     public object Mode() => new ModeViewModel(Session.Get<AnyPS5Profile>(), navigator, this);
 
     public object Install() =>
-        new InstallViewModel(Session.Get<IAnyPS5Installer>(), Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
+        new InstallViewModel(Session.Get<IAnyPS5Installer>(), AnyPS5Mode.Release, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
 
     public object Done() =>
-        new DoneViewModel(Session.Get<IAnyPS5Installer>().GetState().Record, Session.Get<AnyPS5Paths>(), Session.LogFile, platform, navigator, this);
+        new DoneViewModel(Session.Get<IAnyPS5Installer>().ReadRecord(), Session.Get<AnyPS5Paths>(), Session.LogFile, platform, navigator, this);
 }

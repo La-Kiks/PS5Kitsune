@@ -62,12 +62,19 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public int Runs { get; private set; }
 
-    public IReadOnlyList<IStep> CreateSteps() => [.. stepNames.Select(name => new NamedStep(name))];
+    public AnyPS5Mode CurrentMode { get; set; } = AnyPS5Mode.Release;
 
-    public AnyPS5InstallState GetState() => State;
+    public AnyPS5Mode? InstalledMode { get; private set; }
 
-    public Task InstallAsync(IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
+    public AnyPS5InstallRecord? ReadRecord() => State.Record;
+
+    public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. stepNames.Select(name => new NamedStep(name))];
+
+    public AnyPS5InstallState GetState(AnyPS5Mode mode) => State;
+
+    public Task InstallAsync(AnyPS5Mode mode, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
     {
+        InstalledMode = mode;
         Runs++;
         return Install(progress, onEvent, cancellationToken);
     }
