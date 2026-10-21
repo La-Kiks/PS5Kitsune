@@ -16,17 +16,18 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 2 of 8 (end-to-end command-line path). There is no graphical interface yet. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 3 of 8 (PC checks). The app shows a PC check screen; installing and adding games still go through the command line. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
 ```powershell
-ps5kitsune install                   # Python, relinker, libraries and scripts of AnyPS5 v0.1.2
+ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
+ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.2
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
 ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ```
 
-Every command takes `--root <data root>`; the default is `C:\PS5Kitsune`.
+Every command takes `--root <data root>`; the default is `C:\PS5Kitsune`. `check` and `install` exit with code 2 when a check is blocking.
 
 ## What PS5Kitsune does not do
 

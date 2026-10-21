@@ -144,3 +144,5 @@ This replaces the roadmap's criterion ("an Intel Iris Xe laptop reports `shaderI
 
 1. On the AMD laptop (Ryzen 7 7730U, Radeon iGPU), `ps5kitsune check` and the screen show the same results, with no blocking result. The commit limit may be a warning, depending on the page file.
 2. On an Intel + NVIDIA PC (available in a few days), the probe sees both GPUs; if the iGPU lacks `shaderInt64` it is reported and the NVIDIA GPU is named as usable. The result is recorded in the architecture. This run may happen after the PR is merged: the logic is covered by the fixtures, the run confirms it on real hardware.
+
+**2026-10-21, AMD laptop:** `check` exit 0; os-arch OK, cpu-extensions OK, cpu-vendor Info (AMD), vulkan-driver OK (AMD Radeon (TM) Graphics), vulkan-features OK, commit-limit OK (18,333 MiB available; limit 13,824 MiB), dozen OK, nvidia-driver OK, disk-space OK, install-path OK. The screen: pending the user's confirmation. Intel + NVIDIA run: pending.
