@@ -15,8 +15,9 @@ internal static class AddCommand
         var command = new Command("add", "Validate a game, copy it into the games folder, convert it and audit its imports.") { pathArgument };
         command.SetAction((parseResult, cancellationToken) => CommandHost.RunAsync(parseResult.GetValue(rootOption), "add", async (services, logger) =>
         {
-            var vendor = CpuVendor.Detect();
-            var toIntel = CpuVendor.IsIntel(vendor);
+            var cpu = services.GetRequiredService<ICpuInfo>().Read();
+            var vendor = cpu.Vendor;
+            var toIntel = cpu.IsIntel;
             var toIntelText = toIntel ? "yes" : "no";
             logger.CpuDetected(vendor, toIntelText);
 

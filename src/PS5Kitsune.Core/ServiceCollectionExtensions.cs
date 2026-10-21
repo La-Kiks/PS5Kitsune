@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Downloads;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
@@ -29,6 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDownloader, HttpDownloader>();
         services.AddSingleton<IProcessRunner, CliWrapProcessRunner>();
         services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<ICpuInfo, X86CpuInfo>();
         services.AddSingleton<StepRunner>();
         services.AddSingleton<AnyPS5Paths>();
         services.AddSingleton<AnyPS5Installer>();
