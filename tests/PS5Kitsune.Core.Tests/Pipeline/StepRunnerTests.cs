@@ -68,6 +68,50 @@ public sealed class StepRunnerTests
     }
 
     [Fact]
+    public async Task A_failing_done_check_is_reported_as_the_step_failure()
+    {
+        var steps = new IStep[]
+        {
+            new FakeStep("A", _executed) { DoneFailure = new UnauthorizedAccessException("access denied") },
+            new FakeStep("B", _executed),
+        };
+
+        var exception = await Assert.ThrowsAsync<StepFailedException>(() =>
+            _runner.RunAsync(steps, onEvent: _events.Add, cancellationToken: TestContext.Current.CancellationToken));
+
+        Assert.Equal("A", exception.StepName);
+        Assert.IsType<UnauthorizedAccessException>(exception.InnerException);
+        Assert.Empty(_executed);
+        Assert.Equal([(StepEventKind.Failed, "A")], _events.Select(e => (e.Kind, e.StepName)));
+    }
+
+    [Fact]
+    public async Task Cancelling_during_a_step_emits_Cancelled_for_it()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var a = new FakeStep("A", _executed) { OnExecute = cancellation.Cancel, Failure = new OperationCanceledException(cancellation.Token) };
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            _runner.RunAsync([a, new FakeStep("B", _executed)], onEvent: _events.Add, cancellationToken: cancellation.Token));
+
+        Assert.Equal([(StepEventKind.Started, "A"), (StepEventKind.Cancelled, "A")], _events.Select(e => (e.Kind, e.StepName)));
+        Assert.NotNull(_events[^1].Duration);
+    }
+
+    [Fact]
+    public async Task Cancelling_before_the_first_step_emits_nothing()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            _runner.RunAsync([new FakeStep("A", _executed)], onEvent: _events.Add, cancellationToken: cancellation.Token));
+
+        Assert.Empty(_events);
+        Assert.Empty(_executed);
+    }
+
+    [Fact]
     public void Download_progress_is_forwarded_synchronously()
     {
         var received = new List<StepProgress>();
@@ -94,7 +138,9 @@ public sealed class StepRunnerTests
 
         public Action? OnExecute { get; init; }
 
-        public bool IsAlreadyDone() => Done;
+        public Exception? DoneFailure { get; init; }
+
+        public bool IsAlreadyDone() => DoneFailure is null ? Done : throw DoneFailure;
 
         public Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken)
         {
