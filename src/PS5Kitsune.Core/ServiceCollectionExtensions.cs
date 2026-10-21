@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Downloads;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
@@ -31,6 +32,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IProcessRunner, CliWrapProcessRunner>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ICpuInfo, X86CpuInfo>();
+        services.AddSingleton<IVulkanProbeRunner, VulkanProbeRunner>();
+        services.AddSingleton<SystemFactsCollector>();
+        services.AddSingleton<ISystemChecker, SystemChecker>();
+        foreach (var check in SystemChecks.All)
+        {
+            // Registered against the interface: SystemChecker receives them as IEnumerable<ISystemCheck>, in this order.
+            services.AddSingleton<ISystemCheck>(check);
+        }
+
         services.AddSingleton<StepRunner>();
         services.AddSingleton<AnyPS5Paths>();
         services.AddSingleton<AnyPS5Installer>();
