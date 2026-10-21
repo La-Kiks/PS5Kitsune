@@ -103,7 +103,7 @@ public sealed class CliWrapProcessRunnerTests
     }
 
     [Fact]
-    public async Task Error_output_is_logged_at_Information()
+    public async Task Error_output_is_logged_at_Debug()
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -115,7 +115,8 @@ public sealed class CliWrapProcessRunnerTests
 
         await runner.RunAsync(new ProcessSpec("cmd.exe", ["/c", "echo oops 1>&2"]), cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Information && entry.Message.Contains("oops", StringComparison.Ordinal));
+        var line = Assert.Single(logger.Entries, entry => entry.Message.StartsWith("[cmd.exe] oops", StringComparison.Ordinal));
+        Assert.Equal(LogLevel.Debug, line.Level);
     }
 
     private sealed class CapturingLogger : ILogger<CliWrapProcessRunner>

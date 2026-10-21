@@ -56,15 +56,8 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
 
         void Forward(OutputSource source, string text)
         {
-            if (source == OutputSource.StandardError && !spec.Quiet)
-            {
-                LogErrorOutput(spec.FileName, text);
-            }
-            else
-            {
-                LogOutput(spec.FileName, text);
-            }
-
+            // Debug only: the log file keeps every line, and a step reports the lines that matter through its progress.
+            LogOutput(spec.FileName, text);
             onOutput?.Invoke(new OutputLine(source, text));
         }
     }
@@ -89,9 +82,6 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not stop every process started by {FileName}: {Reason}")]
     private partial void LogKillFailed(string fileName, string reason);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "[{FileName}] {Text}")]
-    private partial void LogErrorOutput(string fileName, string text);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Running {FileName} {Arguments}")]
     private partial void LogStarting(string fileName, IReadOnlyList<string> arguments);
