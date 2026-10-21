@@ -1,13 +1,15 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Checks;
 
 namespace PS5Kitsune.App.ViewModels;
 
-/// <summary>The PC check screen: runs every check and shows the results with a verdict.</summary>
-public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatform platform) : ObservableObject
+/// <summary>The PC check screen: runs every check and shows the results with a verdict. A blocking result stops the install here.</summary>
+public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatform platform, Navigator navigator, IPages pages)
+    : ObservableObject, INavigationAware
 {
     public ObservableCollection<CheckRowViewModel> Checks { get; } = [];
 
@@ -15,18 +17,34 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
     public ObservableCollection<string> Gpus { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanContinue))]
+    [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     public partial bool IsChecking { get; private set; }
 
     [ObservableProperty]
     public partial string Verdict { get; private set; } = "";
 
-    /// <summary>Null while checking.</summary>
+    /// <summary>Null while checking, before the first check and after a cancelled one.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BannerStatus))]
+    [NotifyPropertyChangedFor(nameof(CanContinue))]
+    [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     public partial CheckStatus? Overall { get; private set; }
 
     /// <summary>Colors the verdict banner: <see cref="Overall"/> with Info shown as Ok, because cpu-vendor is always Info.</summary>
     public CheckStatus? BannerStatus => Overall == CheckStatus.Info ? CheckStatus.Ok : Overall;
+
+    /// <summary>Warnings do not block: the banner already shows them.</summary>
+    public bool CanContinue => !IsChecking && Overall is { } overall && overall != CheckStatus.Blocking;
+
+    /// <summary>Checks the first time the page is shown, and again after a cancelled check; not when coming back from Mode.</summary>
+    public void OnNavigatedTo()
+    {
+        if (!IsChecking && Overall is null)
+        {
+            CheckCommand.Execute(null);
+        }
+    }
 
     [RelayCommand]
     private async Task CheckAsync(CancellationToken cancellationToken)
@@ -52,7 +70,11 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
             Overall = report.Overall;
             Verdict = report.Verdict;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (OperationCanceledException)
+        {
+            Verdict = "Check cancelled.";
+        }
+        catch (Exception exception)
         {
             Overall = CheckStatus.Blocking;
             Verdict = $"Could not check this PC: {exception.Message}";
@@ -61,5 +83,15 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
         {
             IsChecking = false;
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanContinue))]
+    private void Continue() => navigator.GoTo(pages.Mode());
+
+    [RelayCommand]
+    private void Back()
+    {
+        CheckCommand.Cancel();
+        navigator.GoBack();
     }
 }

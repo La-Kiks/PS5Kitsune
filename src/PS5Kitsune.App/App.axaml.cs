@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.App.Views;
 using PS5Kitsune.Core;
@@ -25,6 +26,8 @@ public sealed partial class App : Application
         services.AddPS5KitsuneLogging(layout.Logs, "app", console: false);
         services.AddPlatform(platform).AddPS5KitsuneCore(layout, ProfileLoader.LoadEmbedded());
         services.AddTransient<MainWindowViewModel>();
+        services.AddSingleton<Navigator>();
+        services.AddSingleton<IPages>(new UnwiredPages());
         services.AddTransient<SystemCheckViewModel>();
         _services = services.BuildServiceProvider();
 
@@ -38,5 +41,19 @@ public sealed partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    // Temporary bridge until the window is rewritten around the navigator (Task 11).
+    private sealed class UnwiredPages : IPages
+    {
+        public object Home() => throw new NotSupportedException();
+
+        public object SystemCheck() => throw new NotSupportedException();
+
+        public object Mode() => throw new NotSupportedException();
+
+        public object Install() => throw new NotSupportedException();
+
+        public object Done() => throw new NotSupportedException();
     }
 }
