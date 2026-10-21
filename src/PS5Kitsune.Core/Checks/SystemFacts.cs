@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Profiles;
 
@@ -25,4 +26,7 @@ public sealed record SystemFacts
     public long? FreeDiskBytes { get; init; }
 
     public required CheckThresholds Limits { get; init; }
+
+    /// <summary>The install mode the check is for: build mode needs more disk space.</summary>
+    public AnyPS5Mode Mode { get; init; } = AnyPS5Mode.Release;
 }

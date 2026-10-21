@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Profiles;
 
@@ -9,7 +10,7 @@ namespace PS5Kitsune.Core.Checks;
 /// <summary>Gathers every fact once, so each check stays a pure function and the probe runs once.</summary>
 public sealed class SystemFactsCollector(IPlatform platform, ICpuInfo cpu, IVulkanProbeRunner vulkan, DataLayout layout, AnyPS5Profile profile)
 {
-    public async Task<SystemFacts> CollectAsync(CancellationToken cancellationToken = default) => new()
+    public async Task<SystemFacts> CollectAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default) => new()
     {
         OSArchitecture = RuntimeInformation.OSArchitecture,
         Cpu = cpu.Read(),
@@ -19,6 +20,7 @@ public sealed class SystemFactsCollector(IPlatform platform, ICpuInfo cpu, IVulk
         DataRoot = layout.Root,
         FreeDiskBytes = FreeSpace(layout.Root),
         Limits = profile.Checks,
+        Mode = mode,
     };
 
     // The data root may not exist yet: its drive is what matters.
@@ -51,14 +53,14 @@ public sealed record SystemCheckReport(IReadOnlyList<CheckResult> Results, Vulka
 
 public interface ISystemChecker
 {
-    Task<SystemCheckReport> RunAsync(CancellationToken cancellationToken = default);
+    Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default);
 }
 
 public sealed partial class SystemChecker(SystemFactsCollector collector, IEnumerable<ISystemCheck> checks, ILogger<SystemChecker> logger) : ISystemChecker
 {
-    public async Task<SystemCheckReport> RunAsync(CancellationToken cancellationToken = default)
+    public async Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default)
     {
-        var facts = await collector.CollectAsync(cancellationToken).ConfigureAwait(false);
+        var facts = await collector.CollectAsync(mode, cancellationToken).ConfigureAwait(false);
         var results = checks.Select(check => check.Evaluate(facts)).ToList();
         foreach (var result in results)
         {

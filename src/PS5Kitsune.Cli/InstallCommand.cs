@@ -13,7 +13,7 @@ internal static class InstallCommand
         var command = new Command("install", "Install the AnyPS5 release of the active profile: Python, relinker, libraries and scripts.");
         command.SetAction((parseResult, cancellationToken) => CommandHost.RunAsync(parseResult.GetValue(rootOption), "install", async (services, logger) =>
         {
-            var report = await services.GetRequiredService<ISystemChecker>().RunAsync(cancellationToken);
+            var report = await services.GetRequiredService<ISystemChecker>().RunAsync(AnyPS5Mode.Release, cancellationToken);
             CheckReportPrinter.Print(logger, report, onlyProblems: true);
             if (report.HasBlocking)
             {

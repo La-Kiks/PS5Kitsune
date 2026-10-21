@@ -1,4 +1,5 @@
 using System.Globalization;
+using PS5Kitsune.Core.AnyPS5;
 
 namespace PS5Kitsune.Core.Checks;
 
@@ -20,12 +21,14 @@ public sealed class DiskSpaceCheck : SystemCheck
 
         var free = bytes / GiB;
         var shown = Math.Floor(free * 10) / 10;
-        var needed = facts.Limits.MinFreeDiskGiB;
+        var build = facts.Mode == AnyPS5Mode.Build;
+        var needed = build ? facts.Limits.BuildMinFreeDiskGiB : facts.Limits.MinFreeDiskGiB;
+        var what = build ? "AnyPS5 built from source and a game" : "AnyPS5 and a game";
         return free >= needed
             ? Result(CheckStatus.Ok, string.Create(CultureInfo.InvariantCulture, $"{shown:0.0} GiB free on the data folder's drive."))
             : Result(
                 CheckStatus.Warning,
-                string.Create(CultureInfo.InvariantCulture, $"{shown:0.0} GiB free on the data folder's drive; AnyPS5 and a game need about {needed} GiB."),
+                string.Create(CultureInfo.InvariantCulture, $"{shown:0.0} GiB free on the data folder's drive; {what} need about {needed} GiB."),
                 "Free some space, or choose a data folder on another drive.");
     }
 }

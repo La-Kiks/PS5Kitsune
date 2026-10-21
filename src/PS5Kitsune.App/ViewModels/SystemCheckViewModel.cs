@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 
 namespace PS5Kitsune.App.ViewModels;
@@ -56,7 +57,7 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
         Gpus.Clear();
         try
         {
-            var report = await checker.RunAsync(cancellationToken).ConfigureAwait(true);
+            var report = await checker.RunAsync(AnyPS5Mode.Release, cancellationToken).ConfigureAwait(true);
             foreach (var result in report.Results)
             {
                 Checks.Add(new CheckRowViewModel(result, platform));

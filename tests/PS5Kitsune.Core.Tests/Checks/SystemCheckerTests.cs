@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Profiles;
@@ -26,7 +27,7 @@ public sealed class SystemCheckerTests : IDisposable
         _platform.CommitLimitBytes = 16UL << 30;
         _platform.VulkanDriverManifests = ["dzn_icd.json"];
 
-        var facts = await CreateCollector().CollectAsync(TestContext.Current.CancellationToken);
+        var facts = await CreateCollector().CollectAsync(AnyPS5Mode.Release, TestContext.Current.CancellationToken);
 
         Assert.Equal(16UL << 30, facts.CommitLimitBytes);
         Assert.Equal(["dzn_icd.json"], facts.VulkanDriverManifests);
@@ -43,7 +44,7 @@ public sealed class SystemCheckerTests : IDisposable
         _platform.CommitLimitBytes = 8UL << 30;
         var checker = new SystemChecker(CreateCollector(), SystemChecks.All, NullLogger<SystemChecker>.Instance);
 
-        var report = await checker.RunAsync(TestContext.Current.CancellationToken);
+        var report = await checker.RunAsync(AnyPS5Mode.Release, TestContext.Current.CancellationToken);
 
         Assert.Equal(
             ["os-arch", "cpu-extensions", "cpu-vendor", "vulkan-driver", "vulkan-features", "commit-limit", "dozen", "nvidia-driver", "disk-space", "install-path"],
