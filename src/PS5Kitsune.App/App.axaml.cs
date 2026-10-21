@@ -1,59 +1,49 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.Sessions;
+using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.App.Views;
-using PS5Kitsune.Core;
-using PS5Kitsune.Core.Logging;
 using PS5Kitsune.Core.Profiles;
+using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Platform.Windows;
 
 namespace PS5Kitsune.App;
 
 public sealed partial class App : Application
 {
-    private ServiceProvider? _services;
-
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
+    /// <summary>Composition root: root-independent objects here, everything tied to a data root in its <see cref="RootSession"/>.</summary>
     public override void OnFrameworkInitializationCompleted()
     {
         var platform = PlatformServices.Detect();
-        var layout = new DataLayout(platform.DefaultDataRoot);
-        var services = new ServiceCollection();
-        services.AddPS5KitsuneLogging(layout.Logs, "app", console: false);
-        services.AddPlatform(platform).AddPS5KitsuneCore(layout, ProfileLoader.LoadEmbedded());
-        services.AddTransient<MainWindowViewModel>();
-        services.AddSingleton<Navigator>();
-        services.AddSingleton<IPages>(new UnwiredPages());
-        services.AddTransient<SystemCheckViewModel>();
-        _services = services.BuildServiceProvider();
+        var profile = ProfileLoader.LoadEmbedded();
+        var settings = new AppSettingsStore(platform.SettingsDirectory);
+        var loaded = settings.Load();
+        var sessions = new SessionHost(
+            root => RootSession.Create(root, platform, profile),
+            DataRoots.Resolve(null, loaded.Settings, platform.DefaultDataRoot));
+        if (loaded.Problem is { } problem)
+        {
+            sessions.Current.Get<ILogger<App>>().SettingsIgnored(problem);
+        }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var viewModel = _services.GetRequiredService<MainWindowViewModel>();
-            var window = new MainWindow { DataContext = viewModel };
-            window.Opened += (_, _) => viewModel.SystemCheck.CheckCommand.Execute(null);
+            var window = new MainWindow();
+            var navigator = new Navigator();
+            var dialogs = new AvaloniaDialogService(() => window);
+            var pages = new PageFactory(sessions, navigator, dialogs, settings, new AvaloniaUiDispatcher(), platform);
+            window.DataContext = new MainWindowViewModel(sessions, navigator, platform, dialogs);
+            navigator.GoHome(pages.Home());
             desktop.MainWindow = window;
-            desktop.Exit += (_, _) => _services.Dispose();
+            desktop.Exit += (_, _) => sessions.Dispose();
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    // Temporary bridge until the window is rewritten around the navigator (Task 11).
-    private sealed class UnwiredPages : IPages
-    {
-        public object Home() => throw new NotSupportedException();
-
-        public object SystemCheck() => throw new NotSupportedException();
-
-        public object Mode() => throw new NotSupportedException();
-
-        public object Install() => throw new NotSupportedException();
-
-        public object Done() => throw new NotSupportedException();
     }
 }
