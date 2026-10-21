@@ -13,6 +13,8 @@ namespace PS5Kitsune.App.ViewModels;
 public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore settings, IDialogService dialogs, Navigator navigator, IPages pages)
     : ObservableObject, INavigationAware
 {
+    private const string BuildDetail = "Built from source. Repair or update it from the command line: ps5kitsune install";
+
     [ObservableProperty]
     public partial AnyPS5InstallStatus Status { get; private set; }
 
@@ -31,6 +33,11 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     [ObservableProperty]
     public partial string ProfileText { get; private set; } = "";
 
+    /// <summary>False for a build install: the app repairs or replaces a build only from milestone 5b on.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    public partial bool CanStart { get; private set; } = true;
+
     /// <summary>Why the chosen folder cannot be used; null otherwise.</summary>
     [ObservableProperty]
     public partial string? RootError { get; private set; }
@@ -43,7 +50,8 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         var session = sessions.Current;
         var profile = session.Get<AnyPS5Profile>();
         var installer = session.Get<IAnyPS5Installer>();
-        var state = installer.GetState(installer.CurrentMode);
+        var mode = installer.CurrentMode;
+        var state = installer.GetState(mode);
         DataRoot = session.Layout.Root;
         ProfileText = $"{profile.Id} ({(profile.Validated ? "validated" : "not validated yet")})";
         Status = state.Status;
@@ -64,9 +72,24 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
                 "Install it to convert and run games. It takes a few minutes and needs no compilation.",
                 "Install AnyPS5"),
         };
+
+        CanStart = mode != AnyPS5Mode.Build;
+        if (!CanStart)
+        {
+            if (state.Status == AnyPS5InstallStatus.Installed)
+            {
+                StateTitle = state.Record is null ? "AnyPS5 is installed (built from source)" : $"AnyPS5 {state.Record.Version} is installed (built from source)";
+                StateDetail = $"{StateDetail} {BuildDetail}".TrimStart();
+            }
+            else
+            {
+                StateTitle = "The AnyPS5 build is incomplete";
+                StateDetail = BuildDetail;
+            }
+        }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start() => navigator.GoTo(pages.SystemCheck());
 
     [RelayCommand]
