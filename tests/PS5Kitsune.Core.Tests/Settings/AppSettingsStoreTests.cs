@@ -21,7 +21,8 @@ public sealed class AppSettingsStoreTests : IDisposable
     [Fact]
     public async Task Saved_settings_load_back()
     {
-        var settings = new AppSettings(AppSettings.CurrentSchemaVersion, @"D:\PS5Kitsune");
+        // A fully qualified path on every OS: Load() ignores a relative root, and D:\ is relative on Linux.
+        var settings = new AppSettings(AppSettings.CurrentSchemaVersion, _temp.Combine("data"));
 
         await Store.SaveAsync(settings, TestContext.Current.CancellationToken);
 
