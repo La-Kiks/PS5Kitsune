@@ -84,6 +84,30 @@ public sealed class InstallViewModelTests
     }
 
     [Fact]
+    public async Task Retry_rebuilds_the_rows_when_the_step_list_got_shorter()
+    {
+        _installer.StepNames = ["Remove the other mode's files", "Install Python", "Download the relinker"];
+        _installer.Install = (_, _, _) => throw new StepFailedException("Download the relinker", new IOException("disk full"));
+        var viewModel = Create();
+
+        await viewModel.RunAsync();
+
+        Assert.Equal(3, viewModel.Steps.Count);
+
+        _installer.StepNames = ["Install Python", "Download the relinker"];
+        _installer.Install = (_, onEvent, _) =>
+        {
+            onEvent!(new StepEvent(StepEventKind.Skipped, "Install Python", 1, 2));
+            onEvent(new StepEvent(StepEventKind.Completed, "Download the relinker", 2, 2, TimeSpan.Zero));
+            return Task.CompletedTask;
+        };
+        await viewModel.RetryCommand.ExecuteAsync(null);
+
+        Assert.Equal(["Install Python", "Download the relinker"], viewModel.Steps.Select(step => step.Name));
+        Assert.Equal([InstallStepState.Skipped, InstallStepState.Done], viewModel.Steps.Select(step => step.State));
+    }
+
+    [Fact]
     public async Task Cancel_goes_back_home()
     {
         _installer.Install = async (_, onEvent, cancellationToken) =>

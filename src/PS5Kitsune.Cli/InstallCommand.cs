@@ -13,7 +13,7 @@ internal static class InstallCommand
     {
         var modeOption = new Option<AnyPS5Mode?>("--mode")
         {
-            Description = "release: download the release. build: compile the profile's commit. Defaults to the mode of the current install, else release.",
+            Description = "release: download the release. build: compile the profile's commit. Defaults to the mode of an unfinished install, else of the current install, else release.",
         };
         var command = new Command("install", "Install AnyPS5 from the active profile: Python, relinker, libraries and scripts.") { modeOption };
         command.SetAction((parseResult, cancellationToken) => CommandHost.RunAsync(parseResult.GetValue(rootOption), "install", async (services, logger) =>

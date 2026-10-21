@@ -38,7 +38,8 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         _navigator = navigator;
         _pages = pages;
         _busyChanged = busyChanged;
-        Steps = [.. installer.CreateSteps(mode).Select(step => new InstallStepViewModel(step.Name))];
+        Steps = [];
+        RebuildSteps();
     }
 
     public ObservableCollection<InstallStepViewModel> Steps { get; }
@@ -100,10 +101,7 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         IsRunning = true;
         HasFailed = false;
         Failure = null;
-        foreach (var step in Steps)
-        {
-            step.State = InstallStepState.Pending;
-        }
+        RebuildSteps();
 
         _busyChanged?.Invoke(true);
         try
@@ -133,6 +131,16 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
                 IsRunning = false;
                 IsDownloading = false;
             });
+        }
+    }
+
+    /// <summary>The list can be shorter on a retry (the other mode's files are gone), so the rows follow the installer's current steps.</summary>
+    private void RebuildSteps()
+    {
+        Steps.Clear();
+        foreach (var step in _installer.CreateSteps(_mode))
+        {
+            Steps.Add(new InstallStepViewModel(step.Name));
         }
     }
 

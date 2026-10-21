@@ -137,7 +137,7 @@ Before running the steps, the installer reads `install.json`. If it records the 
 
 `ps5kitsune install [--mode release|build]`.
 
-Mode resolution: the `--mode` option, else the mode in `install.json`, else `release`. After an override changes `build.commit`, a plain `ps5kitsune install` therefore updates the build.
+Mode resolution: the `--mode` option, else the mode of an unfinished install, else the mode in `install.json`, else `release`. After an override changes `build.commit`, a plain `ps5kitsune install` therefore updates the build.
 
 The command starts with three lines, before the PC check:
 
@@ -147,7 +147,7 @@ Profile: doom-validated-2026-10 (embedded)
 Mode: build (current install)
 ```
 
-The data root source is one of `--root`, `saved setting` or `default`. The mode source is one of `--mode`, `current install` or `default`. This also settles the milestone 4 follow-up "the CLI should print the data root it used".
+The data root source is one of `--root`, `saved setting` or `default`. The mode source is one of `--mode`, `unfinished install`, `current install` or `default`. This also settles the milestone 4 follow-up "the CLI should print the data root it used".
 
 ## Tool output
 

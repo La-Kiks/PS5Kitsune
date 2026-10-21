@@ -56,6 +56,9 @@ internal delegate Task InstallBehavior(IProgress<StepProgress>? progress, Action
 
 internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installer
 {
+    /// <summary>The names CreateSteps returns; a test changes them between runs.</summary>
+    public string[] StepNames { get; set; } = stepNames;
+
     public AnyPS5InstallState State { get; set; } = new(AnyPS5InstallStatus.NotInstalled, null);
 
     public InstallBehavior Install { get; set; } = (_, _, _) => Task.CompletedTask;
@@ -70,7 +73,7 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5InstallRecord? ReadRecord() => State.Record;
 
-    public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. stepNames.Select(name => new NamedStep(name))];
+    public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. StepNames.Select(name => new NamedStep(name))];
 
     public AnyPS5InstallState GetState(AnyPS5Mode mode) => State;
 
