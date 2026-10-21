@@ -66,9 +66,18 @@ public static class ProfileLoader
             RequireHttps(profile.Id, $"tool {name}", tool.Url);
         }
 
-        if (profile.Checks.CommitLimitMiB <= 0 || profile.Checks.MinFreeDiskGiB < 0)
+        if (profile.Build is { } build)
         {
-            throw new InvalidProfileException($"Profile {profile.Id}: checks.commitLimitMiB must be positive and checks.minFreeDiskGiB not negative.");
+            RequireHttps(profile.Id, "build repository", build.Repository);
+            if (build.Commit.Length != 40 || !build.Commit.All(char.IsAsciiHexDigitLower))
+            {
+                throw new InvalidProfileException($"Profile {profile.Id}: build.commit needs a full lowercase hex SHA, got \"{build.Commit}\".");
+            }
+        }
+
+        if (profile.Checks.CommitLimitMiB <= 0 || profile.Checks.MinFreeDiskGiB < 0 || profile.Checks.BuildMinFreeDiskGiB < 0)
+        {
+            throw new InvalidProfileException($"Profile {profile.Id}: checks.commitLimitMiB must be positive, checks.minFreeDiskGiB and checks.buildMinFreeDiskGiB not negative.");
         }
     }
 

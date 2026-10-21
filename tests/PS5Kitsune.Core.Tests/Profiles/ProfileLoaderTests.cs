@@ -152,5 +152,52 @@ public sealed class ProfileLoaderTests
         Assert.Contains("commitLimitMiB", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Embedded_profile_pins_the_build_commit_and_the_build_tools()
+    {
+        var profile = ProfileLoader.LoadEmbedded();
+
+        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5.git"), profile.Build?.Repository);
+        Assert.Equal("48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd", profile.Build?.Commit);
+        Assert.Equal("da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be", profile.Tools["mingit"].Sha256);
+        Assert.Equal("cb2fbad6162540cdf5e1facdce08d4dac359e8cf64f7f696a99274291763b815", profile.Tools["winlibs"].Sha256);
+        Assert.Equal(15, profile.Checks.BuildMinFreeDiskGiB);
+    }
+
+    [Theory]
+    [InlineData("http://github.com/boykopovar/AnyPS5.git", "48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd")]
+    [InlineData("https://github.com/boykopovar/AnyPS5.git", "48d61f5")]
+    [InlineData("https://github.com/boykopovar/AnyPS5.git", "48D61F53B46F1D0726889E4DD39C5EF2B3EB30CD")]
+    public void Rejects_an_invalid_build_section(string repository, string commit)
+    {
+        Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "build": { "repository": "{{repository}}", "commit": "{{commit}}" }
+            }
+            """));
+    }
+
+    [Fact]
+    public void Rejects_a_negative_build_disk_threshold()
+    {
+        Assert.Throws<InvalidProfileException>(() => Load("""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "checks": { "buildMinFreeDiskGiB": -1 }
+            }
+            """));
+    }
+
+    [Fact]
+    public void RequireBuild_names_the_profile_when_it_has_no_build_section()
+    {
+        var profile = Load("""{ "schemaVersion": 1, "id": "release-only", "source": { "kind": "release", "tag": "v1" } }""");
+
+        var exception = Assert.Throws<InvalidProfileException>(() => profile.RequireBuild());
+
+        Assert.Contains("release-only", exception.Message, StringComparison.Ordinal);
+    }
+
     private static AnyPS5Profile Load(string json) => ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes(json)));
 }

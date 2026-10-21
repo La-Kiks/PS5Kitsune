@@ -19,7 +19,8 @@ public sealed record AnyPS5Profile
 
     public required ProfileSource Source { get; init; }
 
-    public ProfileSource? AlternateSource { get; init; }
+    /// <summary>What build mode compiles; null when the profile only supports release mode.</summary>
+    public ProfileBuild? Build { get; init; }
 
     public IReadOnlyDictionary<string, ProfileAsset> Assets { get; init; } = new Dictionary<string, ProfileAsset>();
 
@@ -41,6 +42,10 @@ public sealed record AnyPS5Profile
         var asset = Asset(key);
         return asset.Url ?? new Uri($"{RepositoryUrl}/releases/download/{Source.Tag}/{asset.Name}");
     }
+
+    /// <exception cref="InvalidProfileException">The profile has no build section.</exception>
+    public ProfileBuild RequireBuild() =>
+        Build ?? throw new InvalidProfileException($"Profile {Id} has no build section: build mode is not available.");
 }
 
 /// <param name="Kind">"release" (uses <paramref name="Tag"/>) or "commit" (uses <paramref name="Sha"/>).</param>
@@ -50,6 +55,10 @@ public sealed record ProfileSource(string Kind, string? Tag = null, string? Sha 
     /// <summary>The tag of a release, the SHA of a commit.</summary>
     public string Version => Tag ?? Sha ?? "unknown";
 }
+
+/// <param name="Repository">Git URL of AnyPS5, over HTTPS.</param>
+/// <param name="Commit">Full lowercase SHA of the commit to build.</param>
+public sealed record ProfileBuild(Uri Repository, string Commit);
 
 /// <param name="Name">File name of a release asset of the source tag. Unused when <paramref name="Url"/> is set.</param>
 /// <param name="Url">Direct URL, for files that are not release assets (source archive, pinned script).</param>
@@ -85,6 +94,9 @@ public sealed record CheckThresholds
 
     /// <summary>Free space wanted on the data root's drive for AnyPS5 and a game.</summary>
     public long MinFreeDiskGiB { get; init; } = 5;
+
+    /// <summary>Free space wanted for build mode: the clone, the build folder, the tools and a game.</summary>
+    public long BuildMinFreeDiskGiB { get; init; } = 15;
 
     /// <summary>NVIDIA driver versions, as Vulkan's driverInfo reports them, known to crash AnyPS5 games.</summary>
     public IReadOnlyList<string> NvidiaBadDrivers { get; init; } = [];
