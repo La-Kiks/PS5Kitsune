@@ -24,4 +24,8 @@ internal sealed class FakePlatform : IPlatform
     public IReadOnlyList<string> GetVulkanDriverManifests() => VulkanDriverManifests;
 
     public void OpenFix(CheckFix fix) => OpenedFixes.Add(fix);
+
+    public List<string> OpenedPaths { get; } = [];
+
+    public void OpenPath(string path) => OpenedPaths.Add(path);
 }

@@ -19,7 +19,8 @@ public sealed partial class WindowsPlatform : IPlatform
     /// </summary>
     public string DefaultDataRoot => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory) ?? @"C:\", "PS5Kitsune");
 
-    public string SettingsDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PS5Kitsune");
+    /// <summary>Local, not roaming: the data root it names is a path on this PC.</summary>
+    public string SettingsDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PS5Kitsune");
 
     public string ExecutableSuffix => ".exe";
 
@@ -57,6 +58,13 @@ public sealed partial class WindowsPlatform : IPlatform
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(fix), fix, "Unknown fix.");
+        }
+    }
+
+    public void OpenPath(string path)
+    {
+        using (Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }))
+        {
         }
     }
 

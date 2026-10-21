@@ -8,6 +8,16 @@ public sealed class WindowsPlatformTests
     private readonly WindowsPlatform _platform = new();
 
     [Fact]
+    public void Settings_live_in_local_app_data()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+
+        Assert.Equal(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PS5Kitsune"),
+            _platform.SettingsDirectory);
+    }
+
+    [Fact]
     public void Commit_limit_is_at_least_the_physical_memory()
     {
         Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");

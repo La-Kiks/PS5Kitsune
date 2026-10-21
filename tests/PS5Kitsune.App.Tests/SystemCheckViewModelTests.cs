@@ -126,5 +126,9 @@ public sealed class SystemCheckViewModelTests
         public IReadOnlyList<string> GetVulkanDriverManifests() => [];
 
         public void OpenFix(CheckFix fix) => OpenedFixes.Add(fix);
+
+        public List<string> OpenedPaths { get; } = [];
+
+        public void OpenPath(string path) => OpenedPaths.Add(path);
     }
 }

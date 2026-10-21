@@ -79,6 +79,9 @@ internal static partial class CliLog
     [LoggerMessage(Level = LogLevel.Information, Message = "{Verdict}")]
     public static partial void CheckVerdict(this ILogger logger, string verdict);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Problem}")]
+    public static partial void SettingsIgnored(this ILogger logger, string problem);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Installation stopped before downloading anything. Fix the blocking problems above, then run 'ps5kitsune install' again; 'ps5kitsune check' shows every check.")]
     public static partial void InstallBlocked(this ILogger logger);
 }
