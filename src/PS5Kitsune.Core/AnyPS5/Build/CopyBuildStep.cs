@@ -14,10 +14,16 @@ public sealed class CopyBuildStep(BuildPaths build, AnyPS5Paths current, WinLibs
     public string Name => "Copy the build";
 
     public bool IsAlreadyDone() =>
-        Plan().All(copy => File.Exists(copy.Source) && FileTree.SameSize(copy.Source, copy.Target) && FileHash.Sha256(copy.Source) == FileHash.Sha256(copy.Target));
+        Missing() is null
+        && Plan().All(copy => File.Exists(copy.Source) && FileTree.SameSize(copy.Source, copy.Target) && FileHash.Sha256(copy.Source) == FileHash.Sha256(copy.Target));
 
     public Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken)
     {
+        if (Missing() is { } missing)
+        {
+            throw missing;
+        }
+
         var plan = Plan();
         foreach (var (source, _) in plan.Where(copy => !File.Exists(copy.Source)))
         {
@@ -41,6 +47,20 @@ public sealed class CopyBuildStep(BuildPaths build, AnyPS5Paths current, WinLibs
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>What a release has and the build did not produce, checked before copying anything; null when complete.</summary>
+    private FileNotFoundException? Missing()
+    {
+        string[] required = [build.BuiltRelinker, Path.Combine(build.Source, "tools", "import_audit.py"), Path.Combine(build.Source, "tools", "unwrap_self.py")];
+        if (required.FirstOrDefault(path => !File.Exists(path)) is { } absent)
+        {
+            return new FileNotFoundException($"The build did not produce {absent}.", absent);
+        }
+
+        return Directory.Exists(build.BuiltLibs) && Directory.EnumerateFiles(build.BuiltLibs, "*.prx").Any()
+            ? null
+            : new FileNotFoundException($"The build produced no .prx library in {build.BuiltLibs}.", build.BuiltLibs);
     }
 
     private List<(string Source, string Target)> Plan()

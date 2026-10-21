@@ -74,5 +74,45 @@ public sealed class CopyBuildStepTests : IDisposable
         Assert.Contains("relinker", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_build_without_a_prx_library_fails_before_copying()
+    {
+        await Step.ExecuteAsync(null, TestContext.Current.CancellationToken);
+        File.Delete(Path.Combine(_setup.Paths.BuiltLibs, "libSceAudioOut.prx"));
+        TestFiles.Write(_setup.Paths.BuiltRelinker, "relinker v2");
+
+        Assert.False(Step.IsAlreadyDone());
+        var exception = await Assert.ThrowsAsync<FileNotFoundException>(() => Step.ExecuteAsync(null, TestContext.Current.CancellationToken));
+
+        Assert.Equal($"The build produced no .prx library in {_setup.Paths.BuiltLibs}.", exception.Message);
+        Assert.Equal("relinker", File.ReadAllText(_current.Relinker));
+        Assert.True(File.Exists(Path.Combine(_current.Libs, "libSceAudioOut.prx")));
+    }
+
+    [Theory]
+    [InlineData("unwrap_self.py")]
+    [InlineData("import_audit.py")]
+    public async Task A_source_without_a_script_fails_before_copying(string script)
+    {
+        var missing = Path.Combine(_setup.Paths.Source, "tools", script);
+        File.Delete(missing);
+
+        Assert.False(Step.IsAlreadyDone());
+        var exception = await Assert.ThrowsAsync<FileNotFoundException>(() => Step.ExecuteAsync(null, TestContext.Current.CancellationToken));
+
+        Assert.Equal($"The build did not produce {missing}.", exception.Message);
+        Assert.False(File.Exists(_current.Relinker));
+    }
+
+    [Fact]
+    public async Task A_script_removed_after_the_copy_undoes_the_step()
+    {
+        await Step.ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        File.Delete(Path.Combine(_setup.Paths.Source, "tools", "unwrap_self.py"));
+
+        Assert.False(Step.IsAlreadyDone());
+    }
+
     public void Dispose() => _temp.Dispose();
 }

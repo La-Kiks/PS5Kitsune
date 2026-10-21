@@ -28,6 +28,15 @@ internal static class InstallCommand
             logger.DataRootUsed(root, context.DataRootSource);
             logger.ProfileUsed(profile.Id, origin);
             logger.ModeUsed(modeName, choice.Source);
+            try
+            {
+                installer.CreateSteps(choice.Mode);
+            }
+            catch (InvalidOperationException exception)
+            {
+                logger.ModeUnavailable(exception.Message);
+                return 1;
+            }
 
             var report = await services.GetRequiredService<ISystemChecker>().RunAsync(choice.Mode, cancellationToken);
             CheckReportPrinter.Print(logger, report, onlyProblems: true);

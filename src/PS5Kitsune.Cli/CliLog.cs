@@ -94,6 +94,9 @@ internal static partial class CliLog
     [LoggerMessage(Level = LogLevel.Information, Message = "Mode: {Mode} ({Source})")]
     public static partial void ModeUsed(this ILogger logger, string mode, string source);
 
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Problem} Run 'ps5kitsune install --mode release' to install the release instead.")]
+    public static partial void ModeUnavailable(this ILogger logger, string problem);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Installation stopped before downloading anything. Fix the blocking problems above, then run 'ps5kitsune install' again; 'ps5kitsune check' shows every check.")]
     public static partial void InstallBlocked(this ILogger logger);
 }
