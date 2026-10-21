@@ -32,7 +32,7 @@ Every command takes `--root <data root>`; without it, the CLI uses the data fold
 
 ### Build mode
 
-`ps5kitsune install --mode release|build` picks how AnyPS5 is installed. Release mode downloads the published release. Build mode downloads MinGit and WinLibs, fetches the profile's commit and compiles it. It needs more disk space (15 GiB checked for now) and a long first run. An interrupted build resumes where it stopped, and a new commit builds incrementally.
+`ps5kitsune install --mode release|build` picks how AnyPS5 is installed. Release mode downloads the published release. Build mode downloads MinGit and WinLibs, fetches the profile's commit and compiles it. It needs more disk space (10 GiB checked) and a first run of about 12 minutes on an 8-thread laptop. An interrupted build resumes where it stopped, and a new commit builds incrementally.
 
 Without `--mode`, the CLI resumes an unfinished install in the mode it was started in, else uses the mode of the current install, else `release`. The command starts with three lines that say what it will use:
 

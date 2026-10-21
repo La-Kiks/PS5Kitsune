@@ -50,7 +50,7 @@
   "checks": {
     "commitLimitMiB": 13824,
     "minFreeDiskGiB": 5,
-    "buildMinFreeDiskGiB": 15,
+    "buildMinFreeDiskGiB": 10,
     "nvidiaBadDrivers": [ "610.47" ]
   }
 }

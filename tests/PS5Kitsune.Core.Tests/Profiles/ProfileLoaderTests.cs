@@ -161,7 +161,7 @@ public sealed class ProfileLoaderTests
         Assert.Equal("48d61f53b46f1d0726889e4dd39c5ef2b3eb30cd", profile.Build?.Commit);
         Assert.Equal("da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be", profile.Tools["mingit"].Sha256);
         Assert.Equal("cb2fbad6162540cdf5e1facdce08d4dac359e8cf64f7f696a99274291763b815", profile.Tools["winlibs"].Sha256);
-        Assert.Equal(15, profile.Checks.BuildMinFreeDiskGiB);
+        Assert.Equal(10, profile.Checks.BuildMinFreeDiskGiB);
     }
 
     [Theory]

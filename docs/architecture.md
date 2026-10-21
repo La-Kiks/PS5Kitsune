@@ -149,7 +149,7 @@ Each check returns OK, Warning or Blocking, with an explanation and an action. T
 | Commit limit (RAM + page file) | `GlobalMemoryStatusEx`: a game can commit up to 13,824 MiB | Warning + button opening `SystemPropertiesPerformance.exe`; no automatic change |
 | Dozen driver (D3D12 over Vulkan) present | Vulkan driver manifests in the registry, and the probe's `driverId` (`MesaDozen`) | Info: can crash enumeration, can be disabled at launch in V3 |
 | NVIDIA driver known to crash | Driver version read by the probe | Warning: 610.47 crashes in `nvgpucomp64.dll` (see `USAGE.md`); version list in the profile |
-| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB) in release mode, or `checks.buildMinFreeDiskGiB` (15 GiB for now) in build mode; the build value is to be set from a measured build |
+| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB) in release mode, or `checks.buildMinFreeDiskGiB` (10 GiB) in build mode: a built root measured 3.2 GB (tools 1.1 GB, build 0.9 GB, source 0.5 GB, current 0.3 GB, downloads 0.3 GB), plus room for a game and for the build folder to grow |
 | Install path | No spaces, ASCII only | Blocking: WinLibs and CMake fail otherwise |
 
 ### Portable tools
@@ -478,7 +478,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
 - [x] Default mode of the first profile: **release `v0.1.2`**, which runs DOOM for PS5 (validated 2026-10-20 with milestone 2's CLI; audit orange: 361 implemented, 3 stubs, 0 absent)
-- [ ] Build mode disk space threshold (`buildMinFreeDiskGiB`, 15 for now), to set from the first measured build
+- [x] Build mode disk space threshold: **`buildMinFreeDiskGiB` = 10 GiB**, from the build measured on 2026-10-21 (root of 3.2 GB)
 - [ ] Check for new profiles at startup, or only on demand
 
 Decided at review: portable tools without winget, pinned profile by default, copy (not move) the game by default, isolated Vulkan probe, game launched detached from the launcher.

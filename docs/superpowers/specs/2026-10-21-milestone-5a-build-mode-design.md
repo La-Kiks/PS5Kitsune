@@ -37,7 +37,7 @@ Milestone 5 is split in two:
 
   Validation: `repository` uses HTTPS, and `commit` is 40 lowercase hex characters.
 - `tools` gains `mingit` and `winlibs` (version, URL, SHA-256), with the values above.
-- `checks` gains `buildMinFreeDiskGiB`, set to 15 for now. The criterion run measures the real size and the value is updated before merge. The PC check uses the threshold of the requested mode.
+- `checks` gains `buildMinFreeDiskGiB`. It started at 15 and was set to 10 from the criterion run (see "Criterion result"). The PC check uses the threshold of the requested mode.
 
 ## Active profile and override
 
@@ -224,3 +224,24 @@ Run by the user on their PC after the tests pass, on an empty root:
 14. Clearing `current` on a mode switch is the first step, "Remove the other mode's files", listed only when `install.json` records the other mode; it deletes `install.json` last, so a locked file fails as a step and a retry clears again. The copy step also requires the relinker, a `.prx`, `import_audit.py` and `unwrap_self.py` before copying.
 15. Tool stderr is logged at Debug like stdout: at Information it reached the console for every tool. Error-like lines still reach the console once, through the step's progress messages.
 16. The criterion run showed that libusb-cmake's `gen-describe.ps1` needs a non-WSL `bash.exe` and picked the WSL alias in `%LOCALAPPDATA%\Microsoft\WindowsApps`, because MinGit ships no `bash.exe`. MinGit's install now copies `usr\bin\sh.exe` (GNU bash) to `bash.exe` (a missing copy means reinstall), and the child PATH drops the WindowsApps entry and ends with `tools\mingit\usr\bin`.
+17. The CLI gives a cancelled command 30 seconds to stop (`InvocationConfiguration.ProcessTerminationTimeout`). The criterion run showed that System.CommandLine's default of 2 seconds ended the process before CMake and Ninja had stopped, so the cancellation was never logged and the log file was cut short.
+
+## Criterion result
+
+Run by the user on 2026-10-21 on the AMD laptop (8 threads, so 7 parallel jobs), against commit `48d61f5`:
+
+1. **Clean build: passed after one fix.** The first run failed at "Build the libraries" on libusb-cmake's `bash.exe` lookup (refinement 16). After the fix, a plain `install` resumed at that step (`Mode: build (unfinished install)`) and finished. A second clean root then built with no intervention.
+   - Durations: tools 24 s, source and submodules 75 s, configure 99 s (it downloads FFmpeg), compile 122 s, libraries 395 s, copy 2 s. That is about 12 minutes in all.
+   - Sizes: `tools` 1.1 GB, `build` 0.9 GB, `source` 0.5 GB, `current` 0.3 GB, `downloads` 0.3 GB, so a root of 3.2 GB. `buildMinFreeDiskGiB` is set to 10 from this.
+2. **Ctrl+C and resume: passed.**
+   - A Ctrl+C during "Install MinGit" resumed without downloading the zip again.
+   - A Ctrl+C during "Compile AnyPS5" left no `ninja` or `cc1plus` running. The next `install` said `build (unfinished install)`, skipped steps 1 to 6, and Ninja had 226 of 364 units left.
+   - That run showed the missing cancellation log (refinement 17). After the fix, a Ctrl+C during "Build the libraries" printed `cancelled after 218.5 s` and `Cancelled.`, and the resume had 505 of 860 units left.
+3. **Incremental update: passed.**
+   - An override pointing at `663de1a` printed `Profile: doom-validated-2026-10 (override)` and `Mode: build (current install)`.
+   - Submodules took 18 s instead of 70 s and configure 11 s instead of 97 s. Compile took 78 s (364 units), and the libraries took 435 s.
+   - The total was about 9 minutes against 12. The libraries rebuild almost fully because the new commit changes code they share, so the update is shorter but not much shorter.
+   - Removing the override and running `install` again went back to `48d61f5` incrementally.
+4. **Bonus, DOOM with the built `current`:** not run yet.
+
+Seen during the run, for 5b: a sub-build that runs its own Ninja interleaves its `[n/m]` counter with the main one in the console progress.

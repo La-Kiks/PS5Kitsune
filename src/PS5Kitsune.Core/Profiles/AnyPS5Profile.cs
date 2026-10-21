@@ -96,7 +96,7 @@ public sealed record CheckThresholds
     public long MinFreeDiskGiB { get; init; } = 5;
 
     /// <summary>Free space wanted for build mode: the clone, the build folder, the tools and a game.</summary>
-    public long BuildMinFreeDiskGiB { get; init; } = 15;
+    public long BuildMinFreeDiskGiB { get; init; } = 10;
 
     /// <summary>NVIDIA driver versions, as Vulkan's driverInfo reports them, known to crash AnyPS5 games.</summary>
     public IReadOnlyList<string> NvidiaBadDrivers { get; init; } = [];
