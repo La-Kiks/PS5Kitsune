@@ -205,3 +205,16 @@ Run by the user on their PC after the tests pass, on an empty root:
   - `install.json` schema 2;
   - the 5a / 5b split in the roadmap.
 - `README.md`: `--mode` and `override.json`.
+
+## Refinements from the implementation plan
+
+1. MinGit 2.56 keeps its CA bundle under `ucrt64`: it is tried first, `mingw64` second.
+2. The process runner kills the whole tree itself on cancellation (no Job Object needed). A kill that fails is logged, never thrown.
+3. Error-like lines reach the console from both outputs: Ninja prints compiler errors on the standard output. The tail quoted in errors holds both outputs, Ninja counters excluded.
+4. The console prints the build fraction every 10 %, like downloads, instead of overwriting one line.
+5. `GetSourceStep` sets `remote.origin.url` with `git config`, so a rerun after any interruption needs no special case; configure passes `-DCMAKE_MAKE_PROGRAM` and forward-slash paths.
+6. The copy step's done-check ignores extra files in `current` (Python's `__pycache__`); execution still mirrors `libs` and `scripts`.
+7. The app's Install page installs in release mode (the only card on Mode until 5b); Home and Done read the current mode from `install.json`. The app also loads `override.json` per root, without showing an ignored one until 5b.
+8. The network integration test is `[Fact(Explicit = true)]`, so neither the default run nor CI runs it.
+9. `BuildMarkers.Clear` ignores a missing marker file, so a first run, where `anyps5\state` does not exist yet, works.
+10. The `install` command's log arguments are computed into locals first (analyzer CA1873).
