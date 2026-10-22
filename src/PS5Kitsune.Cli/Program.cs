@@ -19,6 +19,7 @@ var rootCommand = new RootCommand("PS5Kitsune: installer and launcher for AnyPS5
 {
     CheckCommand.Create(rootOption),
     InstallCommand.Create(rootOption),
+    UseCommand.Create(rootOption),
     AddCommand.Create(rootOption),
     RunCommand.Create(rootOption),
     ToolsCommand.Create(rootOption),

@@ -19,8 +19,11 @@ internal static partial class CliLog
     [LoggerMessage(Level = LogLevel.Information, Message = "Full log: {LogFile}")]
     public static partial void FullLog(this ILogger logger, string logFile);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "AnyPS5 {Version} is installed in {Directory}.")]
-    public static partial void AnyPS5Ready(this ILogger logger, string version, string directory);
+    [LoggerMessage(Level = LogLevel.Information, Message = "AnyPS5 {Mode} {Version} is now in use ({Directory}).")]
+    public static partial void InstallInUse(this ILogger logger, string mode, string version, string directory);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Problem}")]
+    public static partial void UseRefused(this ILogger logger, string problem);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "CPU: {Vendor}. Intel conversion (--to-intel): {ToIntel}.")]
     public static partial void CpuDetected(this ILogger logger, string vendor, string toIntel);

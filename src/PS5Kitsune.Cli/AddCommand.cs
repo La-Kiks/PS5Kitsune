@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Games;
 
@@ -15,6 +16,7 @@ internal static class AddCommand
         var command = new Command("add", "Validate a game, copy it into the games folder, convert it and audit its imports.") { pathArgument };
         command.SetAction((parseResult, cancellationToken) => CommandHost.RunAsync(parseResult.GetValue(rootOption), "add", async (services, logger) =>
         {
+            services.GetRequiredService<AnyPS5Installer>().MigrateLegacyInstall();
             var cpu = services.GetRequiredService<ICpuInfo>().Read();
             var vendor = cpu.Vendor;
             var toIntel = cpu.IsIntel;
