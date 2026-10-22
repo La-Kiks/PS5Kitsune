@@ -154,7 +154,7 @@ Run by the user on the AMD laptop after the tests pass:
 
 ## Decision after the final review
 
-The final review found that switching modes in the app empties `anyps5\current` before the new mode is installed, so a failed or cancelled build after a release leaves no working AnyPS5. The CLI does the same, but only on an explicit `--mode`. The user chose to keep this behaviour in 5b. A later milestone will keep the release and build installs side by side (`anyps5\release`, `anyps5\build`, plus the active one), so a switch never removes a working install. Until then, switching modes in the app replaces the installed mode from its first step.
+The final review found that switching modes in the app empties `anyps5\current` before the new mode is installed, so a failed or cancelled build after a release leaves no working AnyPS5. The CLI does the same, but only on an explicit `--mode`. The user chose to keep this behaviour in 5b. Milestone 5c (see the roadmap) will keep the release and build installs side by side (`anyps5\release`, `anyps5\build`, plus the active one), so a switch never removes a working install. Until then, switching modes in the app replaces the installed mode from its first step.
 
 ## Changes from the criterion run
 

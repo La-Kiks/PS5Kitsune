@@ -499,10 +499,14 @@ The order follows "end to end first, screens second": each milestone ends with a
    - **5a — Build mode, Core and CLI.** MinGit, WinLibs, fetch at the profile's commit, configure with `SSL_CERT_FILE`, build, `libs`, resume via `IsAlreadyDone()`, `install --mode`, `override.json`. Spec: [milestone 5a](superpowers/specs/2026-10-21-milestone-5a-build-mode-design.md).
      - Criterion: `ps5kitsune install --mode build` finishes with no intervention on a clean PC; an interruption mid-build resumes without redoing everything; then an incremental update to another commit.
    - **5b — Build mode UI.** The Build card on Mode, the Tools screen, and the build progress on Install. Spec: [milestone 5b](superpowers/specs/2026-10-22-milestone-5b-build-ui-design.md).
+   - **5c — Side-by-side installs.** Release and build each get their own folder (`anyps5\release`, `anyps5\build`) plus the choice of the active one, so switching modes never removes a working install and switching back is instant. `AnyPS5Paths`, the done-checks, `install.json`, Home and Mode become aware of both installs, and a converted game records which install it was audited against.
+     - Criterion: with a release installed, a build cancelled or failed mid-compile leaves the release active and usable; switching between two finished installs takes seconds and runs no step.
 6. **V2 — Add-a-game screens.** On top of milestone 2's logic: summary, options, progress, verdict, Reconvert.
    - Criterion: DOOM added from the UI, green audit; Reconvert keeps `data\` and `_trophy\`.
 7. **V3 — Launcher.** Library, detached launch with log, per-game settings, Lavapipe (Mesa 7z), fonts, error diagnosis.
    - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe; the launcher closed and reopened finds the running game; a deliberately provoked error 126 is recognized and repaired.
+   - **7b — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
+     - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
 8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
    - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.
 
