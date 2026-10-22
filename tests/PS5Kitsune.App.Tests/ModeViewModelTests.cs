@@ -36,18 +36,18 @@ public sealed class ModeViewModelTests
 
         viewModel.InstallCommand.Execute(null);
 
-        Assert.Equal("install", _navigator.CurrentPage);
+        Assert.Equal("install:Release", _navigator.CurrentPage);
     }
 
     [Fact]
     public void Back_returns_to_the_pc_check()
     {
-        _navigator.GoTo("check");
+        _navigator.GoTo("check:Release");
         var viewModel = new ModeViewModel(TestSessions.Profile, _navigator, new FakePages());
         _navigator.GoTo(viewModel);
 
         viewModel.BackCommand.Execute(null);
 
-        Assert.Equal("check", _navigator.CurrentPage);
+        Assert.Equal("check:Release", _navigator.CurrentPage);
     }
 }

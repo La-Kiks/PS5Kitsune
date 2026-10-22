@@ -7,6 +7,7 @@ using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Profiles;
+using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.App.Tests;
 
@@ -94,18 +95,33 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     }
 }
 
-/// <summary>Pages are plain strings, so a test asserts where the navigator went.</summary>
+/// <summary>Pages are plain strings, so a test asserts where the navigator went, and with which mode.</summary>
 internal sealed class FakePages : IPages
 {
     public object Home() => "home";
 
-    public object SystemCheck() => "check";
-
     public object Mode() => "mode";
 
-    public object Install() => "install";
+    public object SystemCheck(AnyPS5Mode mode) => $"check:{mode}";
+
+    public object Tools() => "tools";
+
+    public object Install(AnyPS5Mode mode) => $"install:{mode}";
 
     public object Done() => "done";
+}
+
+internal sealed class FakeTool(string id, bool installed) : IPortableTool
+{
+    public string Id => id;
+
+    public bool Installed { get; set; } = installed;
+
+    public bool IsInstalled() => Installed;
+
+    public Task InstallAsync(IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public Task<string> GetVersionAsync(CancellationToken cancellationToken = default) => Task.FromResult("1");
 }
 
 internal sealed class FakeDialogs : IDialogService

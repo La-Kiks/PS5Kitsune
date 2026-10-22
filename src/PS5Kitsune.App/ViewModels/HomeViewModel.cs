@@ -90,7 +90,7 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
-    private void Start() => navigator.GoTo(pages.SystemCheck());
+    private void Start() => navigator.GoTo(pages.SystemCheck(AnyPS5Mode.Release));
 
     [RelayCommand]
     private async Task ChangeRootAsync()

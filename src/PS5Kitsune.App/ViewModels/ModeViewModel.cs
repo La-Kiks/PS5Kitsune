@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.App.ViewModels;
@@ -20,5 +21,5 @@ public sealed partial class ModeViewModel(AnyPS5Profile profile, Navigator navig
     private void Back() => navigator.GoBack();
 
     [RelayCommand]
-    private void Install() => navigator.GoTo(pages.Install());
+    private void Install() => navigator.GoTo(pages.Install(AnyPS5Mode.Release));
 }

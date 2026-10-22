@@ -17,6 +17,9 @@
     <DataTemplate DataType="vm:ModeViewModel">
       <views:ModeView />
     </DataTemplate>
+    <DataTemplate DataType="vm:ToolsViewModel">
+      <views:ToolsView />
+    </DataTemplate>
     <DataTemplate DataType="vm:InstallViewModel">
       <views:InstallView />
     </DataTemplate>

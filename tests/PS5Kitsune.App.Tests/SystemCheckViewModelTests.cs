@@ -21,8 +21,13 @@ public sealed class SystemCheckViewModelTests
     private readonly TestPlatform _platform = new();
     private readonly Navigator _navigator = new();
 
-    private SystemCheckViewModel Create(Func<CancellationToken, Task<SystemCheckReport>> answer) =>
-        new(new FakeChecker(answer), _platform, _navigator, new FakePages());
+    private FakeChecker? _checker;
+
+    private SystemCheckViewModel Create(Func<CancellationToken, Task<SystemCheckReport>> answer, AnyPS5Mode mode = AnyPS5Mode.Release)
+    {
+        _checker = new FakeChecker(answer);
+        return new(_checker, mode, _platform, _navigator, new FakePages());
+    }
 
     [Fact]
     public async Task Shows_the_results_and_the_verdict()
@@ -132,15 +137,18 @@ public sealed class SystemCheckViewModelTests
         Assert.False(Create(_ => Task.FromResult(Report())).CanContinue);
     }
 
-    [Fact]
-    public async Task Continue_goes_to_the_mode_page()
+    [Theory]
+    [InlineData(AnyPS5Mode.Release, "install:Release")]
+    [InlineData(AnyPS5Mode.Build, "tools")]
+    public async Task Checks_for_the_mode_and_continues_to_its_next_page(AnyPS5Mode mode, string next)
     {
-        var viewModel = Create(_ => Task.FromResult(Report()));
+        var viewModel = Create(_ => Task.FromResult(Report()), mode);
         await viewModel.CheckCommand.ExecuteAsync(null);
 
         viewModel.ContinueCommand.Execute(null);
 
-        Assert.Equal("mode", _navigator.CurrentPage);
+        Assert.Equal(mode, _checker!.Mode);
+        Assert.Equal(next, _navigator.CurrentPage);
     }
 
     [Fact]
@@ -205,6 +213,12 @@ public sealed class SystemCheckViewModelTests
 
     private sealed class FakeChecker(Func<CancellationToken, Task<SystemCheckReport>> answer) : ISystemChecker
     {
-        public Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default) => answer(cancellationToken);
+        public AnyPS5Mode? Mode { get; private set; }
+
+        public Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default)
+        {
+            Mode = mode;
+            return answer(cancellationToken);
+        }
     }
 }

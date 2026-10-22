@@ -125,7 +125,7 @@ public sealed class HomeViewModelTests : IDisposable
     {
         Create().StartCommand.Execute(null);
 
-        Assert.Equal("check", _navigator.CurrentPage);
+        Assert.Equal("check:Release", _navigator.CurrentPage);
     }
 
     [Fact]
