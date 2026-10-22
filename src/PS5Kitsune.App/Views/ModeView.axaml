@@ -30,6 +30,8 @@
   </UserControl.Styles>
 
   <DockPanel>
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding ErrorText}" IsVisible="{Binding ErrorText, Converter={x:Static ObjectConverters.IsNotNull}}"
+               Foreground="#C42B1C" TextWrapping="Wrap" Margin="0,12,0,0" />
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
       <Button Content="Back" Command="{Binding BackCommand}" />
       <Button Content="{Binding ContinueText}" Classes="accent" Command="{Binding ContinueCommand}" />

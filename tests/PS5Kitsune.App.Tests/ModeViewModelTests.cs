@@ -236,6 +236,26 @@ public sealed class ModeViewModelTests
     }
 
     [Fact]
+    public void A_failed_switch_stays_on_the_page_and_says_why()
+    {
+        _installer.Records[AnyPS5Mode.Release] = ReleaseRecord;
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.UseFailure = new InvalidOperationException("gone");
+        var viewModel = Create();
+        viewModel.SelectBuildCommand.Execute(null);
+
+        viewModel.ContinueCommand.Execute(null);
+
+        Assert.NotEqual("home", _navigator.CurrentPage);
+        Assert.Equal("Cannot switch to this install: gone", viewModel.ErrorText);
+
+        viewModel.SelectReleaseCommand.Execute(null);
+
+        Assert.Null(viewModel.ErrorText);
+    }
+
+    [Fact]
     public void Without_an_install_nothing_is_named_and_the_button_continues()
     {
         var viewModel = Create();

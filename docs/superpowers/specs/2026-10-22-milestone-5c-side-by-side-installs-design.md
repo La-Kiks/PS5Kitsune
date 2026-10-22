@@ -148,3 +148,4 @@ Run by the user on the AMD laptop after the tests pass:
 ## Changes after the final review
 
 1. `Use(mode)` also refuses a mode whose install did not finish (`RequestedMode == mode`), with "The {mode} install did not finish; run install --mode {mode} to resume it.", so `ps5kitsune use` cannot make an install active while its update is pending. Mode already offered "Resume the install" in that case.
+2. Mode's "Use this install" shows "Cannot switch to this install: {reason}" and stays on the page when the switch fails, instead of letting the exception escape.

@@ -104,8 +104,16 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     public AnyPS5InstallRecord? ReadRecord(AnyPS5Mode mode) =>
         Records.TryGetValue(mode, out var record) ? record : State.Record is { } stateRecord && stateRecord.Mode == mode ? stateRecord : null;
 
+    /// <summary>Thrown by Use when set, before ActiveMode changes.</summary>
+    public Exception? UseFailure { get; set; }
+
     public void Use(AnyPS5Mode mode)
     {
+        if (UseFailure is not null)
+        {
+            throw UseFailure;
+        }
+
         Used.Add(mode);
         ActiveMode = mode;
     }

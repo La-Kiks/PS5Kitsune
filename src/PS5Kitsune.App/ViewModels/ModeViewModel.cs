@@ -83,6 +83,12 @@ public sealed partial class ModeViewModel : ObservableObject
 
     public bool IsBuildSelected => SelectedMode == AnyPS5Mode.Build;
 
+    /// <summary>Why the last "Use this install" failed; null otherwise, and cleared when the selected card changes.</summary>
+    [ObservableProperty]
+    public partial string? ErrorText { get; private set; }
+
+    partial void OnSelectedModeChanged(AnyPS5Mode value) => ErrorText = null;
+
     [RelayCommand]
     private void SelectRelease() => SelectedMode = AnyPS5Mode.Release;
 
@@ -97,7 +103,16 @@ public sealed partial class ModeViewModel : ObservableObject
     {
         if (SwitchesOnly)
         {
-            _installer.Use(SelectedMode);
+            try
+            {
+                _installer.Use(SelectedMode);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                ErrorText = $"Cannot switch to this install: {exception.Message}";
+                return;
+            }
+
             _navigator.GoHome(_pages.Home());
             return;
         }
