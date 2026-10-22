@@ -149,3 +149,15 @@ Run by the user on the AMD laptop after the tests pass:
 
 1. `Use(mode)` also refuses a mode whose install did not finish (`RequestedMode == mode`), with "The {mode} install did not finish; run install --mode {mode} to resume it.", so `ps5kitsune use` cannot make an install active while its update is pending. Mode already offered "Resume the install" in that case.
 2. Mode's "Use this install" shows "Cannot switch to this install: {reason}" and stays on the page when the switch fails, instead of letting the exception escape.
+
+## Criterion result
+
+Run by the user on 2026-10-22 on the AMD laptop, with the Release build:
+
+- Points 1 to 4 passed.
+  - The 5b test root holding a build migrated: `anyps5\current` moved to `anyps5\installs\build`, and "Verify / repair" skipped every step.
+  - A build closed during "Compile AnyPS5" left the release in use; resuming it made the build active.
+  - "Use this install" on Mode and `ps5kitsune use release|build` switched in both directions, quickly and with no step.
+  - DOOM for PS5 v1.1.1 (`PPSA99666.zip`), added with the build in use, records mode `build`, version `3fd1cc3` and the full commit.
+- Observation, outside 5c's scope: that add audited orange (360 implemented, 4 stubs, 0 absent) with DOOM v1.1.1 and commit 3fd1cc3.
+- Tests: 442 in all, 441 passed and 1 skipped (the explicit network test).
