@@ -45,7 +45,7 @@ Mode: build (current install)
 
 The data root comes from `--root`, `saved setting` or `default`. The mode comes from `--mode`, `unfinished install`, `current install` or `default`. If the active profile cannot build (no `build` section), the command stops right after these lines and suggests `--mode release`.
 
-The release and the build each live in their own folder (`anyps5\installselease`, `anyps5\installsuild`), so installing one never removes the other. A successful install becomes the one in use; a failed or cancelled one never changes it. The clone and the build folder are kept, so going back to build mode is incremental. The console shows the steps, the build progress and the compiler's error lines; the full git and CMake output is in the log under `<root>\logs`.
+The release and the build each live in their own folder (`anyps5\installselease`, `anyps5\installsbuild`), so installing one never removes the other. A successful install becomes the one in use; a failed or cancelled one never changes it. The clone and the build folder are kept, so going back to build mode is incremental. The console shows the steps, the build progress and the compiler's error lines; the full git and CMake output is in the log under `<root>\logs`.
 
 To build another commit, copy the profile to `<root>\profiles\override.json`, change `build.commit`, then run `ps5kitsune install`. A valid override replaces the embedded profile (the second line then says `override`). An invalid one is ignored, with a warning in the log. In the app, choose "Build from source" on the Mode screen: the PC check then uses the build threshold, and a Tools screen shows what will be downloaded before the build starts.
 
