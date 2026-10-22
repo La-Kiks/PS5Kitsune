@@ -1,11 +1,11 @@
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
-using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Core.Games.Steps;
 
-/// <summary>Writes game.json last: its presence means the game is added.</summary>
-public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5Profile profile, TimeProvider time) : IStep
+/// <summary>Writes game.json last: its presence means the game is added. It names the install that converted the game.</summary>
+public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5InstallRecord install, TimeProvider time) : IStep
 {
     private const string IconPath = "app0/sce_sys/icon0.png";
 
@@ -23,12 +23,7 @@ public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5Profile
             Name = context.Metadata.Name,
             Executable = context.Game.ExecutableName,
             Icon = File.Exists(Path.Combine(context.Game.Root, IconPath)) ? IconPath : null,
-            ConvertedWith = new ConversionInfo(
-                profile.Id,
-                profile.Source.Kind,
-                profile.Source.Version,
-                profile.Source.Kind == "commit" ? profile.Source.Sha : null,
-                context.ToIntel),
+            ConvertedWith = new ConversionInfo(install.Profile, InstallModes.Name(install.Mode), install.Version, install.Commit, context.ToIntel),
             Audit = new AuditRecord(audit.Implemented, audit.Stub, audit.Absent, audit.Verdict),
             AddedAt = time.GetLocalNow(),
         };

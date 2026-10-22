@@ -149,7 +149,7 @@ Each check returns OK, Warning or Blocking, with an explanation and an action. T
 | Commit limit (RAM + page file) | `GlobalMemoryStatusEx`: a game can commit up to 13,824 MiB | Warning + button opening `SystemPropertiesPerformance.exe`; no automatic change |
 | Dozen driver (D3D12 over Vulkan) present | Vulkan driver manifests in the registry, and the probe's `driverId` (`MesaDozen`) | Info: can crash enumeration, can be disabled at launch in V3 |
 | NVIDIA driver known to crash | Driver version read by the probe | Warning: 610.47 crashes in `nvgpucomp64.dll` (see `USAGE.md`); version list in the profile |
-| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB) in release mode, or `checks.buildMinFreeDiskGiB` (10 GiB) in build mode: a built root measured 3.2 GB (tools 1.1 GB, build 0.9 GB, source 0.5 GB, current 0.3 GB, downloads 0.3 GB), plus room for a game and for the build folder to grow |
+| Free disk space | `DriveInfo` on the install folder | Warning below the profile's `checks.minFreeDiskGiB` (5 GiB) in release mode, or `checks.buildMinFreeDiskGiB` (10 GiB) in build mode: a built root measured 3.2 GB (tools 1.1 GB, build 0.9 GB, source 0.5 GB, install 0.3 GB, downloads 0.3 GB), plus room for a game and for the build folder to grow |
 | Install path | No spaces, ASCII only | Blocking: WinLibs and CMake fail otherwise |
 
 ### Portable tools
@@ -169,12 +169,12 @@ All tools go into `<root>\tools\`, downloaded from their official source, verifi
 
 1. Read the release targeted by the profile via `GET /repos/boykopovar/AnyPS5/releases/tags/<tag>` (or `latest` in "latest" mode).
 2. Download `relinker-<tag>.exe` and `prx-windows-<tag>.zip`. Verify each file against the `digest` field (`sha256:…`) that the GitHub API provides for every release asset, in addition to the profile's hash when present. The zip contains a `libs/` folder with the `.prx` files and the 3 DLLs; it may also contain `libTracyClient.dll`.
-3. Download the source archive of the same tag and extract `tools\` and `core\libs\prx\` into `anyps5\current\scripts\` **keeping the tree layout**. `import_audit.py` looks for throwing stubs in `../core/libs/prx` relative to itself by default: with this layout, no `--source` option is needed.
+3. Download the source archive of the same tag and extract `tools\` and `core\libs\prx\` into `anyps5\installs\release\scripts\` **keeping the tree layout**. `import_audit.py` looks for throwing stubs in `../core/libs/prx` relative to itself by default: with this layout, no `--source` option is needed.
 4. Show the release date and the profile status (validated or not).
 
 **Build mode**
 
-Layout under `anyps5\`: `source\` (git clone), `build\` (CMake build folder, outside the clone), `state\` (one marker per step, holding the commit) and `current\` (the same for both modes). A marker is written after its step succeeds, never before. A missing marker, or one holding another commit, means the step is not done.
+Layout under `anyps5\`: `source\` (git clone), `build\` (CMake build folder, outside the clone), `state\` (one marker per step, holding the commit) and `installs\build\` (the finished install, same layout as a release). A marker is written after its step succeeds, never before. A missing marker, or one holding another commit, means the step is not done.
 
 | # | Step | Execution | Done when |
 | --- | --- | --- | --- |
@@ -192,10 +192,11 @@ Layout under `anyps5\`: `source\` (git clone), `build\` (CMake build folder, out
 - The compiler and `ninja` paths are full WinLibs paths with forward slashes, and `-DCMAKE_MAKE_PROGRAM` names Ninja, so CMake does not depend on `PATH` to find them.
 - Every git and CMake command runs with the build environment: the child's `PATH` is `tools\winlibs\mingw64\bin`, `tools\mingit\cmd`, the inherited entries without `%LOCALAPPDATA%\Microsoft\WindowsApps` (the WSL and Store app aliases), then `tools\mingit\usr\bin` last (it also holds `find` and `sort`, which must not shadow Windows' own). The reason: libusb-cmake's `gen-describe.ps1` needs a non-WSL `bash.exe`, MinGit ships only `usr\bin\sh.exe` (GNU bash), so the install copies it to `bash.exe` and the WSL alias is kept off the `PATH`. `SSL_CERT_FILE` is set to MinGit's CA bundle (`ucrt64\etc\ssl\certs\ca-bundle.crt`, else `mingw64\...`). This avoids error 60 when CMake downloads FFmpeg. The app's own environment is never changed.
 - Parallel jobs: `N = max(1, min(logical processors, physical RAM in GiB / 2))`. GCC can use about 2 GiB per job on large C++ files.
-- Copy step: `build\core\relinker\relinker.exe` goes to `current\relinker.exe`; `build\core\libs\libs\*.prx` plus `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` from WinLibs go to `current\libs\`; `source\tools\` and `source\core\libs\prx\` go to `current\scripts\`. These folders are mirrored. The result is identical in layout to a release install. The step first checks that the build produced the relinker, at least one `.prx`, `source\tools\import_audit.py` and `source\tools\unwrap_self.py`, and fails before copying anything when one is missing.
-- Switching modes: if `install.json` records the other mode, the install starts with a "Remove the other mode's files" step that empties `current\`, so a release's `libTracyClient.dll` cannot linger next to a build. It deletes `install.json` last: a locked file fails the step like any other, and the next run finds the record and clears again. `source\`, `build\` and `state\` are kept, so going back to build mode is incremental.
-- Mode of a plain `install`: `--mode`, else the mode of an unfinished install, else the mode of `install.json`, else release. The installer writes the requested mode to `state\requested-mode` before the first step and deletes it once every step succeeded, so an install cancelled or failed before `install.json` is written resumes in the same mode (`Mode: build (unfinished install)`). The file is outside `current\`, so the clear step never deletes it. A mode the active profile does not support is reported right after the opening lines, before the PC check.
+- Copy step: `build\core\relinker\relinker.exe` goes to `installs\build\relinker.exe`; `build\core\libs\libs\*.prx` plus `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` from WinLibs go to `installs\build\libs\`; `source\tools\` and `source\core\libs\prx\` go to `installs\build\scripts\`. These folders are mirrored. The result is identical in layout to a release install. The step first checks that the build produced the relinker, at least one `.prx`, `source\tools\import_audit.py` and `source\tools\unwrap_self.py`, and fails before copying anything when one is missing.
+- Side by side: the release and the build each keep their own folder under `installs\`, so installing one never touches the other and switching back runs no step. `state\active` holds `release` or `build` and names the install games are converted with. An install becomes active only once every step succeeded; a failed or cancelled one never changes it. `source\`, `build\` and `state\` are kept, so going back to build mode is incremental.
+- Mode of a plain `install`: `--mode`, else the mode of an unfinished install, else the mode of `install.json`, else release. The installer writes the requested mode to `state\requested-mode` before the first step and deletes it once every step succeeded, so an install cancelled or failed before `install.json` is written resumes in the same mode (`Mode: build (unfinished install)`). A mode the active profile does not support is reported right after the opening lines, before the PC check.
 - Tool output: every git and CMake line, stdout and stderr, goes to the log file at Debug. The console shows the build's progress every 10 % and, once, each line that looks like an error (`error:`, `fatal:`, `CMake Error`, `FAILED:`). A sub-build that runs its own Ninja prints a smaller counter between the main one's lines: each command follows the counter with the largest total, so the progress never jumps back.
+- `ps5kitsune use release|build` switches to an install that is already finished, with no step; it refuses an unfinished one, and an install whose update did not finish (exit code 1). It logs "AnyPS5 {mode} {version} is now in use ({directory})."
 - The app shows a build install on Home ("built from source") and repairs, resumes or updates it like a release: Home opens Mode, which preselects build.
 - Resume: an interruption during step 6 leaves no `compile.done`. The next run skips steps 1 to 5 and Ninja recompiles only what is missing.
 - Update: a new commit in the profile makes every marker stale. Steps 3 to 8 run again, and CMake and Ninja reuse `build\` incrementally.
@@ -205,8 +206,8 @@ Each step is an `IStep`: on failure, the user resumes from the failed step witho
 
 ### Screens
 
-1. **Home**: current state (nothing installed, or installed version + commit, active profile, new validated version available). Its action opens Mode.
-2. **Mode**: release or build, with date, commit, profile status, estimated duration and disk space of each option. It preselects the mode of an unfinished install, else the installed mode, else release. Build is disabled when the active profile has no build.
+1. **Home**: current state (nothing installed, or installed version + commit, active profile, new validated version available). Its action opens Mode. When the other mode is also installed it lists it ("Also installed: {mode} {version}"), and it reports an interrupted install ("The {mode} install did not finish.").
+2. **Mode**: release or build, with date, commit, profile status, estimated duration and disk space of each option. It preselects the mode of an unfinished install, else the installed mode, else release. Build is disabled when the active profile has no build. The active install shows "In use"; a finished one that is not active has a "Use this install" button.
 3. **PC check**: list of checks for the chosen mode (build mode needs `buildMinFreeDiskGiB` free), with status badge and action button.
 4. **Tools** (build mode only): Python, MinGit and WinLibs, each installed or missing with its download size (the profile's `size`), the total to download and the disk space a build takes. Its button opens Install, whose first steps download what is missing.
 5. **Install**: steps ticked as they complete, a progress bar (download bytes, Ninja's `[n/m]` counter, or indeterminate while a build step reports nothing), scrolling log, Cancel button. A failed build command shows its targeted message, with the exit code and last output lines under "Show details".
@@ -364,12 +365,14 @@ C:\PS5Kitsune\
 ├── anyps5\
 │   ├── source\                  git clone, fetched by SHA (build mode)
 │   ├── build\                   CMake build folder (build mode)
-│   ├── state\                   one marker per build step, holding the commit (build mode); requested-mode while an install is unfinished
-│   └── current\
-│       ├── relinker.exe
-│       ├── libs\                .prx + 3 DLLs, ready to copy
-│       ├── scripts\             tools\ and core\libs\prx of the same commit, tree layout kept
-│       └── install.json         profile, mode, version, commit, date
+│   ├── state\                   one marker per build step, holding the commit (build mode); active (release or build); requested-mode while an install is unfinished
+│   └── installs\
+│       ├── release\             the release install
+│       └── build\               the build install, copied from build\
+│           ├── relinker.exe
+│           ├── libs\            .prx + 3 DLLs, ready to copy
+│           ├── scripts\         tools\ and core\libs\prx of the same commit, tree layout kept
+│           └── install.json     profile, mode, version, commit, date
 ├── games\
 │   └── PPSA00000\               one folder per game (title ID)
 │       ├── app0\
@@ -388,11 +391,13 @@ C:\PS5Kitsune\
 └── logs\                        installer logs
 ```
 
+Both installs stay side by side: `state\active` names the one games are converted with, and an install becomes active only once every step succeeded. `ps5kitsune use release|build` and Mode's "Use this install" switch with no step. A root from before 5c has its `anyps5\current` moved into `installs\<mode>` the first time the CLI or the app opens it.
+
 The data root itself is chosen on the app's home screen and saved in `%LOCALAPPDATA%\PS5Kitsune\settings.json` (`{ "schemaVersion": 1, "dataRoot": "…" }`), outside the root. The CLI reads the same file: `--root`, then the saved root, then `C:\PS5Kitsune`. When the user changes the root on Home, the app replaces the session first and saves the setting second: a refused change leaves `settings.json` untouched, and a failed save keeps the new root for this run and shows "Cannot save the setting".
 
 ### Install record (`install.json`)
 
-`anyps5\current\install.json` records what is installed, for both modes.
+`install.json` sits in each install folder (`anyps5\installs\release`, `anyps5\installs\build`) and records what is installed there.
 
 ```json
 {
@@ -428,6 +433,8 @@ The data root itself is chosen on the app's home screen and saved in `%LOCALAPPD
   "lastPlayedAt": null
 }
 ```
+
+`convertedWith.mode` is the install mode that converted the game, `release` or `build`; `commit` is set for a build.
 
 `PPSA00000` is an example; the real ID comes from the game's `param.json`. Every JSON file of the app has a `schemaVersion` field, to migrate records cleanly when the format changes.
 
@@ -499,7 +506,7 @@ The order follows "end to end first, screens second": each milestone ends with a
    - **5a — Build mode, Core and CLI.** MinGit, WinLibs, fetch at the profile's commit, configure with `SSL_CERT_FILE`, build, `libs`, resume via `IsAlreadyDone()`, `install --mode`, `override.json`. Spec: [milestone 5a](superpowers/specs/2026-10-21-milestone-5a-build-mode-design.md).
      - Criterion: `ps5kitsune install --mode build` finishes with no intervention on a clean PC; an interruption mid-build resumes without redoing everything; then an incremental update to another commit.
    - **5b — Build mode UI.** The Build card on Mode, the Tools screen, and the build progress on Install. Spec: [milestone 5b](superpowers/specs/2026-10-22-milestone-5b-build-ui-design.md).
-   - **5c — Side-by-side installs.** Release and build each get their own folder (`anyps5\release`, `anyps5\build`) plus the choice of the active one, so switching modes never removes a working install and switching back is instant. `AnyPS5Paths`, the done-checks, `install.json`, Home and Mode become aware of both installs, and a converted game records which install it was audited against.
+   - **5c — Side-by-side installs.** Release and build each get their own folder (`anyps5\installs\release`, `anyps5\installs\build`; the build folder name was taken by CMake) plus the choice of the active one, so switching modes never removes a working install and switching back is instant. `AnyPS5Paths`, the done-checks, `install.json`, Home and Mode become aware of both installs, and a converted game records which install it was audited against. Spec: [milestone 5c](superpowers/specs/2026-10-22-milestone-5c-side-by-side-installs-design.md).
      - Criterion: with a release installed, a build cancelled or failed mid-compile leaves the release active and usable; switching between two finished installs takes seconds and runs no step.
 6. **V2 — Add-a-game screens.** On top of milestone 2's logic: summary, options, progress, verdict, Reconvert.
    - Criterion: DOOM added from the UI, green audit; Reconvert keeps `data\` and `_trophy\`.

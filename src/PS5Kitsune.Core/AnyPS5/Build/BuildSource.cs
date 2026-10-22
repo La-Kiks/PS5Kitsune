@@ -5,7 +5,7 @@ using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.Core.AnyPS5.Build;
 
-/// <summary>Build mode: MinGit and WinLibs, the profile's commit, configure, compile, libs, then a copy into anyps5\current.</summary>
+/// <summary>Build mode: MinGit and WinLibs, the profile's commit, configure, compile, libs, then a copy into anyps5\installs\build.</summary>
 public sealed class BuildSource(
     AnyPS5Profile profile,
     MinGitTool mingit,
@@ -33,7 +33,7 @@ public sealed class BuildSource(
             new ConfigureStep(commands, markers, paths, environment),
             new CompileStep(commands, markers, paths, jobs),
             new LibsStep(commands, markers, paths, jobs),
-            new CopyBuildStep(paths, current, winlibs),
+            new CopyBuildStep(paths, current.For(AnyPS5Mode.Build), winlibs),
         ];
     }
 

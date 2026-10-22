@@ -14,7 +14,9 @@ internal static class RunCommand
         var command = new Command("run", "Launch an added game from its folder and follow its log until it exits.") { titleIdArgument };
         command.SetAction((parseResult, cancellationToken) => CommandHost.RunAsync(parseResult.GetValue(rootOption), "run", async (services, logger) =>
         {
-            if (!services.GetRequiredService<AnyPS5Installer>().IsInstalled())
+            var installer = services.GetRequiredService<AnyPS5Installer>();
+            installer.MigrateLegacyInstall();
+            if (!installer.IsInstalled())
             {
                 throw new AnyPS5NotInstalledException();
             }

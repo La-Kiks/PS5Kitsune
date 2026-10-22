@@ -6,7 +6,7 @@ public sealed record InstallModeChoice(AnyPS5Mode Mode, string Source);
 public static class InstallModes
 {
     /// <summary>
-    /// The --mode option, else the mode of an install that did not finish, else the mode of the current install, else
+    /// The --mode option, else the mode of an install that did not finish, else the mode of the active install, else
     /// release; so a plain 'install' resumes an interrupted install and updates a build.
     /// </summary>
     public static InstallModeChoice Resolve(AnyPS5Mode? option, AnyPS5Mode? unfinished, AnyPS5InstallRecord? record) =>
@@ -21,4 +21,8 @@ public static class InstallModes
         AnyPS5Mode.Build => "build",
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
     };
+
+    /// <summary>The mode whose <see cref="Name"/> is <paramref name="name"/>; null for any other text.</summary>
+    public static AnyPS5Mode? Parse(string name) =>
+        Enum.GetValues<AnyPS5Mode>().Where(mode => Name(mode) == name).Cast<AnyPS5Mode?>().FirstOrDefault();
 }

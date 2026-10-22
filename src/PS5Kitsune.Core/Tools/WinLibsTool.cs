@@ -24,7 +24,7 @@ public sealed class WinLibsTool(
 
     public string Ninja => Tool("ninja");
 
-    /// <summary>The GCC runtime DLLs the relinker and the libraries load; they go into anyps5\current\libs.</summary>
+    /// <summary>The GCC runtime DLLs the relinker and the libraries load; they go into anyps5\installs\build\libs.</summary>
     public IReadOnlyList<string> RuntimeDlls =>
     [
         Path.Combine(Bin, "libgcc_s_seh-1.dll"),

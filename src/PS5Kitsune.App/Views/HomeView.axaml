@@ -9,6 +9,7 @@
         <TextBlock Text="{Binding StateTitle}" FontSize="20" FontWeight="SemiBold" />
         <ProgressBar IsIndeterminate="True" Width="80" HorizontalAlignment="Left" IsVisible="{Binding IsChecking}" />
         <TextBlock Text="{Binding StateDetail}" TextWrapping="Wrap" Opacity="0.85" />
+        <TextBlock Text="{Binding OtherInstallText}" Opacity="0.85" IsVisible="{Binding OtherInstallText, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Button Content="{Binding ActionText}" Command="{Binding StartCommand}" Classes="accent" Margin="0,8,0,0" />
       </StackPanel>
     </Border>

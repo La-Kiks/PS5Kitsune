@@ -122,6 +122,7 @@ public sealed class ModeViewModelTests
     [Fact]
     public void A_release_install_is_named_on_its_card_and_repaired_from_the_button()
     {
+        _installer.ActiveMode = AnyPS5Mode.Release;
         _installer.State = Installed(AnyPS5Mode.Release, "v0.1.2");
 
         var viewModel = Create();
@@ -138,6 +139,7 @@ public sealed class ModeViewModelTests
     [Fact]
     public void A_build_install_is_named_on_its_card_and_repaired_from_the_button()
     {
+        _installer.ActiveMode = AnyPS5Mode.Build;
         _installer.CurrentMode = AnyPS5Mode.Build;
         _installer.State = Installed(AnyPS5Mode.Build, "3fd1cc3");
 
@@ -157,6 +159,100 @@ public sealed class ModeViewModelTests
         var viewModel = Create();
 
         Assert.Equal("Resume the install", viewModel.ContinueText);
+    }
+
+    private static readonly AnyPS5InstallRecord ReleaseRecord = new(2, "test-profile", AnyPS5Mode.Release, "v0.1.2", null, new Uri("https://example.test/u.py"), default);
+
+    private static readonly AnyPS5InstallRecord BuildRecord = new(2, "test-profile", AnyPS5Mode.Build, "3fd1cc3", "3fd1cc393b8512c2e989860053f30dee5a8cd1aa", null, default);
+
+    [Fact]
+    public void Both_installs_show_their_version_and_the_active_one_is_in_use()
+    {
+        _installer.Records[AnyPS5Mode.Release] = ReleaseRecord;
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+        _installer.ActiveMode = AnyPS5Mode.Release;
+
+        var viewModel = Create();
+
+        Assert.Equal("Installed: v0.1.2", viewModel.ReleaseInstalledText);
+        Assert.Equal("Installed: 3fd1cc3", viewModel.BuildInstalledText);
+        Assert.True(viewModel.IsReleaseInUse);
+        Assert.False(viewModel.IsBuildInUse);
+    }
+
+    [Fact]
+    public void The_button_names_what_happens_to_the_selected_install()
+    {
+        _installer.Records[AnyPS5Mode.Release] = ReleaseRecord;
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.CurrentMode = AnyPS5Mode.Release;
+        var viewModel = Create();
+
+        Assert.Equal("Verify / repair", viewModel.ContinueText);
+        viewModel.SelectBuildCommand.Execute(null);
+        Assert.Equal("Use this install", viewModel.ContinueText);
+    }
+
+    [Fact]
+    public void An_unfinished_install_is_resumed_before_anything_else()
+    {
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+        _installer.ActiveMode = AnyPS5Mode.Build;
+        _installer.RequestedMode = AnyPS5Mode.Build;
+        _installer.CurrentMode = AnyPS5Mode.Build;
+
+        Assert.Equal("Resume the install", Create().ContinueText);
+    }
+
+    [Fact]
+    public void A_mode_never_installed_continues_to_the_check()
+    {
+        _installer.Records[AnyPS5Mode.Release] = ReleaseRecord;
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        var viewModel = Create();
+
+        viewModel.SelectBuildCommand.Execute(null);
+        Assert.Equal("Continue", viewModel.ContinueText);
+        viewModel.ContinueCommand.Execute(null);
+
+        Assert.Equal("check:Build", _navigator.CurrentPage);
+        Assert.Empty(_installer.Used);
+    }
+
+    [Fact]
+    public void Use_this_install_switches_and_goes_home()
+    {
+        _installer.Records[AnyPS5Mode.Release] = ReleaseRecord;
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        var viewModel = Create();
+
+        viewModel.SelectBuildCommand.Execute(null);
+        viewModel.ContinueCommand.Execute(null);
+
+        Assert.Equal([AnyPS5Mode.Build], _installer.Used);
+        Assert.Equal("home", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public void A_failed_switch_stays_on_the_page_and_says_why()
+    {
+        _installer.Records[AnyPS5Mode.Release] = ReleaseRecord;
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.UseFailure = new InvalidOperationException("gone");
+        var viewModel = Create();
+        viewModel.SelectBuildCommand.Execute(null);
+
+        viewModel.ContinueCommand.Execute(null);
+
+        Assert.NotEqual("home", _navigator.CurrentPage);
+        Assert.Equal("Cannot switch to this install: gone", viewModel.ErrorText);
+
+        viewModel.SelectReleaseCommand.Execute(null);
+
+        Assert.Null(viewModel.ErrorText);
     }
 
     [Fact]

@@ -13,12 +13,13 @@ internal static class InstallCommand
     {
         var modeOption = new Option<AnyPS5Mode?>("--mode")
         {
-            Description = "release: download the release. build: compile the profile's commit. Defaults to the mode of an unfinished install, else of the current install, else release.",
+            Description = "release: download the release. build: compile the profile's commit. Defaults to the mode of an unfinished install, else of the active install, else release.",
         };
         var command = new Command("install", "Install AnyPS5 from the active profile: Python, relinker, libraries and scripts.") { modeOption };
         command.SetAction((parseResult, cancellationToken) => CommandHost.RunAsync(parseResult.GetValue(rootOption), "install", async (services, logger) =>
         {
             var installer = services.GetRequiredService<AnyPS5Installer>();
+            installer.MigrateLegacyInstall();
             var profile = services.GetRequiredService<AnyPS5Profile>();
             var context = services.GetRequiredService<CommandContext>();
             var choice = InstallModes.Resolve(parseResult.GetValue(modeOption), installer.RequestedMode, installer.ReadRecord());
@@ -47,9 +48,10 @@ internal static class InstallCommand
             }
 
             await installer.InstallAsync(choice.Mode, new ConsoleStepProgress(), cancellationToken: cancellationToken);
-            var version = installer.ReadRecord()?.Version ?? profile.Source.Version;
-            var directory = services.GetRequiredService<AnyPS5Paths>().RootDirectory;
-            logger.AnyPS5Ready(version, directory);
+            var record = installer.ReadRecord(choice.Mode)!;
+            var version = record.Version;
+            var directory = services.GetRequiredService<AnyPS5Paths>().For(choice.Mode).RootDirectory;
+            logger.InstallInUse(modeName, version, directory);
             return 0;
         }));
         return command;

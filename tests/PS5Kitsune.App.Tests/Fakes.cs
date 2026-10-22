@@ -79,6 +79,45 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5InstallRecord? ReadRecord() => State.Record;
 
+    public AnyPS5Mode? ActiveMode { get; set; }
+
+    /// <summary>Records by mode; a mode not listed falls back to State.Record when that record has the mode.</summary>
+    public Dictionary<AnyPS5Mode, AnyPS5InstallRecord> Records { get; } = [];
+
+    /// <summary>The modes passed to Use, in order.</summary>
+    public List<AnyPS5Mode> Used { get; } = [];
+
+    /// <summary>Thrown by MigrateLegacyInstall when set.</summary>
+    public Exception? MigrateFailure { get; set; }
+
+    public int Migrations { get; private set; }
+
+    public void MigrateLegacyInstall()
+    {
+        Migrations++;
+        if (MigrateFailure is not null)
+        {
+            throw MigrateFailure;
+        }
+    }
+
+    public AnyPS5InstallRecord? ReadRecord(AnyPS5Mode mode) =>
+        Records.TryGetValue(mode, out var record) ? record : State.Record is { } stateRecord && stateRecord.Mode == mode ? stateRecord : null;
+
+    /// <summary>Thrown by Use when set, before ActiveMode changes.</summary>
+    public Exception? UseFailure { get; set; }
+
+    public void Use(AnyPS5Mode mode)
+    {
+        if (UseFailure is not null)
+        {
+            throw UseFailure;
+        }
+
+        Used.Add(mode);
+        ActiveMode = mode;
+    }
+
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. StepNames.Select(name => new NamedStep(name))];
 
     /// <summary>When set, GetState blocks on it (at most 5 s, so a broken test cannot hang) after reading State.</summary>
@@ -90,8 +129,12 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     /// <summary>Released each time GetState is entered, so a test knows a check is running.</summary>
     public SemaphoreSlim GetStateEntered { get; } = new(0);
 
+    /// <summary>The modes passed to GetState, in order.</summary>
+    public List<AnyPS5Mode> CheckedModes { get; } = [];
+
     public AnyPS5InstallState GetState(AnyPS5Mode mode)
     {
+        CheckedModes.Add(mode);
         var state = State;
         var gate = GetStateGate;
         var failure = GetStateFailure;

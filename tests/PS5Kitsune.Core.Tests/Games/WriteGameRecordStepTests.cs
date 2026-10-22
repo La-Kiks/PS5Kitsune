@@ -1,7 +1,7 @@
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Games.Steps;
 using PS5Kitsune.Core.Library;
-using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tests.Fakes;
 
 namespace PS5Kitsune.Core.Tests.Games;
@@ -19,7 +19,11 @@ public sealed class WriteGameRecordStepTests : IDisposable
         TestFiles.Write(Path.Combine(game.App0, "sce_sys", "icon0.png"), "png");
     }
 
-    private WriteGameRecordStep CreateStep() => new(_context, ProfileLoader.LoadEmbedded(), _time);
+    private static readonly AnyPS5InstallRecord Release = new(2, "doom-validated-2026-10", AnyPS5Mode.Release, "v0.1.2", null, new Uri("https://example.test/u.py"), default);
+
+    private static readonly AnyPS5InstallRecord Build = new(2, "doom-validated-2026-10", AnyPS5Mode.Build, "3fd1cc3", "3fd1cc393b8512c2e989860053f30dee5a8cd1aa", null, default);
+
+    private WriteGameRecordStep CreateStep(AnyPS5InstallRecord? install = null) => new(_context, install ?? Release, _time);
 
     [Fact]
     public async Task Records_the_game_with_default_settings()
@@ -41,6 +45,17 @@ public sealed class WriteGameRecordStepTests : IDisposable
         Assert.Equal(_time.GetLocalNow(), record.AddedAt);
         Assert.Null(record.LastPlayedAt);
         Assert.True(step.IsAlreadyDone());
+    }
+
+    [Fact]
+    public async Task A_game_converted_with_a_build_records_the_build()
+    {
+        _context.Audit = new AuditSummary(262, 0, 0, new Dictionary<string, int>());
+
+        await CreateStep(Build).ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        var record = GameRecordStore.Read(_context.Game.RecordFile)!;
+        Assert.Equal(new ConversionInfo("doom-validated-2026-10", "build", "3fd1cc3", "3fd1cc393b8512c2e989860053f30dee5a8cd1aa", true), record.ConvertedWith);
     }
 
     [Fact]

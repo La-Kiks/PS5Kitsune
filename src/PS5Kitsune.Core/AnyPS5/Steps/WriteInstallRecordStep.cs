@@ -5,7 +5,7 @@ using PS5Kitsune.Core.Pipeline;
 namespace PS5Kitsune.Core.AnyPS5.Steps;
 
 /// <summary>Writes install.json last. Done when it describes the source's install, whatever its schema version.</summary>
-public sealed class WriteInstallRecordStep(IAnyPS5Source source, AnyPS5Paths paths, TimeProvider time) : IStep
+public sealed class WriteInstallRecordStep(IAnyPS5Source source, AnyPS5InstallPaths paths, TimeProvider time) : IStep
 {
     public string Name => "Record the install";
 
