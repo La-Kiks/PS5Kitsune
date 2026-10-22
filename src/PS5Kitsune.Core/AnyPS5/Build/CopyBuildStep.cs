@@ -5,7 +5,7 @@ using PS5Kitsune.Core.Tools;
 namespace PS5Kitsune.Core.AnyPS5.Build;
 
 /// <summary>
-/// Copies the build into anyps5\current so it matches a release install: relinker, libs (.prx + the 3 WinLibs DLLs)
+/// Copies the build into anyps5\installs\build so it matches a release install: relinker, libs (.prx + the 3 WinLibs DLLs)
 /// and the scripts of the same commit. libs and scripts are mirrored on execution; the done-check ignores extra files,
 /// such as the __pycache__ Python writes beside the scripts.
 /// </summary>
