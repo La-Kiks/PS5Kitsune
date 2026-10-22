@@ -13,7 +13,16 @@ namespace PS5Kitsune.Core.AnyPS5.Build;
 /// <param name="SawCertificateError">An HTTPS certificate error appeared in the error output (curl error 60 and friends).</param>
 public sealed record CommandFailure(int ExitCode, string Tail, bool SawCertificateError);
 
-public sealed class BuildCommandException(string message) : Exception(message);
+/// <summary>A git or CMake command failed.</summary>
+/// <param name="summary">The targeted message, shown first.</param>
+/// <param name="details">The exit code and the last lines of output; empty when there are none.</param>
+public sealed class BuildCommandException(string summary, string details = "")
+    : Exception(string.IsNullOrEmpty(details) ? summary : summary + Environment.NewLine + details)
+{
+    public string Summary { get; } = summary;
+
+    public string Details { get; } = details;
+}
 
 /// <summary>Runs git and CMake for build mode with the build environment, reports progress, and turns failures into messages.</summary>
 public sealed partial class BuildCommands(IProcessRunner runner, BuildEnvironment environment, BuildPaths paths, IFreeSpace freeSpace)
@@ -32,12 +41,17 @@ public sealed partial class BuildCommands(IProcessRunner runner, BuildEnvironmen
         ArgumentNullException.ThrowIfNull(spec);
         ArgumentNullException.ThrowIfNull(describeFailure);
         var tail = new OutputTail();
+        var fractions = new FractionTracker();
         var sawCertificateError = false;
         var result = await runner.RunAsync(spec, line =>
         {
             if (NinjaProgress.TryParse(line.Text, out var fraction))
             {
-                progress?.Report(new StepProgress(Fraction: fraction));
+                if (fractions.TryAccept(fraction))
+                {
+                    progress?.Report(new StepProgress(Fraction: fraction));
+                }
+
                 return;
             }
 
@@ -61,7 +75,8 @@ public sealed partial class BuildCommands(IProcessRunner runner, BuildEnvironmen
         var lines = tail.ToString();
         var message = LowDiskMessage() ?? describeFailure(new CommandFailure(result.ExitCode, lines, sawCertificateError));
         throw new BuildCommandException(
-            $"{message}{Environment.NewLine}{Path.GetFileNameWithoutExtension(spec.FileName)} exited with code {result.ExitCode}.{Environment.NewLine}{lines}");
+            message,
+            $"{Path.GetFileNameWithoutExtension(spec.FileName)} exited with code {result.ExitCode}.{Environment.NewLine}{lines}");
     }
 
     private string? LowDiskMessage()
