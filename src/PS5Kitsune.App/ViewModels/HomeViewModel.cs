@@ -64,7 +64,7 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         {
             state = await Task.Run(() => installer.GetState(mode)).ConfigureAwait(true);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception)
         {
             if (generation == _generation)
             {

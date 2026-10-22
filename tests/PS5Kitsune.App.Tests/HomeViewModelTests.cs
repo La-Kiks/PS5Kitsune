@@ -141,6 +141,71 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task The_page_shows_it_is_checking_until_the_state_is_read()
+    {
+        using var gate = new ManualResetEventSlim();
+        _installer.GetStateGate = gate;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+        var viewModel = Create();
+
+        var refresh = viewModel.RefreshAsync();
+        Assert.True(await _installer.GetStateEntered.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+
+        Assert.Equal("Checking the AnyPS5 install…", viewModel.StateTitle);
+        Assert.True(viewModel.IsChecking);
+        Assert.False(viewModel.StartCommand.CanExecute(null));
+
+        gate.Set();
+        await refresh;
+
+        Assert.Equal("AnyPS5 v0.1.2 is installed", viewModel.StateTitle);
+        Assert.False(viewModel.IsChecking);
+        Assert.True(viewModel.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_superseded_check_is_discarded()
+    {
+        using var gateA = new ManualResetEventSlim();
+        using var gateB = new ManualResetEventSlim();
+        var viewModel = Create();
+
+        _installer.GetStateGate = gateA;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.NotInstalled, null);
+        var refreshA = viewModel.RefreshAsync();
+        Assert.True(await _installer.GetStateEntered.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+
+        _installer.GetStateGate = gateB;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+        var refreshB = viewModel.RefreshAsync();
+        Assert.True(await _installer.GetStateEntered.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+
+        // B finishes first, then A's older result arrives and must not overwrite it.
+        gateB.Set();
+        await refreshB;
+        gateA.Set();
+        await refreshA;
+
+        Assert.Equal(AnyPS5InstallStatus.Installed, viewModel.Status);
+        Assert.Equal("AnyPS5 v0.1.2 is installed", viewModel.StateTitle);
+        Assert.Equal("Verify / repair", viewModel.ActionText);
+        Assert.False(viewModel.IsChecking);
+    }
+
+    [Fact]
+    public async Task A_failing_check_says_why_and_never_throws()
+    {
+        _installer.GetStateFailure = new IOException("disk gone");
+        var viewModel = Create();
+
+        await viewModel.RefreshAsync();
+
+        Assert.Equal("Cannot read the AnyPS5 install", viewModel.StateTitle);
+        Assert.Contains("disk gone", viewModel.StateDetail, StringComparison.Ordinal);
+        Assert.False(viewModel.IsChecking);
+    }
+
+    [Fact]
     public async Task Changing_the_root_saves_it_and_replaces_the_session()
     {
         var viewModel = await CreateAsync();
