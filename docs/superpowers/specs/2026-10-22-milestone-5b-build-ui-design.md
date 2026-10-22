@@ -160,3 +160,17 @@ The final review found that switching modes in the app empties `anyps5\current` 
 
 1. Home froze for several seconds on "Back to home" after a build: its refresh ran `GetState`, whose "Copy the build" done-check hashes every copied file on both sides (about 2 x 334 MB), on the UI thread. Home now checks the install on a worker thread and shows "Checking the AnyPS5 install…" meanwhile; a result that arrives after a newer refresh is dropped.
 2. Mode shows "Installed: {version}" on the installed mode's card, and its button reads "Verify / repair" for the installed mode, "Resume the install" for an unfinished one, and "Continue" otherwise.
+
+## Criterion result
+
+Run by the user on 2026-10-22 on the AMD laptop, with the Release build of the app:
+
+- Points 1 to 4 passed.
+  - A build from an empty root finished.
+  - Closing the window during "Compile AnyPS5" and reopening resumed the build.
+  - "Verify / repair" on a finished build skipped every step.
+  - Switching between release and build worked in both directions, on a root that held a release first.
+- Two findings from the first run were fixed, and the re-run passed (see "Changes from the criterion run"):
+  - "Back to home" after a build froze the window for several seconds.
+  - The user asked that Mode show the installed mode and name its action.
+- Release build: 0 warnings. Tests: 413 in all, 412 passed and 1 skipped (the explicit network test).
