@@ -2,6 +2,7 @@ using System.ComponentModel;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.AnyPS5.Build;
 using PS5Kitsune.Core.Pipeline;
 
 namespace PS5Kitsune.App.Tests;
@@ -15,6 +16,9 @@ public sealed class InstallViewModelTests
 
     private InstallViewModel Create() =>
         new(_installer, AnyPS5Mode.Release, "C:/root/logs/app.log", _platform, new InlineDispatcher(), _navigator, new FakePages(), _busy.Add);
+
+    private InstallViewModel CreateBuild() =>
+        new(_installer, AnyPS5Mode.Build, "C:/root/logs/app.log", _platform, new InlineDispatcher(), _navigator, new FakePages(), _busy.Add);
 
     [Fact]
     public async Task Installs_in_the_mode_it_was_created_with()
@@ -152,19 +156,111 @@ public sealed class InstallViewModelTests
         var running = viewModel.RunAsync();
 
         reported!.Report(new StepProgress(Download: new(50, 200)));
-        Assert.True(viewModel.IsDownloading);
-        Assert.False(viewModel.DownloadIndeterminate);
-        Assert.Equal(25, viewModel.DownloadPercent);
+        Assert.True(viewModel.ShowsProgress);
+        Assert.False(viewModel.ProgressIndeterminate);
+        Assert.Equal(25, viewModel.ProgressPercent);
+        Assert.Equal("0.0 / 0.0 MB", viewModel.ProgressText);
 
         reported.Report(new StepProgress(Download: new(50, null)));
-        Assert.True(viewModel.DownloadIndeterminate);
+        Assert.True(viewModel.ProgressIndeterminate);
 
         reported.Report(new StepProgress("Extracting libs"));
         Assert.Contains("Extracting libs", viewModel.Log);
 
         release.SetResult();
         await running;
-        Assert.False(viewModel.IsDownloading);
+        Assert.False(viewModel.ShowsProgress);
+    }
+
+    [Fact]
+    public async Task A_build_counter_drives_the_bar()
+    {
+        IProgress<StepProgress>? reported = null;
+        Action<StepEvent>? events = null;
+        var release = new TaskCompletionSource();
+        _installer.Install = (progress, onEvent, _) =>
+        {
+            reported = progress;
+            events = onEvent;
+            return release.Task;
+        };
+        var viewModel = CreateBuild();
+        var running = viewModel.RunAsync();
+
+        events!(new StepEvent(StepEventKind.Started, "Compile AnyPS5", 2, 2));
+        Assert.True(viewModel.ShowsProgress);
+        Assert.True(viewModel.ProgressIndeterminate);
+        Assert.Equal("Compile AnyPS5", viewModel.ProgressText);
+
+        reported!.Report(new StepProgress(Fraction: new StepFraction(91, 364)));
+        Assert.False(viewModel.ProgressIndeterminate);
+        Assert.Equal(25, viewModel.ProgressPercent);
+        Assert.Equal("91 / 364 units", viewModel.ProgressText);
+
+        events(new StepEvent(StepEventKind.Completed, "Compile AnyPS5", 2, 2, TimeSpan.FromSeconds(1)));
+        Assert.False(viewModel.ShowsProgress);
+
+        release.SetResult();
+        await running;
+    }
+
+    [Fact]
+    public async Task A_release_step_without_a_download_shows_no_bar()
+    {
+        Action<StepEvent>? events = null;
+        var release = new TaskCompletionSource();
+        _installer.Install = (_, onEvent, _) =>
+        {
+            events = onEvent;
+            return release.Task;
+        };
+        var viewModel = Create();
+        var running = viewModel.RunAsync();
+
+        events!(new StepEvent(StepEventKind.Started, "Download the relinker", 2, 2));
+
+        Assert.False(viewModel.ShowsProgress);
+        release.SetResult();
+        await running;
+    }
+
+    [Fact]
+    public async Task A_build_failure_shows_its_summary_and_details()
+    {
+        _installer.Install = (_, _, _) => throw new StepFailedException(
+            "Compile AnyPS5",
+            new BuildCommandException("The build failed. The log holds the full compiler output.", "cmake exited with code 1.\nmain.cpp:1: error: boom"));
+        var viewModel = CreateBuild();
+
+        await viewModel.RunAsync();
+
+        Assert.Equal("Compile AnyPS5 failed: The build failed. The log holds the full compiler output.", viewModel.Failure);
+        Assert.Equal("cmake exited with code 1.\nmain.cpp:1: error: boom", viewModel.FailureDetails);
+    }
+
+    [Fact]
+    public async Task Another_failure_has_no_details()
+    {
+        _installer.Install = (_, _, _) => throw new StepFailedException("Download the relinker", new IOException("disk full"));
+        var viewModel = Create();
+
+        await viewModel.RunAsync();
+
+        Assert.Equal("Download the relinker failed: disk full", viewModel.Failure);
+        Assert.Null(viewModel.FailureDetails);
+    }
+
+    [Fact]
+    public async Task Retry_clears_the_details()
+    {
+        _installer.Install = (_, _, _) => throw new StepFailedException("Compile AnyPS5", new BuildCommandException("The build failed.", "details"));
+        var viewModel = CreateBuild();
+        await viewModel.RunAsync();
+
+        _installer.Install = (_, _, _) => Task.CompletedTask;
+        await viewModel.RetryCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.FailureDetails);
     }
 
     [Fact]

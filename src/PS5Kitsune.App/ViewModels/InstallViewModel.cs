@@ -5,12 +5,13 @@ using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.AnyPS5.Build;
 using PS5Kitsune.Core.Pipeline;
 
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>
-/// Runs the install when the page is shown: step list, download bar, a log built from the installer's events.
+/// Runs the install when the page is shown: step list, a progress bar for downloads and build counters, a log built from the installer's events.
 /// Events and progress arrive on worker threads and are posted to the UI thread in order.
 /// </summary>
 public sealed partial class InstallViewModel : ObservableObject, INavigationAware
@@ -55,18 +56,23 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
     [ObservableProperty]
     public partial string? Failure { get; private set; }
 
+    /// <summary>A download, a build counter, or a running build step with neither yet.</summary>
     [ObservableProperty]
-    public partial bool IsDownloading { get; private set; }
+    public partial bool ShowsProgress { get; private set; }
 
     [ObservableProperty]
-    public partial double DownloadPercent { get; private set; }
+    public partial double ProgressPercent { get; private set; }
 
-    /// <summary>True when the server sent no length.</summary>
+    /// <summary>True when a download has no length, or a build step reports no counter yet.</summary>
     [ObservableProperty]
-    public partial bool DownloadIndeterminate { get; private set; }
+    public partial bool ProgressIndeterminate { get; private set; }
 
     [ObservableProperty]
-    public partial string DownloadText { get; private set; } = "";
+    public partial string ProgressText { get; private set; } = "";
+
+    /// <summary>The exit code and last output lines of a failed build command; null otherwise.</summary>
+    [ObservableProperty]
+    public partial string? FailureDetails { get; private set; }
 
     [ObservableProperty]
     public partial string? OpenError { get; private set; }
@@ -101,6 +107,7 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         IsRunning = true;
         HasFailed = false;
         Failure = null;
+        FailureDetails = null;
         RebuildSteps();
 
         _busyChanged?.Invoke(true);
@@ -115,12 +122,14 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         }
         catch (StepFailedException exception)
         {
-            var message = $"{exception.StepName} failed: {exception.InnerException?.Message ?? exception.Message}";
-            _ui.Post(() => Fail(message));
+            var build = exception.InnerException as BuildCommandException;
+            var message = $"{exception.StepName} failed: {build?.Summary ?? exception.InnerException?.Message ?? exception.Message}";
+            var details = string.IsNullOrEmpty(build?.Details) ? null : build.Details;
+            _ui.Post(() => Fail(message, details));
         }
         catch (Exception exception)
         {
-            _ui.Post(() => Fail($"The install failed: {exception.Message}"));
+            _ui.Post(() => Fail($"The install failed: {exception.Message}", null));
         }
         finally
         {
@@ -129,7 +138,7 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
             _ui.Post(() =>
             {
                 IsRunning = false;
-                IsDownloading = false;
+                ShowsProgress = false;
             });
         }
     }
@@ -144,10 +153,11 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         }
     }
 
-    private void Fail(string message)
+    private void Fail(string message, string? details)
     {
         HasFailed = true;
         Failure = message;
+        FailureDetails = details;
     }
 
     private void Apply(StepEvent stepEvent)
@@ -168,9 +178,17 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
             StepEventKind.Failed => $"{stepEvent.StepName}: failed: {stepEvent.Error?.Message}",
             _ => $"{stepEvent.StepName}: cancelled",
         });
-        if (stepEvent.Kind != StepEventKind.Started)
+        if (stepEvent.Kind == StepEventKind.Started && _mode == AnyPS5Mode.Build)
         {
-            IsDownloading = false;
+            // Git, CMake and extraction report nothing measurable for a while: show that the step is working.
+            ShowsProgress = true;
+            ProgressIndeterminate = true;
+            ProgressPercent = 0;
+            ProgressText = stepEvent.StepName;
+        }
+        else if (stepEvent.Kind != StepEventKind.Started)
+        {
+            ShowsProgress = false;
         }
     }
 
@@ -184,12 +202,20 @@ public sealed partial class InstallViewModel : ObservableObject, INavigationAwar
         if (progress.Download is { } download)
         {
             var total = download.TotalBytes ?? 0;
-            IsDownloading = true;
-            DownloadIndeterminate = total <= 0;
-            DownloadPercent = total > 0 ? download.ReceivedBytes * 100.0 / total : 0;
-            DownloadText = total > 0
+            ShowsProgress = true;
+            ProgressIndeterminate = total <= 0;
+            ProgressPercent = total > 0 ? download.ReceivedBytes * 100.0 / total : 0;
+            ProgressText = total > 0
                 ? string.Create(CultureInfo.InvariantCulture, $"{download.ReceivedBytes / 1048576.0:0.0} / {total / 1048576.0:0.0} MB")
                 : string.Create(CultureInfo.InvariantCulture, $"{download.ReceivedBytes / 1048576.0:0.0} MB");
+        }
+
+        if (progress.Fraction is { } fraction)
+        {
+            ShowsProgress = true;
+            ProgressIndeterminate = false;
+            ProgressPercent = fraction.Done * 100.0 / fraction.Total;
+            ProgressText = string.Create(CultureInfo.InvariantCulture, $"{fraction.Done} / {fraction.Total} units");
         }
     }
 
