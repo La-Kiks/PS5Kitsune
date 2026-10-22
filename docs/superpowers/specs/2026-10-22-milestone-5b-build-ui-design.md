@@ -151,3 +151,7 @@ Run by the user on the AMD laptop after the tests pass:
 3. In build mode every running step shows the indeterminate bar until a download or a counter replaces it, tool steps included. Release mode shows the bar for downloads only, as before.
 4. The Tools total reads "To download: size unknown" when every missing tool lacks a size.
 5. Constant UI texts on view models are get-only properties with an initializer, because the analyzers (CA1822) reject expression-bodied constants on instance members the views bind to.
+
+## Decision after the final review
+
+The final review found that switching modes in the app empties `anyps5\current` before the new mode is installed, so a failed or cancelled build after a release leaves no working AnyPS5. The CLI does the same, but only on an explicit `--mode`. The user chose to keep this behaviour in 5b. A later milestone will keep the release and build installs side by side (`anyps5\release`, `anyps5\build`, plus the active one), so a switch never removes a working install. Until then, switching modes in the app replaces the installed mode from its first step.
