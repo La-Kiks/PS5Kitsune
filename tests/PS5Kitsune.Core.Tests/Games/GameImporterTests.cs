@@ -79,6 +79,8 @@ public sealed class GameImporterTests : IDisposable
         var added = Assert.IsType<GameAdded>(await AddAsync(WriteZip()));
 
         Assert.Equal("DOOM", added.Record.Name);
+        Assert.Equal("release", added.Record.ConvertedWith.Mode);
+        Assert.Equal("v0.1.2", added.Record.ConvertedWith.Version);
         Assert.Equal(AuditVerdict.Green, added.Record.Audit.Verdict);
         Assert.Equal(GameDirectory, added.GameDirectory);
         Assert.Equal(TestFiles.Elf(), File.ReadAllBytes(Path.Combine(GameDirectory, "app0", "eboot.bin")));

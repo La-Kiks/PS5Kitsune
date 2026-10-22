@@ -39,6 +39,7 @@ public sealed partial class GameImporter(
             throw new AnyPS5NotInstalledException();
         }
 
+        var install = installer.ReadRecord() ?? throw new AnyPS5NotInstalledException();
         var source = await resolver.ResolveAsync(input, cancellationToken).ConfigureAwait(false);
         CopyGameStep? copy = null;
         try
@@ -64,7 +65,7 @@ public sealed partial class GameImporter(
                 new UnwrapSelfStep(context, paths, python, processRunner),
                 new RelinkStep(context, paths, profile, processRunner),
                 new AuditStep(context, paths, python, processRunner),
-                new WriteGameRecordStep(context, profile, time),
+                new WriteGameRecordStep(context, install, time),
             ];
             await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
 

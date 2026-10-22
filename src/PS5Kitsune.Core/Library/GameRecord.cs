@@ -30,7 +30,9 @@ public sealed record GameRecord
     public DateTimeOffset? LastPlayedAt { get; init; }
 }
 
-/// <param name="Commit">Commit SHA in commit mode; null for a release.</param>
+/// <param name="Mode">The install mode that converted the game: "release" or "build".</param>
+/// <param name="Version">The release tag, or the first 7 characters of the commit for a build.</param>
+/// <param name="Commit">The commit built; null for a release.</param>
 /// <param name="ToIntel">Whether the relinker ran with its Intel option; Reconvert reuses it.</param>
 public sealed record ConversionInfo(string Profile, string Mode, string Version, string? Commit, bool ToIntel);
 
