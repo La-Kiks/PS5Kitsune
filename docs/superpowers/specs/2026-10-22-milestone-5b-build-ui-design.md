@@ -155,3 +155,8 @@ Run by the user on the AMD laptop after the tests pass:
 ## Decision after the final review
 
 The final review found that switching modes in the app empties `anyps5\current` before the new mode is installed, so a failed or cancelled build after a release leaves no working AnyPS5. The CLI does the same, but only on an explicit `--mode`. The user chose to keep this behaviour in 5b. A later milestone will keep the release and build installs side by side (`anyps5\release`, `anyps5\build`, plus the active one), so a switch never removes a working install. Until then, switching modes in the app replaces the installed mode from its first step.
+
+## Changes from the criterion run
+
+1. Home froze for several seconds on "Back to home" after a build: its refresh ran `GetState`, whose "Copy the build" done-check hashes every copied file on both sides (about 2 x 334 MB), on the UI thread. Home now checks the install on a worker thread and shows "Checking the AnyPS5 install…" meanwhile; a result that arrives after a newer refresh is dropped.
+2. Mode shows "Installed: {version}" on the installed mode's card, and its button reads "Verify / repair" for the installed mode, "Resume the install" for an unfinished one, and "Continue" otherwise.

@@ -13,6 +13,8 @@ public sealed partial class ModeViewModel : ObservableObject
     private readonly AnyPS5Profile _profile;
     private readonly Navigator _navigator;
     private readonly IPages _pages;
+    private readonly AnyPS5InstallRecord? _record;
+    private readonly AnyPS5Mode? _requestedMode;
 
     /// <summary>Preselects the mode the CLI would use without --mode: an unfinished install's, else the installed one's, else release.</summary>
     public ModeViewModel(AnyPS5Profile profile, IAnyPS5Installer installer, Navigator navigator, IPages pages)
@@ -20,6 +22,8 @@ public sealed partial class ModeViewModel : ObservableObject
         _profile = profile;
         _navigator = navigator;
         _pages = pages;
+        _record = installer.ReadRecord();
+        _requestedMode = installer.RequestedMode;
         CanBuild = installer.Supports(AnyPS5Mode.Build);
         SelectedMode = installer.CurrentMode == AnyPS5Mode.Build && CanBuild ? AnyPS5Mode.Build : AnyPS5Mode.Release;
     }
@@ -43,7 +47,21 @@ public sealed partial class ModeViewModel : ObservableObject
 
     public string BuildUnavailableText { get; } = "This profile does not define a build.";
 
+    /// <summary>"Installed: {version}" on the release card when the install is a release; null otherwise.</summary>
+    public string? ReleaseInstalledText => InstalledText(AnyPS5Mode.Release);
+
+    /// <summary>"Installed: {version}" on the build card when the install is a build; null otherwise.</summary>
+    public string? BuildInstalledText => InstalledText(AnyPS5Mode.Build);
+
+    /// <summary>Names what Continue does for the selected mode.</summary>
+    public string ContinueText => _requestedMode == SelectedMode ? "Resume the install"
+        : _record?.Mode == SelectedMode ? "Verify / repair"
+        : "Continue";
+
+    private string? InstalledText(AnyPS5Mode mode) => _record is not null && _record.Mode == mode ? $"Installed: {_record.Version}" : null;
+
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ContinueText))]
     [NotifyPropertyChangedFor(nameof(IsReleaseSelected))]
     [NotifyPropertyChangedFor(nameof(IsBuildSelected))]
     public partial AnyPS5Mode SelectedMode { get; private set; }

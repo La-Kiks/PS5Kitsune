@@ -115,4 +115,57 @@ public sealed class ModeViewModelTests
 
         Assert.Equal("home", _navigator.CurrentPage);
     }
+
+    private static AnyPS5InstallState Installed(AnyPS5Mode mode, string version) =>
+        new(AnyPS5InstallStatus.Installed, new AnyPS5InstallRecord(2, "test-profile", mode, version, null, null, DateTimeOffset.UnixEpoch));
+
+    [Fact]
+    public void A_release_install_is_named_on_its_card_and_repaired_from_the_button()
+    {
+        _installer.State = Installed(AnyPS5Mode.Release, "v0.1.2");
+
+        var viewModel = Create();
+
+        Assert.Equal("Installed: v0.1.2", viewModel.ReleaseInstalledText);
+        Assert.Null(viewModel.BuildInstalledText);
+        Assert.Equal("Verify / repair", viewModel.ContinueText);
+
+        viewModel.SelectBuildCommand.Execute(null);
+
+        Assert.Equal("Continue", viewModel.ContinueText);
+    }
+
+    [Fact]
+    public void A_build_install_is_named_on_its_card_and_repaired_from_the_button()
+    {
+        _installer.CurrentMode = AnyPS5Mode.Build;
+        _installer.State = Installed(AnyPS5Mode.Build, "3fd1cc3");
+
+        var viewModel = Create();
+
+        Assert.Equal("Installed: 3fd1cc3", viewModel.BuildInstalledText);
+        Assert.Null(viewModel.ReleaseInstalledText);
+        Assert.Equal("Verify / repair", viewModel.ContinueText);
+    }
+
+    [Fact]
+    public void An_unfinished_install_is_resumed()
+    {
+        _installer.CurrentMode = AnyPS5Mode.Build;
+        _installer.RequestedMode = AnyPS5Mode.Build;
+
+        var viewModel = Create();
+
+        Assert.Equal("Resume the install", viewModel.ContinueText);
+    }
+
+    [Fact]
+    public void Without_an_install_nothing_is_named_and_the_button_continues()
+    {
+        var viewModel = Create();
+
+        Assert.Null(viewModel.ReleaseInstalledText);
+        Assert.Null(viewModel.BuildInstalledText);
+        Assert.Equal("Continue", viewModel.ContinueText);
+    }
 }
