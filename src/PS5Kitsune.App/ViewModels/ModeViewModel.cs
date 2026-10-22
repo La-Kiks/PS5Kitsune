@@ -13,7 +13,10 @@ public sealed partial class ModeViewModel : ObservableObject
     private readonly AnyPS5Profile _profile;
     private readonly Navigator _navigator;
     private readonly IPages _pages;
-    private readonly AnyPS5InstallRecord? _record;
+    private readonly IAnyPS5Installer _installer;
+    private readonly AnyPS5InstallRecord? _releaseRecord;
+    private readonly AnyPS5InstallRecord? _buildRecord;
+    private readonly AnyPS5Mode? _activeMode;
     private readonly AnyPS5Mode? _requestedMode;
 
     /// <summary>Preselects the mode the CLI would use without --mode: an unfinished install's, else the installed one's, else release.</summary>
@@ -22,7 +25,10 @@ public sealed partial class ModeViewModel : ObservableObject
         _profile = profile;
         _navigator = navigator;
         _pages = pages;
-        _record = installer.ReadRecord();
+        _installer = installer;
+        _releaseRecord = installer.ReadRecord(AnyPS5Mode.Release);
+        _buildRecord = installer.ReadRecord(AnyPS5Mode.Build);
+        _activeMode = installer.ActiveMode;
         _requestedMode = installer.RequestedMode;
         CanBuild = installer.Supports(AnyPS5Mode.Build);
         SelectedMode = installer.CurrentMode == AnyPS5Mode.Build && CanBuild ? AnyPS5Mode.Build : AnyPS5Mode.Release;
@@ -47,18 +53,25 @@ public sealed partial class ModeViewModel : ObservableObject
 
     public string BuildUnavailableText { get; } = "This profile does not define a build.";
 
-    /// <summary>"Installed: {version}" on the release card when the install is a release; null otherwise.</summary>
-    public string? ReleaseInstalledText => InstalledText(AnyPS5Mode.Release);
+    /// <summary>"Installed: {version}" on the release card when the release install is finished; null otherwise.</summary>
+    public string? ReleaseInstalledText => _releaseRecord is { } record ? $"Installed: {record.Version}" : null;
 
-    /// <summary>"Installed: {version}" on the build card when the install is a build; null otherwise.</summary>
-    public string? BuildInstalledText => InstalledText(AnyPS5Mode.Build);
+    /// <summary>"Installed: {version}" on the build card when the build install is finished; null otherwise.</summary>
+    public string? BuildInstalledText => _buildRecord is { } record ? $"Installed: {record.Version}" : null;
+
+    public bool IsReleaseInUse => _activeMode == AnyPS5Mode.Release;
+
+    public bool IsBuildInUse => _activeMode == AnyPS5Mode.Build;
 
     /// <summary>Names what Continue does for the selected mode.</summary>
     public string ContinueText => _requestedMode == SelectedMode ? "Resume the install"
-        : _record?.Mode == SelectedMode ? "Verify / repair"
+        : _activeMode == SelectedMode ? "Verify / repair"
+        : SwitchesOnly ? "Use this install"
         : "Continue";
 
-    private string? InstalledText(AnyPS5Mode mode) => _record is not null && _record.Mode == mode ? $"Installed: {_record.Version}" : null;
+    /// <summary>The selected install is finished and not in use, and no install of it is pending: Continue only switches.</summary>
+    private bool SwitchesOnly => _requestedMode != SelectedMode && _activeMode != SelectedMode
+        && (SelectedMode == AnyPS5Mode.Release ? _releaseRecord : _buildRecord) is not null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ContinueText))]
@@ -80,5 +93,15 @@ public sealed partial class ModeViewModel : ObservableObject
     private void Back() => _navigator.GoBack();
 
     [RelayCommand]
-    private void Continue() => _navigator.GoTo(_pages.SystemCheck(SelectedMode));
+    private void Continue()
+    {
+        if (SwitchesOnly)
+        {
+            _installer.Use(SelectedMode);
+            _navigator.GoHome(_pages.Home());
+            return;
+        }
+
+        _navigator.GoTo(_pages.SystemCheck(SelectedMode));
+    }
 }

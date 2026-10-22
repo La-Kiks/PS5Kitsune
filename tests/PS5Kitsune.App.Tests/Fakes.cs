@@ -121,8 +121,12 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     /// <summary>Released each time GetState is entered, so a test knows a check is running.</summary>
     public SemaphoreSlim GetStateEntered { get; } = new(0);
 
+    /// <summary>The modes passed to GetState, in order.</summary>
+    public List<AnyPS5Mode> CheckedModes { get; } = [];
+
     public AnyPS5InstallState GetState(AnyPS5Mode mode)
     {
+        CheckedModes.Add(mode);
         var state = State;
         var gate = GetStateGate;
         var failure = GetStateFailure;

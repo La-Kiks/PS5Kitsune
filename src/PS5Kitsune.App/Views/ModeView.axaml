@@ -42,6 +42,7 @@
           <StackPanel Spacing="6">
             <TextBlock Text="{Binding ReleaseTitle}" FontSize="16" FontWeight="SemiBold" />
             <TextBlock Text="{Binding ReleaseInstalledText}" FontWeight="SemiBold" IsVisible="{Binding ReleaseInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="In use" FontWeight="SemiBold" IsVisible="{Binding IsReleaseInUse}" />
             <TextBlock Text="{Binding PublishedText}" Opacity="0.85" />
             <TextBlock Text="{Binding ProfileStatusText}" Opacity="0.85" />
             <TextBlock Text="A few minutes, no compilation." Opacity="0.85" />
@@ -52,6 +53,7 @@
           <StackPanel Spacing="6">
             <TextBlock Text="Build from source" FontSize="16" FontWeight="SemiBold" />
             <TextBlock Text="{Binding BuildInstalledText}" FontWeight="SemiBold" IsVisible="{Binding BuildInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="In use" FontWeight="SemiBold" IsVisible="{Binding IsBuildInUse}" />
             <StackPanel Spacing="6" IsVisible="{Binding CanBuild}">
               <TextBlock Text="{Binding BuildCommitText}" Opacity="0.85" />
               <TextBlock Text="{Binding ProfileStatusText}" Opacity="0.85" />

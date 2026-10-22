@@ -37,6 +37,10 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     [ObservableProperty]
     public partial string? RootError { get; private set; }
 
+    /// <summary>"Also installed: {mode} {version}" when the install not in use is finished too; null otherwise.</summary>
+    [ObservableProperty]
+    public partial string? OtherInstallText { get; private set; }
+
     /// <summary>True while the install is being checked: the done-checks can hash hundreds of MB.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
@@ -55,14 +59,14 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         var installer = session.Get<IAnyPS5Installer>();
         DataRoot = session.Layout.Root;
         ProfileText = $"{profile.Id} ({(profile.Validated ? "validated" : "not validated yet")})";
-        var mode = installer.CurrentMode;
         IsChecking = true;
         (StateTitle, StateDetail, ActionText) = ("Checking the AnyPS5 install…", "", "");
+        OtherInstallText = null;
 
-        AnyPS5InstallState state;
+        HomeCheck check;
         try
         {
-            state = await Task.Run(() => installer.GetState(mode)).ConfigureAwait(true);
+            check = await Task.Run(() => Check(installer)).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
@@ -80,8 +84,47 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
             return;
         }
 
-        Apply(state, mode);
+        Apply(check.State, check.Mode);
+        ApplyBothInstalls(check);
         IsChecking = false;
+    }
+
+    /// <param name="Mode">The install described: the active one, else an unfinished one, else release.</param>
+    /// <param name="Other">The record of the other mode's install; null when it never finished or no install is active.</param>
+    private sealed record HomeCheck(AnyPS5Mode Mode, AnyPS5InstallState State, AnyPS5Mode? Active, AnyPS5Mode? Requested, AnyPS5InstallRecord? Other);
+
+    /// <summary>Runs on a worker thread: the migration moves a folder and the done-checks can hash hundreds of MB.</summary>
+    private static HomeCheck Check(IAnyPS5Installer installer)
+    {
+        installer.MigrateLegacyInstall();
+        var active = installer.ActiveMode;
+        var requested = installer.RequestedMode;
+        var mode = active ?? requested ?? AnyPS5Mode.Release;
+        var other = active is { } activeMode ? installer.ReadRecord(OtherMode(activeMode)) : null;
+        return new HomeCheck(mode, installer.GetState(mode), active, requested, other);
+    }
+
+    private static AnyPS5Mode OtherMode(AnyPS5Mode mode) => mode == AnyPS5Mode.Release ? AnyPS5Mode.Build : AnyPS5Mode.Release;
+
+    /// <summary>An unfinished install of the other mode is offered for resuming; a finished one is listed.</summary>
+    private void ApplyBothInstalls(HomeCheck check)
+    {
+        if (check.Active is not { } active)
+        {
+            return;
+        }
+
+        if (check.Requested is { } requested && requested != active)
+        {
+            StateDetail = $"The {InstallModes.Name(requested)} install did not finish.";
+            ActionText = "Resume the install";
+            return;
+        }
+
+        if (check.Other is { } other)
+        {
+            OtherInstallText = $"Also installed: {InstallModes.Name(other.Mode)} {other.Version}";
+        }
     }
 
     private void Apply(AnyPS5InstallState state, AnyPS5Mode mode)

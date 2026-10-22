@@ -83,7 +83,7 @@ public sealed class HomeViewModelTests : IDisposable
     [Fact]
     public async Task A_build_install_is_shown_and_can_be_repaired()
     {
-        _installer.CurrentMode = AnyPS5Mode.Build;
+        _installer.ActiveMode = AnyPS5Mode.Build;
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, BuildRecord);
 
         var viewModel = await CreateAsync();
@@ -100,7 +100,7 @@ public sealed class HomeViewModelTests : IDisposable
     [InlineData(AnyPS5InstallStatus.NotInstalled)]
     public async Task An_unfinished_build_can_be_resumed(AnyPS5InstallStatus status)
     {
-        _installer.CurrentMode = AnyPS5Mode.Build;
+        _installer.RequestedMode = AnyPS5Mode.Build;
         _installer.State = new AnyPS5InstallState(status, null);
 
         var viewModel = await CreateAsync();
@@ -109,6 +109,73 @@ public sealed class HomeViewModelTests : IDisposable
         Assert.Equal("Resume it to finish: the steps already done are skipped.", viewModel.StateDetail);
         Assert.Equal("Resume the install", viewModel.ActionText);
         Assert.True(viewModel.StartCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task The_check_migrates_the_old_install_first()
+    {
+        await CreateAsync();
+
+        Assert.Equal(1, _installer.Migrations);
+    }
+
+    [Fact]
+    public async Task A_failed_migration_is_shown_and_retried_on_the_next_refresh()
+    {
+        _installer.MigrateFailure = new AnyPS5MigrationException(new IOException("The file is in use."));
+
+        var viewModel = await CreateAsync();
+
+        Assert.Equal("Cannot read the AnyPS5 install", viewModel.StateTitle);
+        Assert.Equal(@"Cannot move anyps5\current: The file is in use. Close any game using it and retry.", viewModel.StateDetail);
+        Assert.False(viewModel.IsChecking);
+
+        _installer.MigrateFailure = null;
+        await viewModel.RefreshAsync();
+
+        Assert.Equal(2, _installer.Migrations);
+        Assert.Equal("AnyPS5 is not installed", viewModel.StateTitle);
+    }
+
+    [Fact]
+    public async Task The_other_finished_install_is_listed()
+    {
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+
+        var viewModel = await CreateAsync();
+
+        Assert.Equal("AnyPS5 v0.1.2 is installed", viewModel.StateTitle);
+        Assert.Equal("Also installed: build 48d61f5", viewModel.OtherInstallText);
+    }
+
+    [Fact]
+    public async Task No_other_install_lists_nothing()
+    {
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+
+        var viewModel = await CreateAsync();
+
+        Assert.Null(viewModel.OtherInstallText);
+    }
+
+    [Fact]
+    public async Task An_interrupted_switch_keeps_the_active_install_and_offers_to_resume()
+    {
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.RequestedMode = AnyPS5Mode.Build;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+        _installer.Records[AnyPS5Mode.Build] = BuildRecord;
+
+        var viewModel = await CreateAsync();
+
+        Assert.Equal("AnyPS5 v0.1.2 is installed", viewModel.StateTitle);
+        Assert.Equal("The build install did not finish.", viewModel.StateDetail);
+        Assert.Equal("Resume the install", viewModel.ActionText);
+        Assert.Null(viewModel.OtherInstallText);
+        Assert.Equal(AnyPS5Mode.Release, _installer.CheckedModes.Last());
     }
 
     [Fact]
