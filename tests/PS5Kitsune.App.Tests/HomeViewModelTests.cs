@@ -79,7 +79,7 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void A_build_install_is_shown_and_repaired_only_from_the_command_line()
+    public void A_build_install_is_shown_and_can_be_repaired()
     {
         _installer.CurrentMode = AnyPS5Mode.Build;
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, BuildRecord);
@@ -88,14 +88,15 @@ public sealed class HomeViewModelTests : IDisposable
 
         Assert.Equal("AnyPS5 48d61f5 is installed (built from source)", viewModel.StateTitle);
         Assert.Contains(BuildRecord.InstalledAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), viewModel.StateDetail, StringComparison.Ordinal);
-        Assert.Contains("Built from source. Repair or update it from the command line: ps5kitsune install", viewModel.StateDetail, StringComparison.Ordinal);
-        Assert.False(viewModel.StartCommand.CanExecute(null));
+        Assert.DoesNotContain("command line", viewModel.StateDetail, StringComparison.Ordinal);
+        Assert.Equal("Verify / repair", viewModel.ActionText);
+        Assert.True(viewModel.StartCommand.CanExecute(null));
     }
 
     [Theory]
     [InlineData(AnyPS5InstallStatus.Incomplete)]
     [InlineData(AnyPS5InstallStatus.NotInstalled)]
-    public void An_unfinished_build_is_shown_and_resumed_only_from_the_command_line(AnyPS5InstallStatus status)
+    public void An_unfinished_build_can_be_resumed(AnyPS5InstallStatus status)
     {
         _installer.CurrentMode = AnyPS5Mode.Build;
         _installer.State = new AnyPS5InstallState(status, null);
@@ -103,29 +104,17 @@ public sealed class HomeViewModelTests : IDisposable
         var viewModel = Create();
 
         Assert.Equal("The AnyPS5 build is incomplete", viewModel.StateTitle);
-        Assert.Equal("Built from source. Repair or update it from the command line: ps5kitsune install", viewModel.StateDetail);
-        Assert.False(viewModel.StartCommand.CanExecute(null));
-    }
-
-    [Fact]
-    public void Leaving_build_mode_enables_the_action_again()
-    {
-        _installer.CurrentMode = AnyPS5Mode.Build;
-        var viewModel = Create();
-        _installer.CurrentMode = AnyPS5Mode.Release;
-
-        viewModel.Refresh();
-
+        Assert.Equal("Resume it to finish: the steps already done are skipped.", viewModel.StateDetail);
+        Assert.Equal("Resume the install", viewModel.ActionText);
         Assert.True(viewModel.StartCommand.CanExecute(null));
-        Assert.Equal("AnyPS5 is not installed", viewModel.StateTitle);
     }
 
     [Fact]
-    public void Start_goes_to_the_pc_check()
+    public void Start_goes_to_the_mode_page()
     {
         Create().StartCommand.Execute(null);
 
-        Assert.Equal("check:Release", _navigator.CurrentPage);
+        Assert.Equal("mode", _navigator.CurrentPage);
     }
 
     [Fact]

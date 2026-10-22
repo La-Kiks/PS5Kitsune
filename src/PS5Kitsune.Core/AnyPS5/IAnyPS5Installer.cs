@@ -14,6 +14,9 @@ public interface IAnyPS5Installer
     /// </summary>
     AnyPS5Mode? RequestedMode { get; }
 
+    /// <summary>True when the active profile can install <paramref name="mode"/>; build needs a build section and the build tools.</summary>
+    bool Supports(AnyPS5Mode mode);
+
     /// <summary>install.json as found; null when missing or unreadable.</summary>
     AnyPS5InstallRecord? ReadRecord();
 

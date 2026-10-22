@@ -18,7 +18,7 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object Home() => new HomeViewModel(sessions, settings, dialogs, navigator, this);
 
-    public object Mode() => new ModeViewModel(Session.Get<AnyPS5Profile>(), navigator, this);
+    public object Mode() => new ModeViewModel(Session.Get<AnyPS5Profile>(), Session.Get<IAnyPS5Installer>(), navigator, this);
 
     public object SystemCheck(AnyPS5Mode mode) => new SystemCheckViewModel(Session.Get<ISystemChecker>(), mode, platform, navigator, this);
 

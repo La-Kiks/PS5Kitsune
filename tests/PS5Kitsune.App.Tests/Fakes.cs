@@ -70,6 +70,11 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5Mode? RequestedMode { get; set; }
 
+    /// <summary>False simulates a profile without a build section.</summary>
+    public bool BuildSupported { get; set; } = true;
+
+    public bool Supports(AnyPS5Mode mode) => mode == AnyPS5Mode.Release || BuildSupported;
+
     public AnyPS5Mode? InstalledMode { get; private set; }
 
     public AnyPS5InstallRecord? ReadRecord() => State.Record;

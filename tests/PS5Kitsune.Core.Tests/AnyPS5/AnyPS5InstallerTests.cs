@@ -279,4 +279,13 @@ public sealed class AnyPS5InstallerTests : IDisposable
 
         Assert.Contains("build", exception.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Says_which_modes_the_profile_supports()
+    {
+        var releaseOnly = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time);
+
+        Assert.True(releaseOnly.Supports(AnyPS5Mode.Release));
+        Assert.False(releaseOnly.Supports(AnyPS5Mode.Build));
+    }
 }
