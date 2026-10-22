@@ -9,7 +9,7 @@ namespace PS5Kitsune.Core.AnyPS5.Build;
 /// and the scripts of the same commit. libs and scripts are mirrored on execution; the done-check ignores extra files,
 /// such as the __pycache__ Python writes beside the scripts.
 /// </summary>
-public sealed class CopyBuildStep(BuildPaths build, AnyPS5Paths current, WinLibsTool winlibs) : IStep
+public sealed class CopyBuildStep(BuildPaths build, AnyPS5InstallPaths current, WinLibsTool winlibs) : IStep
 {
     public string Name => "Copy the build";
 

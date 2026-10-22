@@ -7,12 +7,12 @@ public sealed class CopyBuildStepTests : IDisposable
 {
     private readonly TempDirectory _temp = new();
     private readonly BuildTestSetup _setup;
-    private readonly AnyPS5Paths _current;
+    private readonly AnyPS5InstallPaths _current;
 
     public CopyBuildStepTests()
     {
         _setup = new BuildTestSetup(_temp.Path);
-        _current = new AnyPS5Paths(_setup.Layout, _setup.Platform);
+        _current = new AnyPS5Paths(_setup.Layout, _setup.Platform).For(AnyPS5Mode.Build);
         TestFiles.Write(_setup.Paths.BuiltRelinker, "relinker");
         TestFiles.Write(Path.Combine(_setup.Paths.BuiltLibs, "libSceAudioOut.prx"), "prx");
         TestFiles.Write(Path.Combine(_setup.Paths.BuiltLibs, "CMakeFiles", "ignored.txt"), "not a prx");

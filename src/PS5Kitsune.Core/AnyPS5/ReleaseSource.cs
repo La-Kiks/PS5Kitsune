@@ -13,20 +13,21 @@ public sealed class ReleaseSource(AnyPS5Profile profile, AnyPS5Paths paths, Data
 
     public IReadOnlyList<IStep> CreateSteps()
     {
+        var target = paths.For(AnyPS5Mode.Release);
         var relinker = profile.Asset(ProfileAssetKeys.Relinker);
         var libs = profile.Asset(ProfileAssetKeys.Libs);
         var scripts = profile.Asset(ProfileAssetKeys.Scripts);
         var unwrapScript = profile.Asset(ProfileAssetKeys.UnwrapScript);
         return
         [
-            new DownloadFileStep("Download the relinker", profile.AssetUrl(ProfileAssetKeys.Relinker), paths.Relinker, relinker.Sha256, downloader),
+            new DownloadFileStep("Download the relinker", profile.AssetUrl(ProfileAssetKeys.Relinker), target.Relinker, relinker.Sha256, downloader),
             new DownloadArchiveStep(
                 "Download the libraries", profile.AssetUrl(ProfileAssetKeys.Libs), ArchivePath(ProfileAssetKeys.Libs, libs),
-                libs.Sha256, paths.Libs, ZipExtraction.UnderPrefix("libs/"), downloader),
+                libs.Sha256, target.Libs, ZipExtraction.UnderPrefix("libs/"), downloader),
             new DownloadArchiveStep(
                 "Download the scripts", profile.AssetUrl(ProfileAssetKeys.Scripts), ArchivePath(ProfileAssetKeys.Scripts, scripts),
-                scripts.Sha256, paths.Scripts, ZipExtraction.StripTopFolder(scripts.Include ?? []), downloader),
-            new DownloadFileStep("Download unwrap_self.py", profile.AssetUrl(ProfileAssetKeys.UnwrapScript), paths.UnwrapSelf, unwrapScript.Sha256, downloader),
+                scripts.Sha256, target.Scripts, ZipExtraction.StripTopFolder(scripts.Include ?? []), downloader),
+            new DownloadFileStep("Download unwrap_self.py", profile.AssetUrl(ProfileAssetKeys.UnwrapScript), target.UnwrapSelf, unwrapScript.Sha256, downloader),
         ];
     }
 

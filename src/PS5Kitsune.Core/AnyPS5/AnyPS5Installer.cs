@@ -6,7 +6,7 @@ using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.Core.AnyPS5;
 
-/// <summary>Installs AnyPS5 into anyps5/current: Python, then the steps of the mode's source, then install.json.</summary>
+/// <summary>Installs AnyPS5 into anyps5\installs\&lt;mode&gt;: Python, then the steps of the mode's source, then install.json; then makes it active.</summary>
 public sealed class AnyPS5Installer(
     IEnumerable<IAnyPS5Source> sources,
     PythonEmbeddableTool python,
@@ -14,44 +14,30 @@ public sealed class AnyPS5Installer(
     StepRunner stepRunner,
     TimeProvider time) : IAnyPS5Installer
 {
-    public AnyPS5Mode? RequestedMode
-    {
-        get
-        {
-            try
-            {
-                var name = File.ReadAllText(paths.RequestedModeFile).Trim();
-                return Enum.GetValues<AnyPS5Mode>().Where(mode => InstallModes.Name(mode) == name).Cast<AnyPS5Mode?>().FirstOrDefault();
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                return null;
-            }
-        }
-    }
+    public AnyPS5Mode? RequestedMode => paths.RequestedMode;
 
-    public AnyPS5Mode CurrentMode => RequestedMode ?? ReadRecord()?.Mode ?? AnyPS5Mode.Release;
+    public AnyPS5Mode? ActiveMode => paths.ActiveMode;
+
+    public AnyPS5Mode CurrentMode => RequestedMode ?? ActiveMode ?? AnyPS5Mode.Release;
 
     public bool Supports(AnyPS5Mode mode) => Source(mode) is not null;
 
-    /// <summary>The mode's steps, after a "Remove the other mode's files" step when install.json records the other mode.</summary>
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode)
     {
         var source = Source(mode)
             ?? throw new InvalidOperationException(mode == AnyPS5Mode.Build
                 ? "Mode build is not available: the active profile has no build section or no build tools."
                 : "Mode release is not available.");
-        IStep[] clear = ReadRecord() is { } record && record.Mode != mode ? [new ClearOtherModeStep(mode, paths, ReadRecord)] : [];
-        return [.. clear, new InstallToolStep("Install Python", python), .. source.CreateSteps(), new WriteInstallRecordStep(source, paths, time)];
+        return [new InstallToolStep("Install Python", python), .. source.CreateSteps(), new WriteInstallRecordStep(source, paths.For(mode), time)];
     }
 
-    /// <summary>True when every step of the current mode is done.</summary>
-    public bool IsInstalled() => GetState(CurrentMode).Status == AnyPS5InstallStatus.Installed;
+    /// <summary>True when there is an active install and every one of its steps is done.</summary>
+    public bool IsInstalled() => ActiveMode is { } active && GetState(active).Status == AnyPS5InstallStatus.Installed;
 
     /// <summary>A mode the profile does not support is Incomplete, so a screen can show a build install whatever the profile.</summary>
     public AnyPS5InstallState GetState(AnyPS5Mode mode)
     {
-        var record = ReadRecord();
+        var record = ReadRecord(mode);
         if (Source(mode) is null)
         {
             return new AnyPS5InstallState(AnyPS5InstallStatus.Incomplete, record);
@@ -65,11 +51,13 @@ public sealed class AnyPS5Installer(
         return new AnyPS5InstallState(status, record);
     }
 
-    public AnyPS5InstallRecord? ReadRecord()
+    public AnyPS5InstallRecord? ReadRecord() => ActiveMode is { } active ? ReadRecord(active) : null;
+
+    public AnyPS5InstallRecord? ReadRecord(AnyPS5Mode mode)
     {
         try
         {
-            return JsonFiles.Read<AnyPS5InstallRecord>(paths.RecordFile);
+            return JsonFiles.Read<AnyPS5InstallRecord>(paths.For(mode).RecordFile);
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -77,9 +65,20 @@ public sealed class AnyPS5Installer(
         }
     }
 
+    public void Use(AnyPS5Mode mode)
+    {
+        if (ReadRecord(mode) is null)
+        {
+            var name = InstallModes.Name(mode);
+            throw new InvalidOperationException($"The {name} install is not finished; run install --mode {name} first.");
+        }
+
+        paths.WriteActiveMode(mode);
+    }
+
     /// <summary>
-    /// Writes the requested mode first and deletes it once every step succeeded, so an install that fails or is
-    /// cancelled before install.json is written resumes in the same mode.
+    /// Writes the requested mode first and deletes it once every step succeeded and the mode is active, so an install
+    /// that fails or is cancelled resumes in the same mode and leaves the active install untouched.
     /// </summary>
     public async Task InstallAsync(AnyPS5Mode mode, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
     {
@@ -87,6 +86,7 @@ public sealed class AnyPS5Installer(
         Directory.CreateDirectory(Path.GetDirectoryName(paths.RequestedModeFile)!);
         await File.WriteAllTextAsync(paths.RequestedModeFile, InstallModes.Name(mode), cancellationToken).ConfigureAwait(false);
         await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
+        paths.WriteActiveMode(mode);
         File.Delete(paths.RequestedModeFile);
     }
 

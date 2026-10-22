@@ -27,7 +27,7 @@ public sealed class BuildInstallTests : IDisposable
     }
 
     [Fact]
-    public async Task A_build_install_fills_current_and_records_the_commit()
+    public async Task A_build_install_fills_installs_build_and_records_the_commit()
     {
         await _setup.InstallAsync(AnyPS5Mode.Build);
 
@@ -39,6 +39,7 @@ public sealed class BuildInstallTests : IDisposable
             _setup.Installer.ReadRecord());
         Assert.Equal(AnyPS5InstallStatus.Installed, _setup.Installer.GetState(AnyPS5Mode.Build).Status);
         Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
+        Assert.Equal(AnyPS5Mode.Build, _setup.Installer.ActiveMode);
     }
 
     [Fact]
@@ -78,6 +79,7 @@ public sealed class BuildInstallTests : IDisposable
         await Assert.ThrowsAsync<StepFailedException>(() => _setup.InstallAsync(AnyPS5Mode.Build));
 
         Assert.Null(_setup.Installer.ReadRecord());
+        Assert.Null(_setup.Installer.ActiveMode);
         Assert.Equal(AnyPS5Mode.Build, _setup.Installer.RequestedMode);
         Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
         Assert.Equal(
@@ -103,6 +105,8 @@ public sealed class BuildInstallTests : IDisposable
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _setup.Installer.InstallAsync(AnyPS5Mode.Build, cancellationToken: cancellation.Token));
 
+        Assert.Equal(AnyPS5Mode.Release, _setup.Installer.ActiveMode);
+        Assert.True(_setup.Installer.IsInstalled());
         Assert.Equal(AnyPS5Mode.Build, _setup.Installer.RequestedMode);
         Assert.Equal(AnyPS5Mode.Build, _setup.Installer.CurrentMode);
         Assert.Equal(AnyPS5Mode.Build, InstallModes.Resolve(null, _setup.Installer.RequestedMode, _setup.Installer.ReadRecord()).Mode);
@@ -118,20 +122,19 @@ public sealed class BuildInstallTests : IDisposable
     }
 
     [Fact]
-    public async Task Going_back_to_release_replaces_current_and_keeps_the_build_folders()
+    public async Task Both_installs_stay_side_by_side()
     {
         await _setup.InstallAsync(AnyPS5Mode.Build);
-        TestFiles.Write(Path.Combine(_setup.Paths.RootDirectory, "stray", "left.txt"), "by the build");
-
-        Assert.Equal("Remove the other mode's files", _setup.Installer.CreateSteps(AnyPS5Mode.Release)[0].Name);
         await _setup.InstallAsync(AnyPS5Mode.Release);
 
-        Assert.False(Directory.Exists(Path.Combine(_setup.Paths.RootDirectory, "stray")));
-
-        Assert.Equal(AnyPS5TestSetup.RelinkerContent, File.ReadAllBytes(_setup.Paths.Relinker));
-        Assert.False(File.Exists(Path.Combine(_setup.Paths.Libs, "libstdc++-6.dll")));
-        Assert.True(File.Exists(_setup.BuildPaths.BuiltRelinker));
-        Assert.Equal(AnyPS5Mode.Release, _setup.Installer.CurrentMode);
+        var release = _setup.Paths.For(AnyPS5Mode.Release);
+        var build = _setup.Paths.For(AnyPS5Mode.Build);
+        Assert.Equal(AnyPS5TestSetup.RelinkerContent, File.ReadAllBytes(release.Relinker));
+        Assert.False(File.Exists(Path.Combine(release.Libs, "libstdc++-6.dll")));
+        Assert.True(File.Exists(build.Relinker));
+        Assert.True(File.Exists(Path.Combine(build.Libs, "libstdc++-6.dll")));
+        Assert.Equal(AnyPS5Mode.Release, _setup.Installer.ActiveMode);
+        Assert.Equal(AnyPS5InstallStatus.Installed, _setup.Installer.GetState(AnyPS5Mode.Build).Status);
     }
 
     public void Dispose() => _temp.Dispose();

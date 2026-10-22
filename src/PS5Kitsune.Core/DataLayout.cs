@@ -16,7 +16,10 @@ public sealed class DataLayout(string root)
     /// <summary>The AnyPS5 install and, in build mode, its clone, build folder and step markers.</summary>
     public string AnyPS5 => Path.Combine(Root, "anyps5");
 
-    /// <summary>The AnyPS5 install used to convert games: relinker, libs, scripts.</summary>
+    /// <summary>One folder per install mode (release, build), each with relinker, libs, scripts and install.json.</summary>
+    public string AnyPS5Installs => Path.Combine(AnyPS5, "installs");
+
+    /// <summary>The single install folder of milestones 4 to 5b; moved into <see cref="AnyPS5Installs"/> by the migration.</summary>
     public string AnyPS5Current => Path.Combine(AnyPS5, "current");
 
     public string Games => Path.Combine(Root, "games");

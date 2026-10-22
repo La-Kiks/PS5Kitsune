@@ -79,6 +79,23 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5InstallRecord? ReadRecord() => State.Record;
 
+    public AnyPS5Mode? ActiveMode { get; set; }
+
+    /// <summary>Records by mode; a mode not listed falls back to State.Record when that record has the mode.</summary>
+    public Dictionary<AnyPS5Mode, AnyPS5InstallRecord> Records { get; } = [];
+
+    /// <summary>The modes passed to Use, in order.</summary>
+    public List<AnyPS5Mode> Used { get; } = [];
+
+    public AnyPS5InstallRecord? ReadRecord(AnyPS5Mode mode) =>
+        Records.TryGetValue(mode, out var record) ? record : State.Record is { } stateRecord && stateRecord.Mode == mode ? stateRecord : null;
+
+    public void Use(AnyPS5Mode mode)
+    {
+        Used.Add(mode);
+        ActiveMode = mode;
+    }
+
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. StepNames.Select(name => new NamedStep(name))];
 
     /// <summary>When set, GetState blocks on it (at most 5 s, so a broken test cannot hang) after reading State.</summary>

@@ -33,7 +33,7 @@ public sealed class BuildSource(
             new ConfigureStep(commands, markers, paths, environment),
             new CompileStep(commands, markers, paths, jobs),
             new LibsStep(commands, markers, paths, jobs),
-            new CopyBuildStep(paths, current, winlibs),
+            new CopyBuildStep(paths, current.For(AnyPS5Mode.Build), winlibs),
         ];
     }
 
