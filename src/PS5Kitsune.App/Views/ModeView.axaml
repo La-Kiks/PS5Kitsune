@@ -3,34 +3,65 @@
              xmlns:vm="using:PS5Kitsune.App.ViewModels"
              x:Class="PS5Kitsune.App.Views.ModeView"
              x:DataType="vm:ModeViewModel">
+  <UserControl.Styles>
+    <Style Selector="Button.card">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="VerticalContentAlignment" Value="Top" />
+      <Setter Property="Padding" Value="20" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="BorderThickness" Value="2" />
+    </Style>
+    <Style Selector="Button.card /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush" Value="#40808080" />
+    </Style>
+    <Style Selector="Button.card:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush" Value="#80808080" />
+    </Style>
+    <Style Selector="Button.card.selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush">
+        <SolidColorBrush Color="{DynamicResource SystemAccentColor}" />
+      </Setter>
+    </Style>
+    <Style Selector="Button.card:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+  </UserControl.Styles>
+
   <DockPanel>
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
       <Button Content="Back" Command="{Binding BackCommand}" />
-      <Button Content="Install" Classes="accent" Command="{Binding InstallCommand}" />
+      <Button Content="{Binding ContinueText}" Classes="accent" Command="{Binding ContinueCommand}" />
     </StackPanel>
 
     <StackPanel Spacing="16">
       <TextBlock Text="How should AnyPS5 be installed?" FontSize="20" FontWeight="SemiBold" />
       <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
-        <Border Padding="20" CornerRadius="6" BorderThickness="2">
-          <Border.BorderBrush>
-            <SolidColorBrush Color="{DynamicResource SystemAccentColor}" />
-          </Border.BorderBrush>
+        <Button Classes="card" Classes.selected="{Binding IsReleaseSelected}" Command="{Binding SelectReleaseCommand}">
           <StackPanel Spacing="6">
             <TextBlock Text="{Binding ReleaseTitle}" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding ReleaseInstalledText}" FontWeight="SemiBold" IsVisible="{Binding ReleaseInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Text="{Binding PublishedText}" Opacity="0.85" />
             <TextBlock Text="{Binding ProfileStatusText}" Opacity="0.85" />
             <TextBlock Text="A few minutes, no compilation." Opacity="0.85" />
-            <TextBlock Text="Selected" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <TextBlock Text="Selected" FontWeight="SemiBold" Margin="0,8,0,0" IsVisible="{Binding IsReleaseSelected}" />
           </StackPanel>
-        </Border>
-        <Border Grid.Column="1" Padding="20" CornerRadius="6" BorderThickness="1" BorderBrush="#40808080" Opacity="0.5">
+        </Button>
+        <Button Grid.Column="1" Classes="card" Classes.selected="{Binding IsBuildSelected}" Command="{Binding SelectBuildCommand}">
           <StackPanel Spacing="6">
             <TextBlock Text="Build from source" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock Text="Compiles the profile's commit with a portable toolchain." TextWrapping="Wrap" />
-            <TextBlock Text="Available in a later version." FontStyle="Italic" />
+            <TextBlock Text="{Binding BuildInstalledText}" FontWeight="SemiBold" IsVisible="{Binding BuildInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <StackPanel Spacing="6" IsVisible="{Binding CanBuild}">
+              <TextBlock Text="{Binding BuildCommitText}" Opacity="0.85" />
+              <TextBlock Text="{Binding ProfileStatusText}" Opacity="0.85" />
+              <TextBlock Text="{Binding BuildDurationText}" Opacity="0.85" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding BuildDiskText}" Opacity="0.85" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Text="{Binding BuildUnavailableText}" FontStyle="Italic" TextWrapping="Wrap" IsVisible="{Binding !CanBuild}" />
+            <TextBlock Text="Selected" FontWeight="SemiBold" Margin="0,8,0,0" IsVisible="{Binding IsBuildSelected}" />
           </StackPanel>
-        </Border>
+        </Button>
       </Grid>
     </StackPanel>
   </DockPanel>

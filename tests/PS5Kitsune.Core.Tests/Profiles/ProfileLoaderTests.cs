@@ -199,5 +199,43 @@ public sealed class ProfileLoaderTests
         Assert.Contains("release-only", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Embedded_profile_gives_the_build_tool_sizes()
+    {
+        var profile = ProfileLoader.LoadEmbedded();
+
+        Assert.Equal(12601679, profile.Tools["python"].Size);
+        Assert.Equal(39806486, profile.Tools["mingit"].Size);
+        Assert.Equal(267593703, profile.Tools["winlibs"].Size);
+    }
+
+    [Fact]
+    public void A_tool_size_is_optional()
+    {
+        var profile = Load($$"""
+            {
+              "schemaVersion": 1, "id": "ok", "source": { "kind": "release", "tag": "v1" },
+              "tools": { "python": { "version": "3", "url": "https://example.test/p.zip", "sha256": "{{new string('a', 64)}}" } }
+            }
+            """);
+
+        Assert.Null(profile.Tools["python"].Size);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public void Rejects_a_tool_size_that_is_not_positive(long size)
+    {
+        var exception = Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "tools": { "python": { "version": "3", "url": "https://example.test/p.zip", "sha256": "{{new string('a', 64)}}", "size": {{size}} } }
+            }
+            """));
+
+        Assert.Contains("size", exception.Message, StringComparison.Ordinal);
+    }
+
     private static AnyPS5Profile Load(string json) => ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes(json)));
 }

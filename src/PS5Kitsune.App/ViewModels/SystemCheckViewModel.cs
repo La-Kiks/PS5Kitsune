@@ -8,8 +8,8 @@ using PS5Kitsune.Core.Checks;
 
 namespace PS5Kitsune.App.ViewModels;
 
-/// <summary>The PC check screen: runs every check and shows the results with a verdict. A blocking result stops the install here.</summary>
-public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatform platform, Navigator navigator, IPages pages)
+/// <summary>The PC check screen for the chosen mode: runs every check and shows the results with a verdict. A blocking result stops the install here.</summary>
+public sealed partial class SystemCheckViewModel(ISystemChecker checker, AnyPS5Mode mode, IPlatform platform, Navigator navigator, IPages pages)
     : ObservableObject, INavigationAware
 {
     public ObservableCollection<CheckRowViewModel> Checks { get; } = [];
@@ -38,7 +38,7 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
     /// <summary>Warnings do not block: the banner already shows them.</summary>
     public bool CanContinue => !IsChecking && Overall is { } overall && overall != CheckStatus.Blocking;
 
-    /// <summary>Checks the first time the page is shown, and again after a cancelled check; not when coming back from Mode.</summary>
+    /// <summary>Checks the first time the page is shown, and again after a cancelled check; not when coming back from a later page.</summary>
     public void OnNavigatedTo()
     {
         if (!IsChecking && Overall is null)
@@ -57,7 +57,7 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
         Gpus.Clear();
         try
         {
-            var report = await checker.RunAsync(AnyPS5Mode.Release, cancellationToken).ConfigureAwait(true);
+            var report = await checker.RunAsync(mode, cancellationToken).ConfigureAwait(true);
             foreach (var result in report.Results)
             {
                 Checks.Add(new CheckRowViewModel(result, platform));
@@ -86,8 +86,9 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, IPlatfo
         }
     }
 
+    /// <summary>Build mode shows its tools first; release goes straight to the install.</summary>
     [RelayCommand(CanExecute = nameof(CanContinue))]
-    private void Continue() => navigator.GoTo(pages.Mode());
+    private void Continue() => navigator.GoTo(mode == AnyPS5Mode.Build ? pages.Tools() : pages.Install(mode));
 
     [RelayCommand]
     private void Back()

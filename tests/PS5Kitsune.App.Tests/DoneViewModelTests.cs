@@ -53,4 +53,21 @@ public sealed class DoneViewModelTests
 
         Assert.Equal("home", _navigator.CurrentPage);
     }
+
+    [Fact]
+    public void A_build_names_its_commit()
+    {
+        var build = new AnyPS5InstallRecord(2, "test-profile", AnyPS5Mode.Build, "3fd1cc3", "3fd1cc393b8512c2e989860053f30dee5a8cd1aa", null, DateTimeOffset.UnixEpoch);
+
+        var viewModel = Create(build);
+
+        Assert.Equal("AnyPS5 3fd1cc3 is installed", viewModel.Title);
+        Assert.Equal("Built from source, commit 3fd1cc3.", viewModel.BuildText);
+    }
+
+    [Fact]
+    public void A_release_has_no_build_line()
+    {
+        Assert.Null(Create().BuildText);
+    }
 }

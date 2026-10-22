@@ -73,6 +73,33 @@ public sealed class BuildPlumbingTests : IDisposable
         Assert.StartsWith("The build failed.", exception.Message, StringComparison.Ordinal);
         Assert.Contains("exited with code 1", exception.Message, StringComparison.Ordinal);
         Assert.Contains("main.cpp:1: error: boom", exception.Message, StringComparison.Ordinal);
+        Assert.Equal("The build failed.", exception.Summary);
+        Assert.StartsWith("cmake exited with code 1.", exception.Details, StringComparison.Ordinal);
+        Assert.Contains("main.cpp:1: error: boom", exception.Details, StringComparison.Ordinal);
+        Assert.Equal(exception.Summary + Environment.NewLine + exception.Details, exception.Message);
+    }
+
+    [Fact]
+    public async Task A_sub_build_counter_does_not_move_the_main_one()
+    {
+        _setup.Runner.Respond = _ => new FakeProcessResult(0, ["[1/10] a", "[1/3] sub", "[2/3] sub", "[2/10] b", "[1/20] c"]);
+        var reports = new List<StepProgress>();
+
+        await _setup.Commands.RunAsync(_setup.Commands.CMake("--build", "x"), _ => "", new SynchronousProgress(reports.Add), TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            [new StepFraction(1, 10), new StepFraction(2, 10), new StepFraction(1, 20)],
+            reports.Where(report => report.Fraction is not null).Select(report => report.Fraction!.Value));
+    }
+
+    [Fact]
+    public void A_command_failure_without_details_is_its_summary()
+    {
+        var exception = new BuildCommandException("no");
+
+        Assert.Equal("no", exception.Message);
+        Assert.Equal("no", exception.Summary);
+        Assert.Equal("", exception.Details);
     }
 
     [Fact]
@@ -98,6 +125,7 @@ public sealed class BuildPlumbingTests : IDisposable
 
         Assert.StartsWith("Not enough disk space on ", exception.Message, StringComparison.Ordinal);
         Assert.Contains("0.2 GiB left", exception.Message, StringComparison.Ordinal);
+        Assert.StartsWith("Not enough disk space on ", exception.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -77,7 +77,8 @@ public static class ProfileAssetKeys
     public const string UnwrapScript = "unwrapScript";
 }
 
-public sealed record ToolDefinition(string Version, Uri Url, string Sha256);
+/// <param name="Size">Download size of the archive in bytes, shown on the Tools screen; null when the profile does not give it.</param>
+public sealed record ToolDefinition(string Version, Uri Url, string Sha256, long? Size = null);
 
 public sealed record RelinkerOptions
 {

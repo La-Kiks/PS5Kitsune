@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 4 of 8 (install screens). The app installs AnyPS5 (release mode) from its screens; adding games still goes through the command line. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 5 of 8 (build mode). The app installs AnyPS5 from its screens, as a release or built from source; adding games still goes through the command line. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
@@ -46,7 +46,7 @@ The data root comes from `--root`, `saved setting` or `default`. The mode comes 
 
 Switching modes starts with a "Remove the other mode's files" step that empties `anyps5\current`; the clone and the build folder are kept, so going back to build mode is incremental. The console shows the steps, the build progress and the compiler's error lines; the full git and CMake output is in the log under `<root>\logs`.
 
-To build another commit, copy the profile to `<root>\profiles\override.json`, change `build.commit`, then run `ps5kitsune install`. A valid override replaces the embedded profile (the second line then says `override`). An invalid one is ignored, with a warning in the log. The app's Install page installs in release mode until the build UI arrives. The app's Home page shows a build install, but repairs or updates it only from the command line (`ps5kitsune install`) until then.
+To build another commit, copy the profile to `<root>\profiles\override.json`, change `build.commit`, then run `ps5kitsune install`. A valid override replaces the embedded profile (the second line then says `override`). An invalid one is ignored, with a warning in the log. In the app, choose "Build from source" on the Mode screen: the PC check then uses the build threshold, and a Tools screen shows what will be downloaded before the build starts.
 
 ## What PS5Kitsune does not do
 

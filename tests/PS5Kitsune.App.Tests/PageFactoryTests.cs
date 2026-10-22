@@ -2,6 +2,7 @@ using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tests;
@@ -21,10 +22,13 @@ public sealed class PageFactoryTests : IDisposable
         var pages = new PageFactory(sessions, new Navigator(), new FakeDialogs(), new AppSettingsStore(_temp.Combine("settings")), new InlineDispatcher(), platform);
 
         Assert.IsType<HomeViewModel>(pages.Home());
-        Assert.IsType<SystemCheckViewModel>(pages.SystemCheck());
         Assert.IsType<ModeViewModel>(pages.Mode());
-        var install = Assert.IsType<InstallViewModel>(pages.Install());
-        Assert.Equal(6, install.Steps.Count);
+        Assert.IsType<SystemCheckViewModel>(pages.SystemCheck(AnyPS5Mode.Build));
+        var tools = Assert.IsType<ToolsViewModel>(pages.Tools());
+        tools.OnNavigatedTo();
+        Assert.Equal(3, tools.Tools.Count);
+        Assert.Equal(6, Assert.IsType<InstallViewModel>(pages.Install(AnyPS5Mode.Release)).Steps.Count);
+        Assert.Equal(10, Assert.IsType<InstallViewModel>(pages.Install(AnyPS5Mode.Build)).Steps.Count);
         Assert.IsType<DoneViewModel>(pages.Done());
     }
 

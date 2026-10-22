@@ -195,8 +195,8 @@ Layout under `anyps5\`: `source\` (git clone), `build\` (CMake build folder, out
 - Copy step: `build\core\relinker\relinker.exe` goes to `current\relinker.exe`; `build\core\libs\libs\*.prx` plus `libgcc_s_seh-1.dll`, `libstdc++-6.dll` and `libwinpthread-1.dll` from WinLibs go to `current\libs\`; `source\tools\` and `source\core\libs\prx\` go to `current\scripts\`. These folders are mirrored. The result is identical in layout to a release install. The step first checks that the build produced the relinker, at least one `.prx`, `source\tools\import_audit.py` and `source\tools\unwrap_self.py`, and fails before copying anything when one is missing.
 - Switching modes: if `install.json` records the other mode, the install starts with a "Remove the other mode's files" step that empties `current\`, so a release's `libTracyClient.dll` cannot linger next to a build. It deletes `install.json` last: a locked file fails the step like any other, and the next run finds the record and clears again. `source\`, `build\` and `state\` are kept, so going back to build mode is incremental.
 - Mode of a plain `install`: `--mode`, else the mode of an unfinished install, else the mode of `install.json`, else release. The installer writes the requested mode to `state\requested-mode` before the first step and deletes it once every step succeeded, so an install cancelled or failed before `install.json` is written resumes in the same mode (`Mode: build (unfinished install)`). The file is outside `current\`, so the clear step never deletes it. A mode the active profile does not support is reported right after the opening lines, before the PC check.
-- Tool output: every git and CMake line, stdout and stderr, goes to the log file at Debug. The console shows the build's progress every 10 % and, once, each line that looks like an error (`error:`, `fatal:`, `CMake Error`, `FAILED:`).
-- The app shows a build install on Home ("built from source") but repairs or updates it only from the command line (`ps5kitsune install`) until milestone 5b: its action is disabled in build mode.
+- Tool output: every git and CMake line, stdout and stderr, goes to the log file at Debug. The console shows the build's progress every 10 % and, once, each line that looks like an error (`error:`, `fatal:`, `CMake Error`, `FAILED:`). A sub-build that runs its own Ninja prints a smaller counter between the main one's lines: each command follows the counter with the largest total, so the progress never jumps back.
+- The app shows a build install on Home ("built from source") and repairs, resumes or updates it like a release: Home opens Mode, which preselects build.
 - Resume: an interruption during step 6 leaves no `compile.done`. The next run skips steps 1 to 5 and Ninja recompiles only what is missing.
 - Update: a new commit in the profile makes every marker stale. Steps 3 to 8 run again, and CMake and Ninja reuse `build\` incrementally.
 - AnyPS5's CI configures with `BUILD_TESTING=ON` and ccache, and puts WinLibs first on `PATH`. PS5Kitsune uses neither `BUILD_TESTING=ON` nor ccache. WinLibs r7 ships CMake 4.3.1 and Ninja 1.13.2, so the fallback to the official zips is not needed.
@@ -205,14 +205,14 @@ Each step is an `IStep`: on failure, the user resumes from the failed step witho
 
 ### Screens
 
-1. **Home**: current state (nothing installed, or installed version + commit, active profile, new validated version available).
-2. **PC check**: list of checks with status badge and action button.
-3. **Mode**: release or build, with date, profile status and estimated duration of each option.
-4. **Tools** (build mode): what is present, what is missing, download size, "Download what's missing" button.
-5. **Install**: steps ticked as they complete, scrolling log, Cancel button.
-6. **Done**: relinker and libs paths, "Open log" button, continue to V2.
+1. **Home**: current state (nothing installed, or installed version + commit, active profile, new validated version available). Its action opens Mode.
+2. **Mode**: release or build, with date, commit, profile status, estimated duration and disk space of each option. It preselects the mode of an unfinished install, else the installed mode, else release. Build is disabled when the active profile has no build.
+3. **PC check**: list of checks for the chosen mode (build mode needs `buildMinFreeDiskGiB` free), with status badge and action button.
+4. **Tools** (build mode only): Python, MinGit and WinLibs, each installed or missing with its download size (the profile's `size`), the total to download and the disk space a build takes. Its button opens Install, whose first steps download what is missing.
+5. **Install**: steps ticked as they complete, a progress bar (download bytes, Ninja's `[n/m]` counter, or indeterminate while a build step reports nothing), scrolling log, Cancel button. A failed build command shows its targeted message, with the exit code and last output lines under "Show details".
+6. **Done**: relinker and libs paths, the commit for a build, "Open log" button, continue to V2.
 
-Milestone 4 implements Home, PC check, Mode (build shown as coming later), Install and Done. The Tools screen comes with build mode.
+Mode comes before the PC check because the check depends on the mode. The mode is passed from page to page, never stored in the session. Milestone 4 implemented Home, PC check, Mode, Install and Done for release mode; milestone 5b added build mode and the Tools screen.
 
 ## V2 — Add a game
 
@@ -498,11 +498,15 @@ The order follows "end to end first, screens second": each milestone ends with a
 5. **V1c — Build mode**, in two parts.
    - **5a — Build mode, Core and CLI.** MinGit, WinLibs, fetch at the profile's commit, configure with `SSL_CERT_FILE`, build, `libs`, resume via `IsAlreadyDone()`, `install --mode`, `override.json`. Spec: [milestone 5a](superpowers/specs/2026-10-21-milestone-5a-build-mode-design.md).
      - Criterion: `ps5kitsune install --mode build` finishes with no intervention on a clean PC; an interruption mid-build resumes without redoing everything; then an incremental update to another commit.
-   - **5b — Build mode UI.** The Build card on Mode, the Tools screen, and the build progress on Install.
+   - **5b — Build mode UI.** The Build card on Mode, the Tools screen, and the build progress on Install. Spec: [milestone 5b](superpowers/specs/2026-10-22-milestone-5b-build-ui-design.md).
+   - **5c — Side-by-side installs.** Release and build each get their own folder (`anyps5\release`, `anyps5\build`) plus the choice of the active one, so switching modes never removes a working install and switching back is instant. `AnyPS5Paths`, the done-checks, `install.json`, Home and Mode become aware of both installs, and a converted game records which install it was audited against.
+     - Criterion: with a release installed, a build cancelled or failed mid-compile leaves the release active and usable; switching between two finished installs takes seconds and runs no step.
 6. **V2 — Add-a-game screens.** On top of milestone 2's logic: summary, options, progress, verdict, Reconvert.
    - Criterion: DOOM added from the UI, green audit; Reconvert keeps `data\` and `_trophy\`.
 7. **V3 — Launcher.** Library, detached launch with log, per-game settings, Lavapipe (Mesa 7z), fonts, error diagnosis.
    - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe; the launcher closed and reopened finds the running game; a deliberately provoked error 126 is recognized and repaired.
+   - **7b — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
+     - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
 8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
    - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.
 

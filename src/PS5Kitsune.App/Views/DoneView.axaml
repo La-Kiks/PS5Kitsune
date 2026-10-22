@@ -12,6 +12,7 @@
 
     <StackPanel Spacing="12">
       <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding BuildText}" IsVisible="{Binding BuildText, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity="0.85" />
       <TextBlock Text="Adding games from the app comes in a later version; until then, use 'ps5kitsune add'." TextWrapping="Wrap" Opacity="0.85" />
       <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
         <TextBlock Text="Relinker" FontWeight="SemiBold" />

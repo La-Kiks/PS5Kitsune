@@ -13,7 +13,7 @@ namespace PS5Kitsune.App.ViewModels;
 public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore settings, IDialogService dialogs, Navigator navigator, IPages pages)
     : ObservableObject, INavigationAware
 {
-    private const string BuildDetail = "Built from source. Repair or update it from the command line: ps5kitsune install";
+    private int _generation;
 
     [ObservableProperty]
     public partial AnyPS5InstallStatus Status { get; private set; }
@@ -33,27 +33,59 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     [ObservableProperty]
     public partial string ProfileText { get; private set; } = "";
 
-    /// <summary>False for a build install: the app repairs or replaces a build only from milestone 5b on.</summary>
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
-    public partial bool CanStart { get; private set; } = true;
-
     /// <summary>Why the chosen folder cannot be used; null otherwise.</summary>
     [ObservableProperty]
     public partial string? RootError { get; private set; }
 
-    public void OnNavigatedTo() => Refresh();
+    /// <summary>True while the install is being checked: the done-checks can hash hundreds of MB.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    public partial bool IsChecking { get; private set; }
 
-    /// <summary>Reads the install state of the current root.</summary>
-    public void Refresh()
+    public bool CanStart => !IsChecking;
+
+    public void OnNavigatedTo() => _ = RefreshAsync();
+
+    /// <summary>Reads the install state of the current root on a worker thread; a result that arrives after a newer refresh started is dropped.</summary>
+    public async Task RefreshAsync()
     {
+        var generation = ++_generation;
         var session = sessions.Current;
         var profile = session.Get<AnyPS5Profile>();
         var installer = session.Get<IAnyPS5Installer>();
-        var mode = installer.CurrentMode;
-        var state = installer.GetState(mode);
         DataRoot = session.Layout.Root;
         ProfileText = $"{profile.Id} ({(profile.Validated ? "validated" : "not validated yet")})";
+        var mode = installer.CurrentMode;
+        IsChecking = true;
+        (StateTitle, StateDetail, ActionText) = ("Checking the AnyPS5 install…", "", "");
+
+        AnyPS5InstallState state;
+        try
+        {
+            state = await Task.Run(() => installer.GetState(mode)).ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            if (generation == _generation)
+            {
+                (StateTitle, StateDetail, ActionText) = ("Cannot read the AnyPS5 install", exception.Message, "Install AnyPS5");
+                IsChecking = false;
+            }
+
+            return;
+        }
+
+        if (generation != _generation)
+        {
+            return;
+        }
+
+        Apply(state, mode);
+        IsChecking = false;
+    }
+
+    private void Apply(AnyPS5InstallState state, AnyPS5Mode mode)
+    {
         Status = state.Status;
         (StateTitle, StateDetail, ActionText) = state.Status switch
         {
@@ -73,24 +105,21 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
                 "Install AnyPS5"),
         };
 
-        CanStart = mode != AnyPS5Mode.Build;
-        if (!CanStart)
+        if (mode == AnyPS5Mode.Build)
         {
-            if (state.Status == AnyPS5InstallStatus.Installed)
+            StateTitle = state.Status == AnyPS5InstallStatus.Installed
+                ? (state.Record is null ? "AnyPS5 is installed (built from source)" : $"AnyPS5 {state.Record.Version} is installed (built from source)")
+                : "The AnyPS5 build is incomplete";
+            if (state.Status != AnyPS5InstallStatus.Installed)
             {
-                StateTitle = state.Record is null ? "AnyPS5 is installed (built from source)" : $"AnyPS5 {state.Record.Version} is installed (built from source)";
-                StateDetail = $"{StateDetail} {BuildDetail}".TrimStart();
-            }
-            else
-            {
-                StateTitle = "The AnyPS5 build is incomplete";
-                StateDetail = BuildDetail;
+                StateDetail = "Resume it to finish: the steps already done are skipped.";
+                ActionText = "Resume the install";
             }
         }
     }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
-    private void Start() => navigator.GoTo(pages.SystemCheck());
+    private void Start() => navigator.GoTo(pages.Mode());
 
     [RelayCommand]
     private async Task ChangeRootAsync()
@@ -130,6 +159,6 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
             RootError = $"Cannot save the setting: {exception.Message}";
         }
 
-        Refresh();
+        await RefreshAsync().ConfigureAwait(true);
     }
 }

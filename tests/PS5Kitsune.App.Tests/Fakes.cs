@@ -7,6 +7,7 @@ using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Profiles;
+using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.App.Tests;
 
@@ -69,13 +70,35 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5Mode? RequestedMode { get; set; }
 
+    /// <summary>False simulates a profile without a build section.</summary>
+    public bool BuildSupported { get; set; } = true;
+
+    public bool Supports(AnyPS5Mode mode) => mode == AnyPS5Mode.Release || BuildSupported;
+
     public AnyPS5Mode? InstalledMode { get; private set; }
 
     public AnyPS5InstallRecord? ReadRecord() => State.Record;
 
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode) => [.. StepNames.Select(name => new NamedStep(name))];
 
-    public AnyPS5InstallState GetState(AnyPS5Mode mode) => State;
+    /// <summary>When set, GetState blocks on it (at most 5 s, so a broken test cannot hang) after reading State.</summary>
+    public ManualResetEventSlim? GetStateGate { get; set; }
+
+    /// <summary>Thrown by GetState when set.</summary>
+    public Exception? GetStateFailure { get; set; }
+
+    /// <summary>Released each time GetState is entered, so a test knows a check is running.</summary>
+    public SemaphoreSlim GetStateEntered { get; } = new(0);
+
+    public AnyPS5InstallState GetState(AnyPS5Mode mode)
+    {
+        var state = State;
+        var gate = GetStateGate;
+        var failure = GetStateFailure;
+        GetStateEntered.Release();
+        gate?.Wait(TimeSpan.FromSeconds(5));
+        return failure is null ? state : throw failure;
+    }
 
     public Task InstallAsync(AnyPS5Mode mode, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
     {
@@ -94,18 +117,33 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     }
 }
 
-/// <summary>Pages are plain strings, so a test asserts where the navigator went.</summary>
+/// <summary>Pages are plain strings, so a test asserts where the navigator went, and with which mode.</summary>
 internal sealed class FakePages : IPages
 {
     public object Home() => "home";
 
-    public object SystemCheck() => "check";
-
     public object Mode() => "mode";
 
-    public object Install() => "install";
+    public object SystemCheck(AnyPS5Mode mode) => $"check:{mode}";
+
+    public object Tools() => "tools";
+
+    public object Install(AnyPS5Mode mode) => $"install:{mode}";
 
     public object Done() => "done";
+}
+
+internal sealed class FakeTool(string id, bool installed) : IPortableTool
+{
+    public string Id => id;
+
+    public bool Installed { get; set; } = installed;
+
+    public bool IsInstalled() => Installed;
+
+    public Task InstallAsync(IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public Task<string> GetVersionAsync(CancellationToken cancellationToken = default) => Task.FromResult("1");
 }
 
 internal sealed class FakeDialogs : IDialogService

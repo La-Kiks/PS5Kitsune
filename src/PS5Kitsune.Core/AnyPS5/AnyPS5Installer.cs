@@ -32,6 +32,8 @@ public sealed class AnyPS5Installer(
 
     public AnyPS5Mode CurrentMode => RequestedMode ?? ReadRecord()?.Mode ?? AnyPS5Mode.Release;
 
+    public bool Supports(AnyPS5Mode mode) => Source(mode) is not null;
+
     /// <summary>The mode's steps, after a "Remove the other mode's files" step when install.json records the other mode.</summary>
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode)
     {

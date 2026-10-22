@@ -6,6 +6,7 @@ using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
+using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.App.Shell;
 
@@ -17,12 +18,14 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object Home() => new HomeViewModel(sessions, settings, dialogs, navigator, this);
 
-    public object SystemCheck() => new SystemCheckViewModel(Session.Get<ISystemChecker>(), platform, navigator, this);
+    public object Mode() => new ModeViewModel(Session.Get<AnyPS5Profile>(), Session.Get<IAnyPS5Installer>(), navigator, this);
 
-    public object Mode() => new ModeViewModel(Session.Get<AnyPS5Profile>(), navigator, this);
+    public object SystemCheck(AnyPS5Mode mode) => new SystemCheckViewModel(Session.Get<ISystemChecker>(), mode, platform, navigator, this);
 
-    public object Install() =>
-        new InstallViewModel(Session.Get<IAnyPS5Installer>(), AnyPS5Mode.Release, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
+    public object Tools() => new ToolsViewModel(Session.Get<BuildToolsSummary>(), navigator, this);
+
+    public object Install(AnyPS5Mode mode) =>
+        new InstallViewModel(Session.Get<IAnyPS5Installer>(), mode, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
 
     public object Done() =>
         new DoneViewModel(Session.Get<IAnyPS5Installer>().ReadRecord(), Session.Get<AnyPS5Paths>(), Session.LogFile, platform, navigator, this);
