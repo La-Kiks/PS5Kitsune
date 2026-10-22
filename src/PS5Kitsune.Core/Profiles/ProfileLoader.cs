@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace PS5Kitsune.Core.Profiles;
@@ -90,6 +91,10 @@ public static class ProfileLoader
         {
             RequireSha256(profile.Id, $"tool {name}", tool.Sha256);
             RequireHttps(profile.Id, $"tool {name}", tool.Url);
+            if (tool.Size is <= 0)
+            {
+                throw new InvalidProfileException($"Profile {profile.Id}: tool {name} size must be positive, got {tool.Size.Value.ToString(CultureInfo.InvariantCulture)}.");
+            }
         }
 
         if (profile.Build is { } build)

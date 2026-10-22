@@ -60,6 +60,7 @@ public static class ServiceCollectionExtensions
         AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);
         AddTool<MinGitTool>(services, profile, MinGitTool.ToolId);
         AddTool<WinLibsTool>(services, profile, WinLibsTool.ToolId);
+        services.AddSingleton<BuildToolsSummary>();
         services.AddSingleton<BuildEnvironment>();
         services.AddSingleton<IFreeSpace, DriveFreeSpace>();
         services.AddSingleton<BuildPaths>();
