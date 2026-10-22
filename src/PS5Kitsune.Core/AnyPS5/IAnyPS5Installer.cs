@@ -49,4 +49,8 @@ public interface IAnyPS5Installer
     /// <exception cref="StepFailedException">A step failed.</exception>
     /// <exception cref="OperationCanceledException">The install was cancelled; it can be resumed.</exception>
     Task InstallAsync(AnyPS5Mode mode, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Moves anyps5\current, from before milestone 5c, into anyps5\installs and makes it active; does nothing otherwise.</summary>
+    /// <exception cref="AnyPS5MigrationException">The move failed; nothing was changed.</exception>
+    void MigrateLegacyInstall();
 }

@@ -65,6 +65,8 @@ public sealed class AnyPS5Installer(
         }
     }
 
+    public void MigrateLegacyInstall() => AnyPS5Migration.Run(paths);
+
     public void Use(AnyPS5Mode mode)
     {
         if (ReadRecord(mode) is null)

@@ -87,6 +87,20 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     /// <summary>The modes passed to Use, in order.</summary>
     public List<AnyPS5Mode> Used { get; } = [];
 
+    /// <summary>Thrown by MigrateLegacyInstall when set.</summary>
+    public Exception? MigrateFailure { get; set; }
+
+    public int Migrations { get; private set; }
+
+    public void MigrateLegacyInstall()
+    {
+        Migrations++;
+        if (MigrateFailure is not null)
+        {
+            throw MigrateFailure;
+        }
+    }
+
     public AnyPS5InstallRecord? ReadRecord(AnyPS5Mode mode) =>
         Records.TryGetValue(mode, out var record) ? record : State.Record is { } stateRecord && stateRecord.Mode == mode ? stateRecord : null;
 
