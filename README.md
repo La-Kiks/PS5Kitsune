@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 5 of 8 (build mode). The app installs AnyPS5 from its screens, as a release or built from source; adding games still goes through the command line. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 5 of 8 (build mode; 5c, side-by-side release and build installs, in progress). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding games still goes through the command line. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
@@ -24,6 +24,7 @@ The command-line tool installs AnyPS5, adds a game and runs it:
 ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
 ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.2
 ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
+ps5kitsune use release|build         # switch between the release and build installs, both kept side by side
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
 ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ```
@@ -44,7 +45,7 @@ Mode: build (current install)
 
 The data root comes from `--root`, `saved setting` or `default`. The mode comes from `--mode`, `unfinished install`, `current install` or `default`. If the active profile cannot build (no `build` section), the command stops right after these lines and suggests `--mode release`.
 
-Switching modes starts with a "Remove the other mode's files" step that empties `anyps5\current`; the clone and the build folder are kept, so going back to build mode is incremental. The console shows the steps, the build progress and the compiler's error lines; the full git and CMake output is in the log under `<root>\logs`.
+The release and the build each live in their own folder (`anyps5\installselease`, `anyps5\installsuild`), so installing one never removes the other. A successful install becomes the one in use; a failed or cancelled one never changes it. The clone and the build folder are kept, so going back to build mode is incremental. The console shows the steps, the build progress and the compiler's error lines; the full git and CMake output is in the log under `<root>\logs`.
 
 To build another commit, copy the profile to `<root>\profiles\override.json`, change `build.commit`, then run `ps5kitsune install`. A valid override replaces the embedded profile (the second line then says `override`). An invalid one is ignored, with a warning in the log. In the app, choose "Build from source" on the Mode screen: the PC check then uses the build threshold, and a Tools screen shows what will be downloaded before the build starts.
 
