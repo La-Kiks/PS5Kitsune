@@ -143,3 +143,11 @@ Run by the user on the AMD laptop after the tests pass:
   - the removal of "repairs a build only from the command line";
   - 5b in the roadmap, with a link to this spec.
 - `README.md`: build mode from the app.
+
+## Refinements from the implementation plan
+
+1. `FractionTracker` lives in `Core.Pipeline` but is created per command inside `BuildCommands.RunAsync`, so it needs no `Reset()` and the console's 10 % printing gets the fix without change.
+2. Mode asks the installer, through `IAnyPS5Installer.Supports(mode)`, whether build is available: build also needs the MinGit and WinLibs tools, not only the `build` section.
+3. In build mode every running step shows the indeterminate bar until a download or a counter replaces it, tool steps included. Release mode shows the bar for downloads only, as before.
+4. The Tools total reads "To download: size unknown" when every missing tool lacks a size.
+5. Constant UI texts on view models are get-only properties with an initializer, because the analyzers (CA1822) reject expression-bodied constants on instance members the views bind to.

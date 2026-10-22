@@ -12,6 +12,8 @@ public sealed partial class DoneViewModel(AnyPS5InstallRecord? record, AnyPS5Pat
 {
     public string Title => record is null ? "AnyPS5 is installed" : $"AnyPS5 {record.Version} is installed";
 
+    public string? BuildText => record is { Mode: AnyPS5Mode.Build, Commit: { Length: >= 7 } commit } ? $"Built from source, commit {commit[..7]}." : null;
+
     public string Relinker => paths.Relinker;
 
     public string Libs => paths.Libs;
