@@ -213,6 +213,20 @@ public sealed class AnyPS5InstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task Use_refuses_a_mode_whose_install_did_not_finish()
+    {
+        await _setup.InstallAsync();
+        var record = _setup.Installer.ReadRecord()!;
+        await JsonFiles.WriteAsync(_setup.Paths.For(AnyPS5Mode.Build).RecordFile, record with { Mode = AnyPS5Mode.Build, Version = "48d61f5" }, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(_setup.Paths.RequestedModeFile, "build", TestContext.Current.CancellationToken);
+
+        var exception = Assert.Throws<InvalidOperationException>(() => _setup.Installer.Use(AnyPS5Mode.Build));
+
+        Assert.Equal("The build install did not finish; run install --mode build to resume it.", exception.Message);
+        Assert.Equal(AnyPS5Mode.Release, _setup.Installer.ActiveMode);
+    }
+
+    [Fact]
     public async Task Use_refuses_an_install_that_never_finished()
     {
         await _setup.InstallAsync();

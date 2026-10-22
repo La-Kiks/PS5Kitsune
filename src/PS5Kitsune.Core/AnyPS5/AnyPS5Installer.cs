@@ -69,9 +69,14 @@ public sealed class AnyPS5Installer(
 
     public void Use(AnyPS5Mode mode)
     {
+        var name = InstallModes.Name(mode);
+        if (RequestedMode == mode)
+        {
+            throw new InvalidOperationException($"The {name} install did not finish; run install --mode {name} to resume it.");
+        }
+
         if (ReadRecord(mode) is null)
         {
-            var name = InstallModes.Name(mode);
             throw new InvalidOperationException($"The {name} install is not finished; run install --mode {name} first.");
         }
 

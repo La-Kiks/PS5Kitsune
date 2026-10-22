@@ -27,7 +27,7 @@ public interface IAnyPS5Installer
     AnyPS5InstallRecord? ReadRecord(AnyPS5Mode mode);
 
     /// <summary>Makes <paramref name="mode"/>'s finished install the active one, with no step and no done-check.</summary>
-    /// <exception cref="InvalidOperationException"><paramref name="mode"/> has no install.json: its install never finished.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="mode"/> has no install.json (its install never finished), or an install of it started and did not finish (<see cref="RequestedMode"/> is <paramref name="mode"/>).</exception>
     void Use(AnyPS5Mode mode);
 
     /// <summary>The install steps of <paramref name="mode"/>, in order; their names are shown before the install starts.</summary>

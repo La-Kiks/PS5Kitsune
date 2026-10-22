@@ -144,3 +144,7 @@ Run by the user on the AMD laptop after the tests pass:
   - the `convertedWith.mode` values;
   - 5c in the roadmap, with the corrected folder names and a link to this spec.
 - `README.md`: the `use` command.
+
+## Changes after the final review
+
+1. `Use(mode)` also refuses a mode whose install did not finish (`RequestedMode == mode`), with "The {mode} install did not finish; run install --mode {mode} to resume it.", so `ps5kitsune use` cannot make an install active while its update is pending. Mode already offered "Resume the install" in that case.
