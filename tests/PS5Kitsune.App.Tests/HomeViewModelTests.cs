@@ -27,17 +27,19 @@ public sealed class HomeViewModelTests : IDisposable
         _settings = new AppSettingsStore(_temp.Combine("settings"));
     }
 
-    private HomeViewModel Create()
+    private HomeViewModel Create() => new(_sessions, _settings, _dialogs, _navigator, new FakePages());
+
+    private async Task<HomeViewModel> CreateAsync()
     {
-        var viewModel = new HomeViewModel(_sessions, _settings, _dialogs, _navigator, new FakePages());
-        viewModel.Refresh();
+        var viewModel = Create();
+        await viewModel.RefreshAsync();
         return viewModel;
     }
 
     [Fact]
-    public void Nothing_installed_offers_to_install()
+    public async Task Nothing_installed_offers_to_install()
     {
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
 
         Assert.Equal(AnyPS5InstallStatus.NotInstalled, viewModel.Status);
         Assert.Equal("AnyPS5 is not installed", viewModel.StateTitle);
@@ -47,11 +49,11 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void An_install_offers_to_verify_it()
+    public async Task An_install_offers_to_verify_it()
     {
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
 
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
 
         Assert.Equal("AnyPS5 v0.1.2 is installed", viewModel.StateTitle);
         Assert.Contains("test-profile", viewModel.StateDetail, StringComparison.Ordinal);
@@ -60,31 +62,31 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void An_incomplete_install_offers_to_resume()
+    public async Task An_incomplete_install_offers_to_resume()
     {
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Incomplete, null);
 
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
 
         Assert.Equal("The AnyPS5 install is incomplete", viewModel.StateTitle);
         Assert.Equal("Resume the install", viewModel.ActionText);
     }
 
     [Fact]
-    public void A_release_install_can_be_repaired_from_the_app()
+    public async Task A_release_install_can_be_repaired_from_the_app()
     {
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
 
-        Assert.True(Create().StartCommand.CanExecute(null));
+        Assert.True((await CreateAsync()).StartCommand.CanExecute(null));
     }
 
     [Fact]
-    public void A_build_install_is_shown_and_can_be_repaired()
+    public async Task A_build_install_is_shown_and_can_be_repaired()
     {
         _installer.CurrentMode = AnyPS5Mode.Build;
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, BuildRecord);
 
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
 
         Assert.Equal("AnyPS5 48d61f5 is installed (built from source)", viewModel.StateTitle);
         Assert.Contains(BuildRecord.InstalledAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), viewModel.StateDetail, StringComparison.Ordinal);
@@ -96,12 +98,12 @@ public sealed class HomeViewModelTests : IDisposable
     [Theory]
     [InlineData(AnyPS5InstallStatus.Incomplete)]
     [InlineData(AnyPS5InstallStatus.NotInstalled)]
-    public void An_unfinished_build_can_be_resumed(AnyPS5InstallStatus status)
+    public async Task An_unfinished_build_can_be_resumed(AnyPS5InstallStatus status)
     {
         _installer.CurrentMode = AnyPS5Mode.Build;
         _installer.State = new AnyPS5InstallState(status, null);
 
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
 
         Assert.Equal("The AnyPS5 build is incomplete", viewModel.StateTitle);
         Assert.Equal("Resume it to finish: the steps already done are skipped.", viewModel.StateDetail);
@@ -110,20 +112,30 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Start_goes_to_the_mode_page()
+    public async Task Start_goes_to_the_mode_page()
     {
-        Create().StartCommand.Execute(null);
+        (await CreateAsync()).StartCommand.Execute(null);
 
         Assert.Equal("mode", _navigator.CurrentPage);
     }
 
     [Fact]
-    public void Entering_the_page_refreshes_the_state()
+    public async Task Entering_the_page_refreshes_the_state()
     {
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
 
+        var done = new TaskCompletionSource();
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(HomeViewModel.IsChecking) && !viewModel.IsChecking)
+            {
+                done.TrySetResult();
+            }
+        };
+
         viewModel.OnNavigatedTo();
+        await done.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 
         Assert.Equal(AnyPS5InstallStatus.Installed, viewModel.Status);
     }
@@ -131,7 +143,7 @@ public sealed class HomeViewModelTests : IDisposable
     [Fact]
     public async Task Changing_the_root_saves_it_and_replaces_the_session()
     {
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
         var first = _sessions.Current;
         _dialogs.Folder = _temp.Combine("other");
 
@@ -147,7 +159,7 @@ public sealed class HomeViewModelTests : IDisposable
     [Fact]
     public async Task Cancelling_the_picker_changes_nothing()
     {
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
         var first = _sessions.Current;
 
         await viewModel.ChangeRootCommand.ExecuteAsync(null);
@@ -159,7 +171,7 @@ public sealed class HomeViewModelTests : IDisposable
     [Fact]
     public async Task An_unusable_folder_keeps_the_root_and_says_why()
     {
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
         var file = _temp.Combine("a-file");
         await File.WriteAllTextAsync(file, "x", TestContext.Current.CancellationToken);
         _dialogs.Folder = Path.Combine(file, "root");
@@ -175,7 +187,7 @@ public sealed class HomeViewModelTests : IDisposable
     public async Task A_failed_save_says_why_and_keeps_the_new_root()
     {
         await File.WriteAllTextAsync(_temp.Combine("settings"), "x", TestContext.Current.CancellationToken);
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
         _dialogs.Folder = _temp.Combine("other");
 
         await viewModel.ChangeRootCommand.ExecuteAsync(null);
@@ -188,7 +200,7 @@ public sealed class HomeViewModelTests : IDisposable
     [Fact]
     public async Task A_refused_change_keeps_the_root_and_the_setting()
     {
-        var viewModel = Create();
+        var viewModel = await CreateAsync();
         var first = _sessions.Current;
         _sessions.IsBusy = true;
         _dialogs.Folder = _temp.Combine("other");
