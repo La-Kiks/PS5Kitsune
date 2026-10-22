@@ -17,7 +17,9 @@ Milestone 6 is split, with the user's agreement: **6a** (this spec) adds a game 
 - Step names: "Copy the game", "Copy the AnyPS5 libraries", "Unwrap SELF files", "Convert with the relinker", "Audit the imports", "Record the game".
 - `UnwrapSelfStep` and `RelinkStep` throw `GameImportException` with a targeted sentence ("the game must come already unwrapped from the dump tool"; with the Intel option, "the game may use an AMD-only instruction that cannot be converted for Intel CPUs") followed by a newline and the process's output tail, all in one message.
 - `GameAdded` holds the `GameRecord` only; `GameRecord.Audit` keeps the counts, not the import list.
-- `audit.json` (import_audit.py `--json`) has an `imports` array; each entry has `nid`, `name` (may be null), `library` (may be null), `module` (set on some entries where `library` is null), and `class` (`implemented`, `stub`, `absent`, `module`). DOOM for PS5 v1.1.1 with commit 3fd1cc3 has 4 stub entries: `sceSystemServiceLoadExec` (libSceSystemService.prx), `fscanf_nid_postfix` (libSceLibcInternal.prx), `__tls_get_addr_nid_postfix` (libkernel.prx, and libc.prx as a module).
+- `audit.json` (import_audit.py `--json`) has an `imports` array; each entry has `nid`, `name` (may be null), `library` (may be null), `module` (set on some entries where `library` is null), and `class` (`implemented`, `stub`, `absent`, `module`). DOOM for PS5 v1.1.1 with commit 3fd1cc3 has 4 stub entries, so 4 lines on the result screen: `sceSystemServiceLoadExec` (libSceSystemService.prx), `fscanf_nid_postfix` (libSceLibcInternal.prx), `__tls_get_addr_nid_postfix` (libkernel.prx) and `__tls_get_addr_nid_postfix` (libc.prx, a module).
+- `GameSourceResolver` extracts a zip again on every call, and `ZipExtraction` extracts into `<staging>.staging` then renames it, deleting any previous target first; it does not clean up on an exception. A staging folder kept after a failed add is therefore never reused.
+- `AuditStep` also builds its failure message as a sentence, a newline and the script's output tail.
 - The app's `IDialogService` has `PickFolderAsync` and `ConfirmAsync` only; no view handles drag and drop. `ICpuInfo` is registered in Core's services, so a session can resolve it.
 - The close confirmation is tied to `InstallViewModel` (`MainWindowViewModel.IsInstallRunning` and its cancel, and `MainWindow.axaml.cs`).
 - DOOM audits orange with both the validated release (361 implemented, 3 stubs, 0 absent) and the build (360, 4, 0), so the roadmap's "green audit" criterion cannot be met; it becomes "the same verdict as the CLI".
@@ -34,26 +36,27 @@ Milestone 6 is split, with the user's agreement: **6a** (this spec) adds a game 
 
 - runs its whole body on the thread pool (`Task.Run`): resolving a folder, extracting a zip, computing the size and reading the binaries are synchronous today;
 - resolves the input (a folder, or a `.zip` extracted into staging) and validates it, as `AddAsync` does today;
-- throws `InvalidGameSourceException` for a path that is neither a folder nor a `.zip`, or a folder without `eboot.bin` (the resolver's message), and `InvalidGameSourceException` with "Cannot read {path}: {reason}" when a zip cannot be read or extracted, after deleting its staging folder;
-- honours the cancellation token between files of the extraction and before validation; a cancelled preparation deletes its staging folder.
+- throws `InvalidGameSourceException` for a path that is neither a folder nor a `.zip`, or a folder or zip without `eboot.bin` (the resolver's message), and `InvalidGameSourceException` with "Cannot read {path}: {reason}" when a zip cannot be read or extracted;
+- on any exception, including a cancellation and "No eboot.bin", deletes both `<staging>` and `<staging>.staging` before rethrowing;
+- honours the cancellation token during the extraction (the existing per-entry copy already does) and once before validation; validation, the size and the binaries are not cancellable, and no token is added to `GameValidator`.
 
-**Prepared game.** `PreparedGame` (in `Core.Games`), `IDisposable`, with a public constructor so tests and fakes can build one:
+**Prepared game.** `PreparedGame` (in `Core.Games`), `IAsyncDisposable`, with a public constructor so tests and fakes can build one:
 
 - `Source` (`GameSource`), `Validation` (`GameValidation`: metadata, module folders, size, issues), `IsBlocked`;
 - `IconPath`: the full path of `sce_sys/icon0.png` when it exists, else null;
 - `Binaries`: the ELF, SELF or other state of `eboot.bin` and of every file of the module folders (from `BinaryKinds`), as (relative path, kind) pairs;
 - `GameDirectory`: `<root>\games\<titleId>` (null without metadata); `AlreadyAdded`: its `game.json` exists; `Resumes`: the folder exists without `game.json` (a previous add stopped);
-- `Dispose()` applies today's staging rule: it deletes the staging folder unless the copy started and did not complete. It decides with `CopyGameStep.IsAlreadyDone()` and with whether the add started the copy (the add tells the prepared game when the copy step starts and ends). Without a staging folder it does nothing; disposing twice does nothing. A deletion failure is logged and ignored, as today.
+- `DisposeAsync()` deletes the staging folder (`<staging>` and `<staging>.staging`) on the thread pool, so the UI never blocks on a large tree. Since a kept staging folder is never reused (see Facts), it always deletes it, which replaces today's keep-on-interrupted-copy rule; the add's resume works from the copy in the game folder. Without a staging folder it does nothing; disposing twice does nothing. A deletion failure is logged and ignored, as today.
 
 **Add.** `AddAsync(PreparedGame, …)`:
 
 - throws `AnyPS5NotInstalledException` when AnyPS5 is not installed, and `InvalidOperationException` for a blocked or already added game;
-- runs the existing six steps; the staging folder is handled by `Dispose`, not by `AddAsync`;
+- runs the existing six steps; the staging folder is handled by `DisposeAsync`, not by `AddAsync`;
 - returns `GameAdded` with a new `Audit` member (`AuditSummary`, from the audit step's context), so the result screen can list the unresolved functions.
 
-The old `AddAsync(string input, toIntel, …)` keeps its order: the install check first, then prepare, then the checks that return `GameRejected` or `GameAlreadyAdded`, then the new `AddAsync`, then dispose. Its results and the CLI's output do not change.
+The old `AddAsync(string input, toIntel, …)` keeps its order: the install check first, then prepare, then the checks that return `GameRejected` or `GameAlreadyAdded`, then the new `AddAsync`, then dispose. Its results and the CLI's output do not change; the only difference is that an interrupted copy no longer leaves the extracted zip behind.
 
-**Failure details.** `GameImportException` gains `Summary` and `Details`, like `BuildCommandException`: `Message` stays `Summary + newline + Details` (the CLI's output does not change). `UnwrapSelfStep` and `RelinkStep` put their targeted sentence in `Summary` and the exit code line and output tail in `Details`.
+**Failure details.** `GameImportException` gains `Summary` and `Details`, like `BuildCommandException`, with a `GameImportException(string summary, string? details = null)` constructor: `Message` stays `Summary + newline + Details` when there are details, else `Summary` (the CLI's output does not change). `UnwrapSelfStep`, `RelinkStep` and `AuditStep` put their sentence in `Summary` and the exit code line and output tail in `Details`.
 
 **Unresolved functions.** `AuditSummary` gains `Unresolved`: a list of `UnresolvedImport(string Name, string Where, AuditClass Class)` for every `imports` entry whose class is `stub` or `absent`, in file order, where `Name` is `name` or else `nid`, `Where` is `library` or else `module` or else "", and `AuditClass` is `Stub` or `Absent`. Entries with the same name and place appear once. A file without `imports` gives an empty list. `game.json` does not store the list.
 
@@ -65,9 +68,14 @@ Home → Choose a game → Summary → Adding → Result
 
 Pages travel through `IPages`: `ChooseGame()`, `GameSummary(PreparedGame)`, `AddGame(PreparedGame, bool toIntel)`, `AddResult(GameAdded)`.
 
-**Who owns the prepared game.** The page that holds it disposes it when leaving the flow: Summary on Back, Adding after its run stopped (success, cancel or leaving after a failure). Leaving to Home always goes through `Navigator.GoHome`, which clears the back stack, so no old page keeps a disposed game reachable. On window close, the main window first cancels and waits for a running preparation or add, then disposes the current page's prepared game.
+**Who owns the prepared game.** The page that holds it disposes it (`await DisposeAsync()`, on the UI thread's continuation, never in a posted callback) when leaving the flow: Summary on Back; Adding in its run's `finally` on success or cancel, and on "Back to home" after a failure. Leaving to Home always goes through `Navigator.GoHome`, which clears the back stack, so no old page keeps a disposed game reachable. A preparation that completes after Choose's Cancel, or after the page was left, disposes its result at once.
 
-**Running work and the close confirmation.** `MainWindowViewModel` and `MainWindow` stop referring to `InstallViewModel` and use an interface implemented by Install, Choose (while preparing) and Adding: `IRunningWork { bool IsRunning; string QuitMessage; Task CancelAndWaitAsync(); }`. Install's message stays as it is. Choose and Adding set `sessions.IsBusy` while running, as Install does, so the data root cannot change meanwhile.
+**Running work and the close confirmation.** `MainWindowViewModel` and `MainWindow` stop referring to `InstallViewModel` and use two interfaces:
+
+- `IRunningWork { bool IsRunning; string? QuitMessage; Task CancelAndWaitAsync(); }`, implemented by Install, Choose (while preparing) and Adding. A non-null `QuitMessage` asks for confirmation first (Install's message stays as it is; Adding's is below); null (Choose) cancels and waits without asking.
+- `IPreparedGameOwner { Task ReleaseAsync(); }`, implemented by Summary and Adding, which dispose their prepared game.
+
+On window close, the main window cancels and waits for the current page's running work (after confirmation when asked), then awaits `ReleaseAsync()` when the page owns a prepared game, then closes. Choose and Adding set `sessions.IsBusy` while running, as Install does, so the data root cannot change meanwhile.
 
 **Dialogs.** `IDialogService` gains `Task<string?> PickFileAsync(string title, string extension)` (the zip picker, filtering `*.zip`); `FakeDialogs` supports it.
 
@@ -110,7 +118,16 @@ Pages travel through `IPages`: `ChooseGame()`, `GameSummary(PreparedGame)`, `Add
 - Validation warnings from `GameAdded.Warnings`, if any.
 - Buttons "Open the game folder", "Add another game" (`GoHome(Home)` then `GoTo(ChooseGame)`), "Back to home".
 
-**Shared step list.** Install and Adding show the same step list. The rows, log, progress, Cancel, Retry and failure details move from `InstallViewModel` into a `StepRunViewModel` that both pages use. It takes as parameters whether a running step starts indeterminate (Install: build mode only, as today; Adding: always) and how to split an exception into summary and details (Install: `BuildCommandException`; Adding: `GameImportException`). Install's behaviour and texts do not change, and its existing tests keep passing.
+**Shared step list.** Install and Adding show the same step list. The rows, log, progress, Cancel, Retry, failure details and `CancelAndWaitAsync` move from `InstallViewModel` into an abstract base class `StepRunViewModel` that both pages inherit, so the members the views and tests use (`Steps`, `Log`, `Failure`, `ShowsProgress`, …) stay where they are. The page-specific parts are abstract or virtual members:
+
+- `IReadOnlyList<string> StepNames()` (Install: from `CreateSteps(mode)` on every run, as today; Adding: `IGameImporter.StepNames`);
+- `Task RunCoreAsync(IProgress<StepProgress>, Action<StepEvent>, CancellationToken)`;
+- `(string Summary, string? Details) SplitFailure(Exception)` (Install: `BuildCommandException`, and its "The install failed: …" prefix; Adding: `GameImportException`, and the "not installed" case);
+- `bool CanRetry(Exception)` (false for `AnyPS5NotInstalledException`);
+- `OnSucceeded()` and `OnCancelled()` (Install: Done and Home, as today; Adding: Result and Home, after disposing);
+- `bool IndeterminateOnStart` (Install: build mode only, as today; Adding: always).
+
+Install's behaviour and texts do not change, and its existing tests keep passing unchanged.
 
 ## Errors
 
@@ -125,21 +142,20 @@ No test uses the network, the compiler or Python (the process runner is faked, a
 
 - Core:
   - `PrepareAsync` with a folder and with a zip: metadata, icon path, size, module folders, binaries, issues, `AlreadyAdded`, `Resumes`;
-  - a path that is neither; a folder without `eboot.bin`; an unreadable zip (its staging folder is deleted); a cancelled preparation;
-  - `PrepareAsync` does not run on the caller's thread;
-  - `Dispose`: deletes staging when the copy never started, deletes it when the copy finished, keeps it when the copy started and did not complete;
+  - a path that is neither; a folder without `eboot.bin`; a zip without `eboot.bin`, an unreadable zip and a cancelled preparation (each leaves neither `<staging>` nor `<staging>.staging`);
+  - `DisposeAsync` deletes the staging folder, does nothing without one, and can be called twice;
   - `AddAsync(PreparedGame, …)` refuses a blocked game and an already added game, requires the install, and returns the audit summary;
   - the old `AddAsync(string, …)` results and order are unchanged (existing tests, plus one for "not installed" before resolving);
-  - `GameImportException`: `Summary`, `Details`, and `Message` unchanged for the unwrap and relink failures;
+  - `GameImportException`: `Summary`, `Details`, and `Message` unchanged for the unwrap, relink and audit failures;
   - `AuditSummary.Unresolved` from a fixture shaped like DOOM's `audit.json`, with deduplication, and an empty list without `imports`;
   - `StepNames` matches the steps run.
 - App (with a fake `IGameImporter`):
   - Home: "Add a game" enabled only when installed and not checking;
-  - Choose: a folder or a zip opens Summary; an invalid path shows its message; busy state and Cancel;
+  - Choose: a folder or a zip opens Summary; an invalid path shows its message; busy state and Cancel; a result arriving after Cancel is disposed;
   - Summary: binaries, issues, already added and resume texts, the Intel default from the CPU, Add disabled when blocked or already added, Back disposes;
   - Adding: step rows, indeterminate start, cancel (disposes, goes Home), retry, failure details, "not installed" without Retry, success disposes and opens Result;
   - Result: the three verdicts' texts, the counts, missing libraries, the unresolved list and its hidden state, the buttons' targets;
-  - Main window: the close confirmation and cancel through `IRunningWork` for Install and Adding;
+  - Main window (existing `MainWindowViewModelTests` updated to the new interfaces): confirmation and cancel through `IRunningWork` for Install and Adding, cancel without confirmation for Choose, `ReleaseAsync` on close for Summary and for Adding after a failure;
   - Install: existing tests pass after the `StepRunViewModel` extraction;
   - Page factory: the new pages resolve from the real container.
 
@@ -161,4 +177,6 @@ Run by the user on the AMD laptop after the tests pass:
 
 ## Review before planning
 
-An independent review of the first draft (2026-10-22) found: criterion 4 unreachable (the resolver rejects a folder without `eboot.bin` first), the staging rule stated backwards, no audit list in `GameAdded`, preparation not actually off the UI thread, no file picker or drop support, no importer interface for app tests, the close confirmation tied to Install, gaps in the prepared game's lifetime, failure details mixed into the message, and the old `AddAsync` order. This version addresses each of them.
+An independent review of the first draft (2026-10-22) found: criterion 4 unreachable (the resolver rejects a folder without `eboot.bin` first), the staging rule stated backwards, no audit list in `GameAdded`, preparation not actually off the UI thread, no file picker or drop support, no importer interface for app tests, the close confirmation tied to Install, gaps in the prepared game's lifetime, failure details mixed into the message, and the old `AddAsync` order. The second version addressed each of them.
+
+A second review (2026-10-22) confirmed those fixes and found: the shared step list could not keep Install's tests as a separate object (now an abstract base class), an unneeded copy-state signal for the staging rule (now always deleted, since staging is never reused), the `.staging` folder and the "no eboot.bin" zip left behind, the dispose blocking the UI thread and racing the window close (now `DisposeAsync`, awaited, and `IPreparedGameOwner`), no close handling for a page holding a game without running work, a cancel-versus-completion race on Choose, and `AuditStep`'s message. This version addresses them. It also noted that 6a is at the upper bound of one milestone; drag and drop and "Open its folder" stay in, as chosen.
