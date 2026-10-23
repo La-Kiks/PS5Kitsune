@@ -31,5 +31,33 @@ public sealed class AuditSummaryTests : IDisposable
         Assert.Throws<InvalidDataException>(() => AuditSummary.Read(path));
     }
 
+    [Fact]
+    public void Lists_the_stub_and_absent_imports_once_each()
+    {
+        var path = _temp.Combine("audit.json");
+        File.WriteAllText(path, AuditFiles.WithImports());
+
+        var summary = AuditSummary.Read(path);
+
+        Assert.Equal(
+            [
+                new UnresolvedImport("__tls_get_addr_nid_postfix", "libc.prx", AuditClass.Stub),
+                new UnresolvedImport("fscanf_nid_postfix", "libSceLibcInternal.prx", AuditClass.Stub),
+                new UnresolvedImport("sceSystemServiceLoadExec", "libSceSystemService.prx", AuditClass.Stub),
+                new UnresolvedImport("__tls_get_addr_nid_postfix", "libkernel.prx", AuditClass.Stub),
+                new UnresolvedImport("AbCdEfGhIjk", "", AuditClass.Absent),
+            ],
+            summary.Unresolved);
+    }
+
+    [Fact]
+    public void A_file_without_imports_has_no_unresolved_list()
+    {
+        var path = _temp.Combine("audit.json");
+        File.WriteAllText(path, AuditFiles.Json(262, 0, 0));
+
+        Assert.Empty(AuditSummary.Read(path).Unresolved);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

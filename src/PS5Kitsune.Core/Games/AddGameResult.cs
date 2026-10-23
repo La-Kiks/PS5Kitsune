@@ -5,7 +5,8 @@ namespace PS5Kitsune.Core.Games;
 public abstract record AddGameResult;
 
 /// <param name="Warnings">Non-blocking validation issues, to show the user.</param>
-public sealed record GameAdded(GameRecord Record, string GameDirectory, IReadOnlyList<ValidationIssue> Warnings) : AddGameResult;
+/// <param name="Audit">The audit's counts and unresolved functions; game.json keeps only the counts.</param>
+public sealed record GameAdded(GameRecord Record, string GameDirectory, IReadOnlyList<ValidationIssue> Warnings, AuditSummary Audit) : AddGameResult;
 
 /// <summary>Validation found blocking issues; nothing was copied.</summary>
 public sealed record GameRejected(IReadOnlyList<ValidationIssue> Issues) : AddGameResult;

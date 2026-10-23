@@ -61,7 +61,7 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, Pyth
         // 0: nothing blocks; 1: absent imports or missing libraries (the verdict shows it); 2: unreadable input.
         if (result.ExitCode is not (0 or 1))
         {
-            throw new GameImportException($"import_audit.py could not read its input (exit code {result.ExitCode}).{Environment.NewLine}{errors}");
+            throw new GameImportException($"import_audit.py could not read its input (exit code {result.ExitCode}).", errors.ToString());
         }
 
         context.Audit = AuditSummary.Read(game.AuditFile);

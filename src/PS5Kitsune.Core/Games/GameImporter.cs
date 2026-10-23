@@ -70,7 +70,7 @@ public sealed partial class GameImporter(
             await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
 
             var record = GameRecordStore.Read(game.RecordFile) ?? throw new InvalidOperationException($"{game.RecordFile} was not written.");
-            return new GameAdded(record, game.Root, validation.Warnings);
+            return new GameAdded(record, game.Root, validation.Warnings, context.Audit ?? AuditSummary.Read(game.AuditFile));
         }
         finally
         {

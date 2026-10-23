@@ -65,6 +65,10 @@ public sealed class RelinkStepTests : IDisposable
         Assert.Contains("exit code 2", exception.Message, StringComparison.Ordinal);
         Assert.Contains("--to-intel", exception.Message, StringComparison.Ordinal);
         Assert.Contains("unsupported instruction vpdpbusd", exception.Message, StringComparison.Ordinal);
+        var failure = Assert.IsType<GameImportException>(exception);
+        Assert.DoesNotContain(Environment.NewLine, failure.Summary, StringComparison.Ordinal);
+        Assert.Equal(failure.Summary + Environment.NewLine + failure.Details, failure.Message);
+        Assert.Contains("AMD-only instruction", failure.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
