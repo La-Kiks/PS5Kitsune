@@ -151,5 +151,47 @@ public sealed class GameImporterTests : IDisposable
         Assert.Equal(relinksBefore + 1, _setup.Runner.Calls.Count(spec => spec.FileName == _setup.Paths.Relinker));
     }
 
+    [Fact]
+    public async Task A_prepared_game_is_added_and_returns_its_audit()
+    {
+        await _setup.InstallAsync();
+        await using var game = await _importer.PrepareAsync(WriteZip(), TestContext.Current.CancellationToken);
+
+        var added = await _importer.AddAsync(game, toIntel: false, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(TestGames.TitleId, added.Record.TitleId);
+        Assert.Equal(262, added.Audit.Implemented);
+    }
+
+    [Fact]
+    public async Task A_blocked_or_added_game_is_refused()
+    {
+        await _setup.InstallAsync();
+        var folder = _temp.Combine("blocked");
+        TestGames.Create(folder);
+        File.Delete(Path.Combine(folder, "sce_sys", "param.json"));
+        await using var blocked = await _importer.PrepareAsync(folder, TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _importer.AddAsync(blocked, false, cancellationToken: TestContext.Current.CancellationToken));
+
+        await AddAsync(WriteZip());
+        await using var again = await _importer.PrepareAsync(WriteZip(), TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _importer.AddAsync(again, false, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Adding_a_prepared_game_requires_the_install()
+    {
+        await using var game = await _importer.PrepareAsync(WriteZip(), TestContext.Current.CancellationToken);
+
+        await Assert.ThrowsAsync<AnyPS5NotInstalledException>(() => _importer.AddAsync(game, false, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task The_install_is_checked_before_the_input()
+    {
+        await Assert.ThrowsAsync<AnyPS5NotInstalledException>(() => AddAsync(_temp.Combine("nothing.txt")));
+    }
+
     public void Dispose() => _temp.Dispose();
 }

@@ -10,6 +10,9 @@ public sealed class GameSourceResolver(DataLayout layout)
 {
     public const string ExecutableName = "eboot.bin";
 
+    /// <summary>Where a zip is extracted: downloads\staging\&lt;zip name without extension&gt;.</summary>
+    public string StagingFor(string zipPath) => Path.Combine(layout.Staging, Path.GetFileNameWithoutExtension(zipPath));
+
     /// <exception cref="InvalidGameSourceException">The input does not exist or holds no eboot.bin where expected.</exception>
     public async Task<GameSource> ResolveAsync(string input, CancellationToken cancellationToken)
     {
@@ -17,7 +20,7 @@ public sealed class GameSourceResolver(DataLayout layout)
         var path = Path.GetFullPath(input);
         if (File.Exists(path) && string.Equals(Path.GetExtension(path), ".zip", StringComparison.OrdinalIgnoreCase))
         {
-            var staging = Path.Combine(layout.Staging, Path.GetFileNameWithoutExtension(path));
+            var staging = StagingFor(path);
             await ZipExtraction.ExtractAsync(path, staging, archiveSha256: null, ZipExtraction.Everything, cancellationToken).ConfigureAwait(false);
             return new GameSource(FindRoot(staging, input), staging);
         }
