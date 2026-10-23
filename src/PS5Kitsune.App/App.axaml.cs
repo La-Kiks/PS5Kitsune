@@ -34,7 +34,7 @@ public sealed partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var window = new MainWindow();
+            var window = new MainWindow { LoggerSource = () => sessions.Current.Get<ILogger<MainWindow>>() };
             var navigator = new Navigator();
             var dialogs = new AvaloniaDialogService(() => window);
             var pages = new PageFactory(sessions, navigator, dialogs, settings, new AvaloniaUiDispatcher(), platform);

@@ -48,11 +48,16 @@ public sealed record AuditSummary(int Implemented, int Stub, int Absent, IReadOn
                 ? libraries.EnumerateObject().ToDictionary(library => library.Name, library => library.Value.GetInt32())
                 : new Dictionary<string, int>();
             var unresolved = new List<UnresolvedImport>();
-            if (root.TryGetProperty("imports", out var imports))
+            if (root.TryGetProperty("imports", out var imports) && imports.ValueKind == JsonValueKind.Array)
             {
                 foreach (var entry in imports.EnumerateArray())
                 {
-                    AuditClass? kind = entry.GetProperty("class").GetString() switch
+                    if (entry.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    AuditClass? kind = Text(entry, "class") switch
                     {
                         "stub" => AuditClass.Stub,
                         "absent" => AuditClass.Absent,

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Games;
@@ -13,7 +14,7 @@ public sealed class ChooseGameViewModelTests
 
     private ChooseGameViewModel Create()
     {
-        var viewModel = new ChooseGameViewModel(_importer, _dialogs, _navigator, new FakePages(), _busy.Add);
+        var viewModel = new ChooseGameViewModel(_importer, _dialogs, _navigator, new FakePages(), NullLogger<ChooseGameViewModel>.Instance, _busy.Add);
         _navigator.GoTo(viewModel);
         return viewModel;
     }

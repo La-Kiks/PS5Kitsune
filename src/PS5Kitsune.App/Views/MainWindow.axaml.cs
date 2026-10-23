@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Microsoft.Extensions.Logging;
+using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
 
 namespace PS5Kitsune.App.Views;
@@ -9,6 +11,9 @@ public sealed partial class MainWindow : Window
     private bool _closePending;
 
     public MainWindow() => InitializeComponent();
+
+    /// <summary>The logger of the current data root, set by the composition root.</summary>
+    public Func<ILogger>? LoggerSource { get; init; }
 
     /// <summary>While a page runs work or holds a prepared game, closing waits for the user's answer and for the clean-up.</summary>
     protected override void OnClosing(WindowClosingEventArgs e)
@@ -40,6 +45,7 @@ public sealed partial class MainWindow : Window
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             // The window stays open; the work keeps running.
+            LoggerSource?.Invoke().CloseConfirmationFailed(exception);
         }
 
         _closePending = false;

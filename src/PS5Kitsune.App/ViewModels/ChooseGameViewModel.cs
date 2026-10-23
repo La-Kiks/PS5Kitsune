@@ -1,13 +1,15 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.Shell;
 using PS5Kitsune.Core.Games;
 
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>The first page of adding a game: a folder or zip, from the pickers or dropped on the page, read before anything is copied.</summary>
 /// <param name="busyChanged">Told true while the game is read, so the data root cannot change meanwhile.</param>
-public sealed partial class ChooseGameViewModel(IGameImporter importer, IDialogService dialogs, Navigator navigator, IPages pages, Action<bool>? busyChanged = null)
+public sealed partial class ChooseGameViewModel(IGameImporter importer, IDialogService dialogs, Navigator navigator, IPages pages, ILogger<ChooseGameViewModel> logger, Action<bool>? busyChanged = null)
     : ObservableObject, IRunningWork
 {
     private CancellationTokenSource? _cancellation;
@@ -74,6 +76,7 @@ public sealed partial class ChooseGameViewModel(IGameImporter importer, IDialogS
         }
         catch (Exception exception)
         {
+            logger.PrepareGameFailed(exception);
             Error = exception.Message;
         }
         finally
