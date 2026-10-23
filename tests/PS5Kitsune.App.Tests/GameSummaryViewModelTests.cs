@@ -1,6 +1,7 @@
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Tests;
 
 namespace PS5Kitsune.App.Tests;
 
@@ -109,6 +110,26 @@ public sealed class GameSummaryViewModelTests
 
         Assert.True(game.IsDisposed);
         Assert.Equal("choose", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task Leaving_blocks_Add_and_Back_while_the_game_is_disposed()
+    {
+        using var temp = new TempDirectory();
+        var staging = temp.Combine("staging");
+        Directory.CreateDirectory(staging);
+        var template = TestGameData.Prepared();
+        var game = new PreparedGame(new GameSource(staging, staging), template.Validation, null, template.Binaries, template.GameDirectory, false, false);
+        var viewModel = Create(game);
+
+        var leaving = viewModel.BackCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.AddCommand.CanExecute(null));
+        Assert.False(viewModel.BackCommand.CanExecute(null));
+        viewModel.AddCommand.Execute(null);
+        await leaving;
+        Assert.Equal("choose", _navigator.CurrentPage);
+        Assert.False(viewModel.AddCommand.CanExecute(null));
     }
 
     [Fact]

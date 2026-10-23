@@ -14,7 +14,7 @@
       <StackPanel Spacing="12" MaxWidth="680" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="16">
           <Panel Width="64" Height="64">
-            <Border Background="#20808080" CornerRadius="4" IsVisible="{Binding IconPath, Converter={x:Static ObjectConverters.IsNull}}" />
+            <Border Background="#20808080" CornerRadius="4" />
             <Image Width="64" Height="64" Source="{Binding IconPath, Converter={x:Static views:PathToBitmapConverter.Instance}}" />
           </Panel>
           <StackPanel VerticalAlignment="Center">

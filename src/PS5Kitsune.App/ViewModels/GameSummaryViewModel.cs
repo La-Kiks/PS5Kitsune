@@ -62,7 +62,9 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
     [ObservableProperty]
     public partial string? OpenError { get; private set; }
 
-    public bool CanAdd => !game.IsBlocked && !game.AlreadyAdded;
+    public bool CanAdd => !game.IsBlocked && !game.AlreadyAdded && !game.IsDisposed;
+
+    private bool CanGoBack => !game.IsDisposed;
 
     public Task ReleaseAsync() => _handedOver ? Task.CompletedTask : game.DisposeAsync().AsTask();
 
@@ -70,14 +72,23 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
     [RelayCommand(CanExecute = nameof(CanAdd))]
     private void Add()
     {
+        if (game.IsDisposed)
+        {
+            return;
+        }
+
         _handedOver = true;
         navigator.GoTo(pages.AddGame(game, ToIntel));
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
     private async Task BackAsync()
     {
-        await game.DisposeAsync().ConfigureAwait(true);
+        // Disposal starts as soon as DisposeAsync is called, so both commands are blocked for the whole (possibly slow) cleanup.
+        var disposing = game.DisposeAsync();
+        AddCommand.NotifyCanExecuteChanged();
+        BackCommand.NotifyCanExecuteChanged();
+        await disposing.ConfigureAwait(true);
         navigator.GoBack();
     }
 
