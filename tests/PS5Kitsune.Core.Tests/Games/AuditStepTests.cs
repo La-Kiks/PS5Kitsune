@@ -112,6 +112,9 @@ public sealed class AuditStepTests : IDisposable
         var exception = await Assert.ThrowsAsync<GameImportException>(() => CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken));
 
         Assert.Contains("bad registry", exception.Message, StringComparison.Ordinal);
+        var failure = Assert.IsType<GameImportException>(exception);
+        Assert.DoesNotContain(Environment.NewLine, failure.Summary, StringComparison.Ordinal);
+        Assert.Equal(failure.Summary + Environment.NewLine + failure.Details, failure.Message);
     }
 
     [Fact]

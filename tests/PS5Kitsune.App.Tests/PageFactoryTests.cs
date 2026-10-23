@@ -3,6 +3,7 @@ using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tests;
@@ -30,6 +31,10 @@ public sealed class PageFactoryTests : IDisposable
         Assert.Equal(6, Assert.IsType<InstallViewModel>(pages.Install(AnyPS5Mode.Release)).Steps.Count);
         Assert.Equal(10, Assert.IsType<InstallViewModel>(pages.Install(AnyPS5Mode.Build)).Steps.Count);
         Assert.IsType<DoneViewModel>(pages.Done());
+        Assert.IsType<ChooseGameViewModel>(pages.ChooseGame());
+        Assert.IsType<GameSummaryViewModel>(pages.GameSummary(TestGameData.Prepared()));
+        Assert.IsType<AddGameViewModel>(pages.AddGame(TestGameData.Prepared(), false));
+        Assert.IsType<AddResultViewModel>(pages.AddResult(TestGameData.Added()));
     }
 
     public void Dispose() => _temp.Dispose();

@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 5 of 8 (build mode; 5c, side-by-side release and build installs, in progress). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding games still goes through the command line. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 6 of 8 (add a game; 6a, add a game from the app, in progress). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding a game is also possible from the app. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
@@ -28,6 +28,8 @@ ps5kitsune use release|build         # switch between the release and build inst
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
 ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ```
+
+In the app, Home's "Add a game" takes a folder or a .zip (picked or dropped), shows its summary, adds it and shows the audit verdict.
 
 Every command takes `--root <data root>`; without it, the CLI uses the data folder chosen in the app, else `C:\PS5Kitsune`. `check` and `install` exit with code 2 when a check is blocking.
 

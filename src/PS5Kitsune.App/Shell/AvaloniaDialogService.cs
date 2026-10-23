@@ -34,4 +34,20 @@ public sealed class AvaloniaDialogService(Func<Window?> owner) : IDialogService
 
         return await new ConfirmWindow(title, message, confirmText).ShowDialog<bool>(window).ConfigureAwait(true);
     }
+
+    public async Task<string?> PickFileAsync(string title, string extension)
+    {
+        if (owner() is not { } window)
+        {
+            return null;
+        }
+
+        var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType($".{extension} files") { Patterns = [$"*.{extension}"] }],
+        }).ConfigureAwait(true);
+        return files.Count == 0 ? null : files[0].TryGetLocalPath();
+    }
 }

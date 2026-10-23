@@ -42,7 +42,8 @@ public sealed class UnwrapSelfStep(GameImportContext context, AnyPS5Paths paths,
             {
                 File.Delete(partial);
                 throw new GameImportException(
-                    $"unwrap_self.py could not unwrap {relative} (exit code {result.ExitCode}): the game must come already unwrapped from the dump tool.{Environment.NewLine}{errors}");
+                    $"unwrap_self.py could not unwrap {relative} (exit code {result.ExitCode}): the game must come already unwrapped from the dump tool.",
+                    errors.ToString());
             }
 
             File.Move(partial, original, overwrite: true);

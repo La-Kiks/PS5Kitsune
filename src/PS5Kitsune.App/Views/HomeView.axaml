@@ -11,6 +11,8 @@
         <TextBlock Text="{Binding StateDetail}" TextWrapping="Wrap" Opacity="0.85" />
         <TextBlock Text="{Binding OtherInstallText}" Opacity="0.85" IsVisible="{Binding OtherInstallText, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Button Content="{Binding ActionText}" Command="{Binding StartCommand}" Classes="accent" Margin="0,8,0,0" />
+        <Button Content="Add a game" Command="{Binding AddGameCommand}" />
+        <TextBlock Text="{Binding AddGameHint}" Opacity="0.85" IsVisible="{Binding AddGameHint, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
     </Border>
 

@@ -85,6 +85,10 @@ public sealed class UnwrapSelfStepTests : IDisposable
 
         Assert.Contains("already unwrapped from the dump tool", exception.Message, StringComparison.Ordinal);
         Assert.Contains("every load segment looks encrypted", exception.Message, StringComparison.Ordinal);
+        var failure = Assert.IsType<GameImportException>(exception);
+        Assert.DoesNotContain(Environment.NewLine, failure.Summary, StringComparison.Ordinal);
+        Assert.Equal(failure.Summary + Environment.NewLine + failure.Details, failure.Message);
+        Assert.Contains("must come already unwrapped from the dump tool", failure.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

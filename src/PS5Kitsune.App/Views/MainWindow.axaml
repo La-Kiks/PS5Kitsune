@@ -23,6 +23,18 @@
     <DataTemplate DataType="vm:InstallViewModel">
       <views:InstallView />
     </DataTemplate>
+    <DataTemplate DataType="vm:ChooseGameViewModel">
+      <views:ChooseGameView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:GameSummaryViewModel">
+      <views:GameSummaryView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:AddGameViewModel">
+      <views:AddGameView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:AddResultViewModel">
+      <views:AddResultView />
+    </DataTemplate>
     <DataTemplate DataType="vm:DoneViewModel">
       <views:DoneView />
     </DataTemplate>

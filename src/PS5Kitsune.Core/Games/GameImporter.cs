@@ -10,8 +10,8 @@ using PS5Kitsune.Core.Tools;
 namespace PS5Kitsune.Core.Games;
 
 /// <summary>
-/// Adds a game: resolve the folder or zip, validate it, then run the add steps. Without game.json,
-/// a new add resumes at the first step not done. See docs/architecture.md, "V2 — Add a game".
+/// Adds a game in two stages: prepare (resolve the folder or zip and validate it), then add (run the add steps).
+/// Without game.json, a new add resumes at the first step not done. See docs/architecture.md, "V2 — Add a game".
 /// </summary>
 public sealed partial class GameImporter(
     DataLayout layout,
@@ -25,8 +25,13 @@ public sealed partial class GameImporter(
     IProcessRunner processRunner,
     StepRunner stepRunner,
     TimeProvider time,
-    ILogger<GameImporter> logger)
+    ILogger<GameImporter> logger) : IGameImporter
 {
+    public static readonly IReadOnlyList<string> Names =
+        ["Copy the game", "Copy the AnyPS5 libraries", "Unwrap SELF files", "Convert with the relinker", "Audit the imports", "Record the game"];
+
+    public IReadOnlyList<string> StepNames => Names;
+
     /// <param name="toIntel">Convert for an Intel CPU (relinker Intel option).</param>
     /// <exception cref="AnyPS5NotInstalledException">Run install first.</exception>
     /// <exception cref="InvalidGameSourceException">The input is not a game folder or zip.</exception>
@@ -39,57 +44,110 @@ public sealed partial class GameImporter(
             throw new AnyPS5NotInstalledException();
         }
 
+        await using var game = await PrepareAsync(input, cancellationToken).ConfigureAwait(false);
+        if (game.IsBlocked || game.Metadata is not { } metadata)
+        {
+            return new GameRejected(game.Validation.Issues);
+        }
+
+        if (game.AlreadyAdded)
+        {
+            return new GameAlreadyAdded(metadata.TitleId, game.GameDirectory!);
+        }
+
+        return await AddAsync(game, toIntel, progress, onEvent, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<PreparedGame> PrepareAsync(string input, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        return Task.Run(() => PrepareCoreAsync(input, cancellationToken), cancellationToken);
+    }
+
+    public async Task<GameAdded> AddAsync(
+        PreparedGame game, bool toIntel, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(game);
+        if (!installer.IsInstalled())
+        {
+            throw new AnyPS5NotInstalledException();
+        }
+
+        if (game.IsBlocked || game.Metadata is not { } metadata)
+        {
+            throw new InvalidOperationException("The game has blocking issues; it cannot be added.");
+        }
+
+        var layoutGame = new GameLayout(layout.GameDirectory(metadata.TitleId), metadata.TitleId, platform);
+        if (File.Exists(layoutGame.RecordFile))
+        {
+            throw new InvalidOperationException($"{metadata.TitleId} is already added.");
+        }
+
         var install = installer.ReadRecord() ?? throw new AnyPS5NotInstalledException();
-        var source = await resolver.ResolveAsync(input, cancellationToken).ConfigureAwait(false);
-        CopyGameStep? copy = null;
+        var context = new GameImportContext(game.Source, metadata, game.Validation.ModuleDirectories, layoutGame, toIntel);
+        IStep[] steps =
+        [
+            new CopyGameStep(context),
+            new CopyLibsStep(paths, layoutGame),
+            new UnwrapSelfStep(context, paths, python, processRunner),
+            new RelinkStep(context, paths, profile, processRunner),
+            new AuditStep(context, paths, python, processRunner),
+            new WriteGameRecordStep(context, install, time),
+        ];
+        await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
+
+        var record = GameRecordStore.Read(layoutGame.RecordFile) ?? throw new InvalidOperationException($"{layoutGame.RecordFile} was not written.");
+        return new GameAdded(record, layoutGame.Root, game.Validation.Warnings, context.Audit ?? AuditSummary.Read(layoutGame.AuditFile));
+    }
+
+    private async Task<PreparedGame> PrepareCoreAsync(string input, CancellationToken cancellationToken)
+    {
+        var path = Path.GetFullPath(input);
+        var staging = File.Exists(path) && string.Equals(Path.GetExtension(path), ".zip", StringComparison.OrdinalIgnoreCase)
+            ? resolver.StagingFor(path)
+            : null;
         try
         {
+            GameSource source;
+            try
+            {
+                source = await resolver.ResolveAsync(input, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (staging is not null && exception is InvalidDataException or IOException or UnauthorizedAccessException)
+            {
+                throw new InvalidGameSourceException($"Cannot read {input}: {exception.Message}", exception);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
             var validation = validator.Validate(source.Root, layout.Games);
-            if (validation.IsBlocked || validation.Metadata is not { } metadata)
+            var icon = Path.Combine(source.Root, "sce_sys", "icon0.png");
+            var binaries = new List<GameBinary> { new(GameSourceResolver.ExecutableName, BinaryKinds.Detect(Path.Combine(source.Root, GameSourceResolver.ExecutableName))) };
+            foreach (var directory in validation.ModuleDirectories)
             {
-                return new GameRejected(validation.Issues);
+                foreach (var file in Directory.EnumerateFiles(Path.Combine(source.Root, directory), "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+                {
+                    binaries.Add(new GameBinary(Path.GetRelativePath(source.Root, file).Replace('\\', '/'), BinaryKinds.Detect(file)));
+                }
             }
 
-            var game = new GameLayout(layout.GameDirectory(metadata.TitleId), metadata.TitleId, platform);
-            if (File.Exists(game.RecordFile))
+            string? gameDirectory = null;
+            var alreadyAdded = false;
+            var resumes = false;
+            if (validation.Metadata is { } metadata)
             {
-                return new GameAlreadyAdded(metadata.TitleId, game.Root);
+                var game = new GameLayout(layout.GameDirectory(metadata.TitleId), metadata.TitleId, platform);
+                gameDirectory = game.Root;
+                alreadyAdded = File.Exists(game.RecordFile);
+                resumes = !alreadyAdded && Directory.Exists(game.Root);
             }
 
-            var context = new GameImportContext(source, metadata, validation.ModuleDirectories, game, toIntel);
-            copy = new CopyGameStep(context);
-            IStep[] steps =
-            [
-                copy,
-                new CopyLibsStep(paths, game),
-                new UnwrapSelfStep(context, paths, python, processRunner),
-                new RelinkStep(context, paths, profile, processRunner),
-                new AuditStep(context, paths, python, processRunner),
-                new WriteGameRecordStep(context, install, time),
-            ];
-            await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
-
-            var record = GameRecordStore.Read(game.RecordFile) ?? throw new InvalidOperationException($"{game.RecordFile} was not written.");
-            return new GameAdded(record, game.Root, validation.Warnings);
+            return new PreparedGame(source, validation, File.Exists(icon) ? icon : null, binaries, gameDirectory, alreadyAdded, resumes, LogStagingNotDeleted);
         }
-        finally
+        catch (Exception) when (staging is not null)
         {
-            // An extracted zip is only needed until the game is copied; keep it when the copy did not complete.
-            // A cleanup failure (antivirus scanning fresh files) must not replace the real error or fail a finished add.
-            if (source.StagingDirectory is { } staging)
-            {
-                try
-                {
-                    if (Directory.Exists(staging) && (copy is null || copy.IsAlreadyDone()))
-                    {
-                        Directory.Delete(staging, recursive: true);
-                    }
-                }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-                {
-                    LogStagingNotDeleted(exception, staging);
-                }
-            }
+            PreparedGame.DeleteStaging(staging, LogStagingNotDeleted);
+            throw;
         }
     }
 

@@ -41,27 +41,30 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public bool IsInstallRunning => Navigator.CurrentPage is InstallViewModel { IsRunning: true };
+    /// <summary>The current page runs work or owns a prepared game: closing must go through <see cref="ConfirmCloseAsync"/>.</summary>
+    public bool NeedsCloseHandling => Navigator.CurrentPage is IRunningWork { IsRunning: true } or IPreparedGameOwner;
 
-    /// <summary>Asks before closing during an install; on yes, cancels it and waits for the running step to stop.</summary>
+    /// <summary>
+    /// Asks before closing when the running work has a quit message; then cancels it and waits, then releases a prepared game.
+    /// </summary>
     /// <returns>True when the window may close.</returns>
     public async Task<bool> ConfirmCloseAsync()
     {
-        if (Navigator.CurrentPage is not InstallViewModel { IsRunning: true } install)
+        if (Navigator.CurrentPage is IRunningWork { IsRunning: true } work)
         {
-            return true;
+            if (work.QuitMessage is { } message && !await _dialogs.ConfirmAsync("Quit PS5Kitsune?", message, "Quit").ConfigureAwait(true))
+            {
+                return false;
+            }
+
+            await work.CancelAndWaitAsync().ConfigureAwait(true);
         }
 
-        var quit = await _dialogs.ConfirmAsync(
-            "Quit PS5Kitsune?",
-            "An install is running. Quitting cancels it; it will resume where it stopped.",
-            "Quit").ConfigureAwait(true);
-        if (!quit)
+        if (Navigator.CurrentPage is IPreparedGameOwner owner)
         {
-            return false;
+            await owner.ReleaseAsync().ConfigureAwait(true);
         }
 
-        await install.CancelAndWaitAsync().ConfigureAwait(true);
         return true;
     }
 }

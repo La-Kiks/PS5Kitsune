@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PS5Kitsune.App.ViewModels"
+             xmlns:views="using:PS5Kitsune.App.Views"
+             x:Class="PS5Kitsune.App.Views.GameSummaryView"
+             x:DataType="vm:GameSummaryViewModel">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="Back" Command="{Binding BackCommand}" />
+      <Button Content="Add the game" Classes="accent" Command="{Binding AddCommand}" />
+    </StackPanel>
+
+    <ScrollViewer>
+      <StackPanel Spacing="12" MaxWidth="680" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="16">
+          <Panel Width="64" Height="64">
+            <Border Background="#20808080" CornerRadius="4" />
+            <Image Width="64" Height="64" Source="{Binding IconPath, Converter={x:Static views:PathToBitmapConverter.Instance}}" />
+          </Panel>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding TitleId}" Opacity="0.85" />
+          </StackPanel>
+        </StackPanel>
+
+        <TextBlock Text="{Binding SizeText}" />
+        <TextBlock Text="{Binding ModulesText}" />
+        <TextBlock Text="{Binding BinariesText}" TextWrapping="Wrap" />
+
+        <ItemsControl ItemsSource="{Binding BlockingIssues}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" Foreground="#C42B1C" TextWrapping="Wrap" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl ItemsSource="{Binding Warnings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" Foreground="#9D5D00" TextWrapping="Wrap" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <StackPanel Spacing="8" IsVisible="{Binding AlreadyAddedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock Text="{Binding AlreadyAddedText}" TextWrapping="Wrap" />
+          <Button Content="Open its folder" Command="{Binding OpenFolderCommand}" />
+        </StackPanel>
+        <TextBlock Text="{Binding ResumeText}" TextWrapping="Wrap" Opacity="0.85"
+                   IsVisible="{Binding ResumeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="{Binding OpenError}" Foreground="#C42B1C" TextWrapping="Wrap"
+                   IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <CheckBox Content="Convert for an Intel CPU" IsChecked="{Binding ToIntel}" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

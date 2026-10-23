@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GameSourceResolver>();
         services.AddSingleton(_ => new GameValidator());
         services.AddSingleton<GameImporter>();
+        services.AddSingleton<IGameImporter>(provider => provider.GetRequiredService<GameImporter>());
         services.AddSingleton<GameLibrary>();
 
         AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);

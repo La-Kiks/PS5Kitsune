@@ -1,9 +1,11 @@
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tools;
@@ -29,4 +31,13 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object Done() =>
         new DoneViewModel(Session.Get<IAnyPS5Installer>().ReadRecord(), Session.Get<AnyPS5Paths>(), Session.LogFile, platform, navigator, this);
+
+    public object ChooseGame() => new ChooseGameViewModel(Session.Get<IGameImporter>(), dialogs, navigator, this, Session.Get<ILogger<ChooseGameViewModel>>(), busy => sessions.IsBusy = busy);
+
+    public object GameSummary(PreparedGame game) => new GameSummaryViewModel(game, Session.Get<ICpuInfo>().Read().IsIntel, platform, navigator, this);
+
+    public object AddGame(PreparedGame game, bool toIntel) =>
+        new AddGameViewModel(Session.Get<IGameImporter>(), game, toIntel, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
+
+    public object AddResult(GameAdded added) => new AddResultViewModel(added, platform, navigator, this);
 }

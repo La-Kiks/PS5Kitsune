@@ -36,7 +36,7 @@ public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, Any
             var intelNote = context.ToIntel
                 ? $" It ran with {profile.Relinker.IntelArg}: the game may use an AMD-only instruction that cannot be converted for Intel CPUs."
                 : "";
-            throw new GameImportException($"The relinker failed with exit code {result.ExitCode}.{intelNote}{Environment.NewLine}{errors}");
+            throw new GameImportException($"The relinker failed with exit code {result.ExitCode}.{intelNote}", errors.ToString());
         }
 
         Directory.CreateDirectory(context.Game.Meta);
