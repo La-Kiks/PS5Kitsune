@@ -10,10 +10,10 @@ public sealed partial class MainWindow : Window
 
     public MainWindow() => InitializeComponent();
 
-    /// <summary>During an install, closing waits for the user's answer and for the install to stop.</summary>
+    /// <summary>While a page runs work or holds a prepared game, closing waits for the user's answer and for the clean-up.</summary>
     protected override void OnClosing(WindowClosingEventArgs e)
     {
-        if (!_closeConfirmed && DataContext is MainWindowViewModel { IsInstallRunning: true } viewModel)
+        if (!_closeConfirmed && DataContext is MainWindowViewModel { NeedsCloseHandling: true } viewModel)
         {
             e.Cancel = true;
             if (!_closePending)
@@ -39,7 +39,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            // The window stays open; the install keeps running.
+            // The window stays open; the work keeps running.
         }
 
         _closePending = false;

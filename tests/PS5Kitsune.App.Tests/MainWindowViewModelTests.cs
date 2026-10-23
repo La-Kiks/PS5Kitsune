@@ -47,7 +47,7 @@ public sealed class MainWindowViewModelTests : IDisposable
     {
         var install = StartRunningInstall();
 
-        Assert.True(_viewModel.IsInstallRunning);
+        Assert.True(_viewModel.NeedsCloseHandling);
         Assert.False(await _viewModel.ConfirmCloseAsync());
         Assert.Single(_dialogs.Confirmations);
         Assert.True(install.IsRunning);
@@ -63,6 +63,57 @@ public sealed class MainWindowViewModelTests : IDisposable
 
         Assert.True(await _viewModel.ConfirmCloseAsync());
         Assert.False(install.IsRunning);
+    }
+
+    [Fact]
+    public async Task Closing_on_a_page_that_owns_a_game_releases_it_without_asking()
+    {
+        var owner = new FakeOwner();
+        _navigator.GoTo(owner);
+
+        Assert.True(_viewModel.NeedsCloseHandling);
+        Assert.True(await _viewModel.ConfirmCloseAsync());
+
+        Assert.True(owner.Released);
+        Assert.Empty(_dialogs.Confirmations);
+    }
+
+    [Fact]
+    public async Task Running_work_without_a_quit_message_is_cancelled_without_asking()
+    {
+        var work = new FakeWork { IsRunning = true };
+        _navigator.GoTo(work);
+
+        Assert.True(await _viewModel.ConfirmCloseAsync());
+
+        Assert.True(work.Cancelled);
+        Assert.Empty(_dialogs.Confirmations);
+    }
+
+    private sealed class FakeOwner : IPreparedGameOwner
+    {
+        public bool Released { get; private set; }
+
+        public Task ReleaseAsync()
+        {
+            Released = true;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeWork : IRunningWork
+    {
+        public bool IsRunning { get; set; }
+
+        public string? QuitMessage => null;
+
+        public bool Cancelled { get; private set; }
+
+        public Task CancelAndWaitAsync()
+        {
+            Cancelled = true;
+            return Task.CompletedTask;
+        }
     }
 
     private InstallViewModel StartRunningInstall()
