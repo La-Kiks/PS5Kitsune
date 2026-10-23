@@ -16,6 +16,8 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     private int _generation;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddGameCommand))]
+    [NotifyPropertyChangedFor(nameof(AddGameHint))]
     public partial AnyPS5InstallStatus Status { get; private set; }
 
     [ObservableProperty]
@@ -43,10 +45,16 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
 
     /// <summary>True while the install is being checked: the done-checks can hash hundreds of MB.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand), nameof(AddGameCommand))]
+    [NotifyPropertyChangedFor(nameof(AddGameHint))]
     public partial bool IsChecking { get; private set; }
 
     public bool CanStart => !IsChecking;
+
+    public bool CanAddGame => !IsChecking && Status == AnyPS5InstallStatus.Installed;
+
+    /// <summary>Why "Add a game" is disabled; null when it is enabled.</summary>
+    public string? AddGameHint => CanAddGame ? null : "Install AnyPS5 first to add games.";
 
     public void OnNavigatedTo() => _ = RefreshAsync();
 
@@ -160,6 +168,9 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
             }
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanAddGame))]
+    private void AddGame() => navigator.GoTo(pages.ChooseGame());
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start() => navigator.GoTo(pages.Mode());

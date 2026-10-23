@@ -5,6 +5,8 @@ using PS5Kitsune.Core;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tools;
@@ -174,6 +176,14 @@ internal sealed class FakePages : IPages
     public object Install(AnyPS5Mode mode) => $"install:{mode}";
 
     public object Done() => "done";
+
+    public object ChooseGame() => "choose";
+
+    public object GameSummary(PreparedGame game) => $"summary:{game.Metadata?.TitleId}";
+
+    public object AddGame(PreparedGame game, bool toIntel) => $"adding:{game.Metadata?.TitleId}:{toIntel}";
+
+    public object AddResult(GameAdded added) => $"result:{added.Record.TitleId}";
 }
 
 internal sealed class FakeTool(string id, bool installed) : IPortableTool
@@ -192,6 +202,10 @@ internal sealed class FakeTool(string id, bool installed) : IPortableTool
 internal sealed class FakeDialogs : IDialogService
 {
     public string? Folder { get; set; }
+
+    public string? File { get; set; }
+
+    public Task<string?> PickFileAsync(string title, string extension) => Task.FromResult(File);
 
     public bool Confirm { get; set; }
 
@@ -228,5 +242,78 @@ internal static class TestSessions
         services.AddSingleton(installer);
         services.AddSingleton(Profile);
         return new RootSession(new DataLayout(root), services.BuildServiceProvider(), Path.Combine(root, "logs", "app.log"));
+    }
+}
+
+/// <summary>Builds prepared games and add results without touching the disk.</summary>
+internal static class TestGameData
+{
+    public const string TitleId = "PPSA99666";
+
+    public static PreparedGame Prepared(
+        IReadOnlyList<ValidationIssue>? issues = null,
+        bool hasMetadata = true,
+        IReadOnlyList<GameBinary>? binaries = null,
+        string? icon = null,
+        bool alreadyAdded = false,
+        bool resumes = false,
+        IReadOnlyList<string>? moduleDirectories = null,
+        long sizeBytes = 2_359_296)
+    {
+        var metadata = hasMetadata ? new GameMetadata(TitleId, "DOOM") : null;
+        var validation = new GameValidation(metadata, moduleDirectories ?? ["sce_module"], sizeBytes, issues ?? []);
+        return new PreparedGame(
+            new GameSource(@"C:\games\doom", null),
+            validation,
+            icon,
+            binaries ?? [new GameBinary("eboot.bin", BinaryKind.Self), new GameBinary("sce_module/libc.prx", BinaryKind.Self)],
+            hasMetadata ? $@"C:\root\games\{TitleId}" : null,
+            alreadyAdded,
+            resumes);
+    }
+
+    public static GameAdded Added(AuditSummary? audit = null, IReadOnlyList<ValidationIssue>? warnings = null)
+    {
+        var summary = audit ?? new AuditSummary(360, 4, 0, new Dictionary<string, int>());
+        var record = new GameRecord
+        {
+            SchemaVersion = GameRecord.CurrentSchemaVersion,
+            TitleId = TitleId,
+            Name = "DOOM",
+            Executable = TitleId + ".exe",
+            ConvertedWith = new ConversionInfo("test-profile", "release", "v0.1.2", null, false),
+            Audit = new AuditRecord(summary.Implemented, summary.Stub, summary.Absent, summary.Verdict),
+            AddedAt = new DateTimeOffset(2026, 10, 22, 12, 0, 0, TimeSpan.Zero),
+        };
+        return new GameAdded(record, $@"C:\root\games\{TitleId}", warnings ?? [], summary);
+    }
+}
+
+internal delegate Task<GameAdded> AddBehavior(PreparedGame game, bool toIntel, IProgress<StepProgress>? progress, Action<StepEvent>? onEvent, CancellationToken cancellationToken);
+
+internal sealed class FakeGameImporter : IGameImporter
+{
+    public IReadOnlyList<string> StepNames { get; } =
+        ["Copy the game", "Copy the AnyPS5 libraries", "Unwrap SELF files", "Convert with the relinker", "Audit the imports", "Record the game"];
+
+    /// <summary>What PrepareAsync does; by default returns <see cref="TestGameData.Prepared"/>.</summary>
+    public Func<string, CancellationToken, Task<PreparedGame>> Prepare { get; set; } = (_, _) => Task.FromResult(TestGameData.Prepared());
+
+    public AddBehavior Add { get; set; } = (_, _, _, _, _) => Task.FromResult(TestGameData.Added());
+
+    public List<string> Prepared { get; } = [];
+
+    public List<(PreparedGame Game, bool ToIntel)> Adds { get; } = [];
+
+    public Task<PreparedGame> PrepareAsync(string input, CancellationToken cancellationToken)
+    {
+        Prepared.Add(input);
+        return Prepare(input, cancellationToken);
+    }
+
+    public Task<GameAdded> AddAsync(PreparedGame game, bool toIntel, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
+    {
+        Adds.Add((game, toIntel));
+        return Add(game, toIntel, progress, onEvent, cancellationToken);
     }
 }

@@ -345,6 +345,28 @@ public sealed class HomeViewModelTests : IDisposable
         Assert.False(File.Exists(_settings.FilePath));
     }
 
+    [Fact]
+    public async Task Adding_a_game_needs_an_install()
+    {
+        var viewModel = await CreateAsync();
+
+        Assert.False(viewModel.AddGameCommand.CanExecute(null));
+        Assert.Equal("Install AnyPS5 first to add games.", viewModel.AddGameHint);
+    }
+
+    [Fact]
+    public async Task With_an_install_a_game_can_be_added()
+    {
+        _installer.ActiveMode = AnyPS5Mode.Release;
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+        var viewModel = await CreateAsync();
+
+        Assert.True(viewModel.AddGameCommand.CanExecute(null));
+        Assert.Null(viewModel.AddGameHint);
+        viewModel.AddGameCommand.Execute(null);
+        Assert.Equal("choose", _navigator.CurrentPage);
+    }
+
     public void Dispose()
     {
         _sessions.Dispose();

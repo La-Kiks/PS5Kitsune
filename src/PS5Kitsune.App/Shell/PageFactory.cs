@@ -4,6 +4,7 @@ using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tools;
@@ -29,4 +30,13 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object Done() =>
         new DoneViewModel(Session.Get<IAnyPS5Installer>().ReadRecord(), Session.Get<AnyPS5Paths>(), Session.LogFile, platform, navigator, this);
+
+    public object ChooseGame() => new ChooseGameViewModel(Session.Get<IGameImporter>(), dialogs, navigator, this, busy => sessions.IsBusy = busy);
+
+    public object GameSummary(PreparedGame game) => new GameSummaryViewModel(game, Session.Get<ICpuInfo>().Read().IsIntel, platform, navigator, this);
+
+    // Task 5 replaces these two with the Adding and Result pages.
+    public object AddGame(PreparedGame game, bool toIntel) => throw new NotSupportedException("The Adding page comes with Task 5.");
+
+    public object AddResult(GameAdded added) => throw new NotSupportedException("The Result page comes with Task 5.");
 }

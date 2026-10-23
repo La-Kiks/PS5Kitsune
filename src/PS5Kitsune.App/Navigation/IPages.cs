@@ -1,4 +1,5 @@
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Games;
 
 namespace PS5Kitsune.App.Navigation;
 
@@ -20,4 +21,13 @@ public interface IPages
     object Install(AnyPS5Mode mode);
 
     object Done();
+
+    object ChooseGame();
+
+    /// <summary>Takes ownership of <paramref name="game"/> until it is added or the user goes back.</summary>
+    object GameSummary(PreparedGame game);
+
+    object AddGame(PreparedGame game, bool toIntel);
+
+    object AddResult(GameAdded added);
 }
