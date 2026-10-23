@@ -127,6 +127,7 @@ public sealed class PrepareGameTests : IDisposable
         var exception = await Assert.ThrowsAsync<InvalidGameSourceException>(() => PrepareAsync(zip));
 
         Assert.StartsWith($"Cannot read {zip}: ", exception.Message, StringComparison.Ordinal);
+        Assert.IsType<InvalidDataException>(exception.InnerException);
         Assert.False(Directory.Exists(Staging));
         Assert.False(Directory.Exists(Staging + ".staging"));
     }

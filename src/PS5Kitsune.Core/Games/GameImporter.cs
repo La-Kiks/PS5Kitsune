@@ -116,7 +116,7 @@ public sealed partial class GameImporter(
             }
             catch (Exception exception) when (staging is not null && exception is InvalidDataException or IOException or UnauthorizedAccessException)
             {
-                throw new InvalidGameSourceException($"Cannot read {input}: {exception.Message}");
+                throw new InvalidGameSourceException($"Cannot read {input}: {exception.Message}", exception);
             }
 
             cancellationToken.ThrowIfCancellationRequested();
