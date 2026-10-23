@@ -35,8 +35,8 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object GameSummary(PreparedGame game) => new GameSummaryViewModel(game, Session.Get<ICpuInfo>().Read().IsIntel, platform, navigator, this);
 
-    // Task 5 replaces these two with the Adding and Result pages.
-    public object AddGame(PreparedGame game, bool toIntel) => throw new NotSupportedException("The Adding page comes with Task 5.");
+    public object AddGame(PreparedGame game, bool toIntel) =>
+        new AddGameViewModel(Session.Get<IGameImporter>(), game, toIntel, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
 
-    public object AddResult(GameAdded added) => throw new NotSupportedException("The Result page comes with Task 5.");
+    public object AddResult(GameAdded added) => new AddResultViewModel(added, platform, navigator, this);
 }

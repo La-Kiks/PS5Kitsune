@@ -29,6 +29,12 @@
     <DataTemplate DataType="vm:GameSummaryViewModel">
       <views:GameSummaryView />
     </DataTemplate>
+    <DataTemplate DataType="vm:AddGameViewModel">
+      <views:AddGameView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:AddResultViewModel">
+      <views:AddResultView />
+    </DataTemplate>
     <DataTemplate DataType="vm:DoneViewModel">
       <views:DoneView />
     </DataTemplate>

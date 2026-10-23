@@ -116,6 +116,27 @@ public sealed class MainWindowViewModelTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task Closing_during_an_add_cancels_it_and_releases_the_game()
+    {
+        var importer = new FakeGameImporter();
+        var game = TestGameData.Prepared();
+        importer.Add = async (_, _, _, _, token) =>
+        {
+            await Task.Delay(Timeout.Infinite, token);
+            return TestGameData.Added();
+        };
+        var adding = new AddGameViewModel(importer, game, false, "app.log", new TestPlatform(), new InlineDispatcher(), _navigator, new FakePages());
+        _navigator.GoTo(adding);
+        _dialogs.Confirm = true;
+
+        Assert.True(_viewModel.NeedsCloseHandling);
+        Assert.True(await _viewModel.ConfirmCloseAsync());
+
+        Assert.Equal("Adding a game is in progress. Quitting cancels it; adding it again resumes where it stopped.", Assert.Single(_dialogs.Confirmations));
+        Assert.True(game.IsDisposed);
+    }
+
     private InstallViewModel StartRunningInstall()
     {
         _installer.Install = (_, _, cancellationToken) => Task.Delay(Timeout.Infinite, cancellationToken);

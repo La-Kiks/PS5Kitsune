@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PS5Kitsune.App.ViewModels"
+             xmlns:sys="using:System"
+             x:Class="PS5Kitsune.App.Views.AddResultView"
+             x:DataType="vm:AddResultViewModel">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <Button Content="Open the game folder" Command="{Binding OpenFolderCommand}" />
+      <Button Content="Add another game" Command="{Binding AddAnotherCommand}" />
+      <Button Content="Back to home" Classes="accent" Command="{Binding BackHomeCommand}" />
+    </StackPanel>
+
+    <ScrollViewer>
+      <StackPanel Spacing="8">
+        <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding IsGreen}" Foreground="#0F7B0F" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding IsOrange}" Foreground="#9D5D00" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding IsRed}" Foreground="#C42B1C" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding CountsText}" Opacity="0.8" />
+        <TextBlock Text="{Binding MissingLibrariesText}" IsVisible="{Binding MissingLibrariesText, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Foreground="#C42B1C" TextWrapping="Wrap" />
+        <Expander Header="{Binding UnresolvedHeader}" IsVisible="{Binding HasUnresolved}" HorizontalAlignment="Stretch">
+          <ScrollViewer MaxHeight="260">
+            <ItemsControl ItemsSource="{Binding UnresolvedLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="sys:String">
+                  <SelectableTextBlock Text="{Binding}" FontFamily="Cascadia Mono,Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Expander>
+        <ItemsControl ItemsSource="{Binding Warnings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="sys:String">
+              <TextBlock Text="{Binding}" Foreground="#9D5D00" TextWrapping="Wrap" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="{Binding OpenError}" IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   Foreground="#C42B1C" TextWrapping="Wrap" />
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

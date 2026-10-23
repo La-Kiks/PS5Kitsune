@@ -33,6 +33,8 @@ public sealed class PageFactoryTests : IDisposable
         Assert.IsType<DoneViewModel>(pages.Done());
         Assert.IsType<ChooseGameViewModel>(pages.ChooseGame());
         Assert.IsType<GameSummaryViewModel>(pages.GameSummary(TestGameData.Prepared()));
+        Assert.IsType<AddGameViewModel>(pages.AddGame(TestGameData.Prepared(), false));
+        Assert.IsType<AddResultViewModel>(pages.AddResult(TestGameData.Added()));
     }
 
     public void Dispose() => _temp.Dispose();
