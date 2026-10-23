@@ -62,11 +62,17 @@ public sealed partial class ChooseGameViewModel(IGameImporter importer, IDialogS
         try
         {
             game = await importer.PrepareAsync(path, cancellation.Token).ConfigureAwait(true);
+            if (cancellation.IsCancellationRequested || !ReferenceEquals(navigator.CurrentPage, this))
+            {
+                // A late result: still running until its staging folder is deleted, so a window close waits for it.
+                await game.DisposeAsync().ConfigureAwait(true);
+                game = null;
+            }
         }
         catch (OperationCanceledException)
         {
         }
-        catch (Exception exception) when (exception is InvalidGameSourceException or IOException or UnauthorizedAccessException)
+        catch (Exception exception)
         {
             Error = exception.Message;
         }
@@ -77,18 +83,10 @@ public sealed partial class ChooseGameViewModel(IGameImporter importer, IDialogS
             busyChanged?.Invoke(false);
         }
 
-        if (game is null)
+        if (game is not null)
         {
-            return;
+            navigator.GoTo(pages.GameSummary(game));
         }
-
-        if (cancellation.IsCancellationRequested || !ReferenceEquals(navigator.CurrentPage, this))
-        {
-            await game.DisposeAsync().ConfigureAwait(true);
-            return;
-        }
-
-        navigator.GoTo(pages.GameSummary(game));
     }
 
     [RelayCommand(CanExecute = nameof(CanChoose))]

@@ -114,6 +114,41 @@ public sealed class ChooseGameViewModelTests
     }
 
     [Fact]
+    public async Task Any_other_failure_shows_its_message_instead_of_escaping()
+    {
+        _importer.Prepare = (_, _) => throw new ArgumentException("The path is not valid.");
+        var viewModel = Create();
+
+        await viewModel.OpenAsync(@"C:\games\doom");
+
+        Assert.Equal("The path is not valid.", viewModel.Error);
+        Assert.False(viewModel.IsPreparing);
+        Assert.Same(viewModel, _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task The_page_stays_busy_until_a_late_result_is_disposed()
+    {
+        var release = new TaskCompletionSource();
+        var game = TestGameData.Prepared();
+        _importer.Prepare = async (_, _) =>
+        {
+            await release.Task;
+            return game;
+        };
+        var viewModel = Create();
+
+        var opening = viewModel.OpenAsync(@"C:\games\doom");
+        viewModel.CancelCommand.Execute(null);
+        release.SetResult();
+        await opening;
+
+        Assert.True(game.IsDisposed);
+        Assert.False(viewModel.IsPreparing);
+        Assert.Equal([true, false], _busy);
+    }
+
+    [Fact]
     public void Back_returns_home()
     {
         var viewModel = Create();

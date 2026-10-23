@@ -70,6 +70,24 @@ public sealed class PrepareGameTests : IDisposable
     }
 
     [Fact]
+    public async Task A_second_dispose_waits_for_the_deletion_already_running()
+    {
+        var game = await PrepareAsync(WriteZip(TestGames.Zip("PPSA99666/")));
+        for (var index = 0; index < 3000; index++)
+        {
+            TestFiles.Write(Path.Combine(Staging, "bulk", $"{index % 30}", $"file{index}.bin"), "x");
+        }
+
+        var first = game.DisposeAsync();
+        var second = game.DisposeAsync();
+        await second;
+
+        Assert.True(game.IsDisposed);
+        Assert.False(Directory.Exists(Staging));
+        await first;
+    }
+
+    [Fact]
     public async Task An_added_game_and_a_stopped_add_are_recognized()
     {
         var folder = _temp.Combine("doom");

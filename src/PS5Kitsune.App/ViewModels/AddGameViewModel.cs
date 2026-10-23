@@ -31,7 +31,7 @@ public sealed partial class AddGameViewModel : StepRunViewModel, IPreparedGameOw
         }
     }
 
-    public string Title => $"Adding {_game.Metadata?.Name}";
+    public string Title => $"Adding {_game.Metadata?.Name ?? "the game"}";
 
     public override string? QuitMessage { get; } = "Adding a game is in progress. Quitting cancels it; adding it again resumes where it stopped.";
 

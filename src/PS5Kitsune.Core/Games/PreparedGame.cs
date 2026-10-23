@@ -22,6 +22,7 @@ public sealed class PreparedGame(
     Action<Exception, string>? onCleanupFailed = null) : IAsyncDisposable
 {
     private int _disposed;
+    private Task? _disposal;
 
     public GameSource Source { get; } = source;
 
@@ -45,15 +46,23 @@ public sealed class PreparedGame(
 
     public bool IsDisposed => Volatile.Read(ref _disposed) == 1;
 
-    /// <summary>Deletes the staging folder on the thread pool; does nothing the second time or without one.</summary>
+    /// <summary>Deletes the staging folder on the thread pool; every call, also a later one, completes when that deletion has.</summary>
     public async ValueTask DisposeAsync()
     {
-        if (Interlocked.Exchange(ref _disposed, 1) == 1 || Source.StagingDirectory is not { } staging)
+        if (Interlocked.Exchange(ref _disposed, 1) == 0)
         {
-            return;
+            var staging = Source.StagingDirectory;
+            Volatile.Write(ref _disposal, staging is null ? Task.CompletedTask : Task.Run(() => DeleteStaging(staging, onCleanupFailed)));
         }
 
-        await Task.Run(() => DeleteStaging(staging, onCleanupFailed)).ConfigureAwait(false);
+        Task? disposal;
+        var spin = new SpinWait();
+        while ((disposal = Volatile.Read(ref _disposal)) is null)
+        {
+            spin.SpinOnce();   // the first call has set _disposed but not yet stored its task
+        }
+
+        await disposal.ConfigureAwait(false);
     }
 
     /// <summary>Deletes a staging folder and its half-extracted sibling (&lt;staging&gt;.staging); a failure is reported, not thrown.</summary>
