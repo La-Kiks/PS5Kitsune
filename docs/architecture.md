@@ -228,7 +228,7 @@ V2 takes a game folder supplied by the user, in the DOOM for PS5 format, and tur
    - module folders: `sce_module`, `sce_modules` or `prx`. `prx` can coexist with either of the other two, but `sce_module` and `sce_modules` together are a relinker error. None of the three → offer `--module-dir .` for homebrews that keep their libraries beside the executable;
    - total game size compared with free space at the destination.
 3. **Show the summary**: `sce_sys/icon0.png` icon, name, title ID, size, module count, ELF or SELF state of each file.
-4. **Create the game folder** in the library, `<library>\<titleId>\`, and **copy** the game into `app0` as-is. This is the default. "Move" is only offered when the source is on the same drive, after an explicit confirmation reminding that the source will no longer be at its original location.
+4. **Create the game folder** in the library, `<library>\<titleId>\`, and **copy** the game into `app0` as-is. This is the default. "Move" is only offered when the source is on the same drive, after an explicit confirmation reminding that the source will no longer be at its original location. (Move is deferred to milestone 7.)
 5. **Copy `libs`** from the V1 AnyPS5 install (`.prx` + 3 DLLs). The folder is fully controlled by the app, so no Sony `.prx` can slip in (error 193).
 6. **Check ELF or SELF** on `eboot.bin` and on every file of the module folders: the first 4 bytes are `7F 45 4C 46` for an ELF. An unwrapped SELF module is **skipped with a warning** by the relinker (not a failure), hence detecting it beforehand.
 7. **Unwrap if needed** with `python tools\unwrap_self.py <input> <output>`, the repository's official script, replacing the video's `unself.py`. It refuses containers whose segments all look encrypted: the app then states that the game must come already unwrapped from the dump tool. Originals are first backed up to `<game>\.ps5kitsune\originals\`, **outside `app0`**: the relinker treats files whose name extends another module's (`libX.prx.bak`…) as backups and may skip them.
@@ -248,11 +248,10 @@ V2 takes a game folder supplied by the user, in the DOOM for PS5 format, and tur
 
 ### Screens
 
-1. **Folder choice**: drag and drop or Browse button.
-2. **Detected summary**: icon, name, ID, size, blocking issues in red.
-3. **Options**: copy (default) or move, Intel conversion (pre-checked based on the CPU).
-4. **Progress**: steps 4 to 9 with log.
-5. **Result**: audit verdict, collapsible list of absent functions, "Add to library" button.
+1. **Choose a game**: "Choose a folder…", "Choose a .zip…", or drop one on the page; the game is read before anything is copied.
+2. **Summary**: icon, name, title ID, size, module folders, SELF files to unwrap, blocking issues in red and warnings in orange, an already added game, the Intel option (pre-ticked from the CPU). Copy only; Move comes with the library (milestone 7).
+3. **Adding**: the add steps with progress and log, Cancel and Retry; adding again resumes.
+4. **Result**: the verdict in its colour, the counts, missing libraries, and the unresolved functions (stubs and absent) in an expander. The game is registered when `game.json` is written.
 
 A **Reconvert** action reruns steps 5 to 9 on an existing game after an AnyPS5 update: new libs, new exe, new audit, without copying `app0` again. It **never touches** data the game created in its folder: `data\` (saves), `download0\`, `_trophy\`, `anyps5-input.ini`. `shader_cache\` is kept (AnyPS5 stores shaders per recompiler version and purges old ones itself).
 
@@ -508,8 +507,11 @@ The order follows "end to end first, screens second": each milestone ends with a
    - **5b — Build mode UI.** The Build card on Mode, the Tools screen, and the build progress on Install. Spec: [milestone 5b](superpowers/specs/2026-10-22-milestone-5b-build-ui-design.md).
    - **5c — Side-by-side installs.** Release and build each get their own folder (`anyps5\installs\release`, `anyps5\installs\build`; the build folder name was taken by CMake) plus the choice of the active one, so switching modes never removes a working install and switching back is instant. `AnyPS5Paths`, the done-checks, `install.json`, Home and Mode become aware of both installs, and a converted game records which install it was audited against. Spec: [milestone 5c](superpowers/specs/2026-10-22-milestone-5c-side-by-side-installs-design.md).
      - Criterion: with a release installed, a build cancelled or failed mid-compile leaves the release active and usable; switching between two finished installs takes seconds and runs no step.
-6. **V2 — Add-a-game screens.** On top of milestone 2's logic: summary, options, progress, verdict, Reconvert.
-   - Criterion: DOOM added from the UI, green audit; Reconvert keeps `data\` and `_trophy\`.
+6. **V2 — Add-a-game screens**, in two parts.
+   - **6a — Add a game from the app.** Choose, summary, progress and verdict, on top of milestone 2's logic. Spec: [milestone 6a](superpowers/specs/2026-10-22-milestone-6a-add-game-screens-design.md).
+     - Criterion: DOOM added from the UI with the same verdict and counts as the CLI; an already added game and a folder that is not a game are recognized.
+   - **6b — Reconvert** (Core, CLI, app).
+     - Criterion: Reconvert keeps `data\` and `_trophy\`.
 7. **V3 — Launcher.** Library, detached launch with log, per-game settings, Lavapipe (Mesa 7z), fonts, error diagnosis.
    - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe; the launcher closed and reopened finds the running game; a deliberately provoked error 126 is recognized and repaired.
    - **7b — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
