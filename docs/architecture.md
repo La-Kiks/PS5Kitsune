@@ -252,8 +252,11 @@ V2 takes a game folder supplied by the user, in the DOOM for PS5 format, and tur
 2. **Summary**: icon, name, title ID, size, module folders, SELF files to unwrap, blocking issues in red and warnings in orange, an already added game, the Intel option (pre-ticked from the CPU). Copy only; Move comes with the library (milestone 7).
 3. **Adding**: the add steps with progress and log, Cancel and Retry; adding again resumes.
 4. **Result**: the verdict in its colour, the counts, missing libraries, and the unresolved functions (stubs and absent) in an expander. The game is registered when `game.json` is written.
+5. **Reconverting**: the Reconvert steps with progress and log, Cancel and Retry; the result page shows the counts before. Home lists the games converted with another install than the one in use.
 
 A **Reconvert** action reruns steps 5 to 9 on an existing game after an AnyPS5 update: new libs, new exe, new audit, without copying `app0` again. It **never touches** data the game created in its folder: `data\` (saves), `download0\`, `_trophy\`, `anyps5-input.ini`. `shader_cache\` is kept (AnyPS5 stores shaders per recompiler version and purges old ones itself).
+
+Before rebuilding, the conversion outputs (the executable, the relinked marker, `audit.json`, the `*.registry.json` and `*.needed.json` files, `libs\` and `app0\**\*.guest.prx`) are moved into `.ps5kitsune\previous\`; they are deleted once the new `game.json` is about to be written, and moved back if the Reconvert fails, is cancelled or the process dies (`.ps5kitsune\previous\` found on the next read of the game). A running game stops it before anything moves. If writing `game.json` fails after the deletion, the game keeps the new conversion with its old record and shows as needing a Reconvert. Available as `ps5kitsune reconvert <titleId>`, from Home's "Games to reconvert" and from the summary of an already added game.
 
 ## V3 — Launcher
 
@@ -429,9 +432,12 @@ The data root itself is chosen on the app's home screen and saved in `%LOCALAPPD
   "audit": { "implemented": 262, "stub": 0, "absent": 0, "verdict": "green" },
   "settings": { "gpu": null, "lavapipe": false, "language": 1, "presentMode": "fifo" },
   "addedAt": "2026-10-18T15:00:00+02:00",
-  "lastPlayedAt": null
+  "lastPlayedAt": null,
+  "reconvertedAt": null
 }
 ```
+
+`reconvertedAt` is set by Reconvert, which also rewrites `convertedWith` and `audit` and keeps everything else.
 
 `convertedWith.mode` is the install mode that converted the game, `release` or `build`; `commit` is set for a build.
 
@@ -510,7 +516,7 @@ The order follows "end to end first, screens second": each milestone ends with a
 6. **V2 — Add-a-game screens**, in two parts.
    - **6a — Add a game from the app.** Choose, summary, progress and verdict, on top of milestone 2's logic. Spec: [milestone 6a](superpowers/specs/2026-10-22-milestone-6a-add-game-screens-design.md).
      - Criterion: DOOM added from the UI with the same verdict and counts as the CLI; an already added game and a folder that is not a game are recognized.
-   - **6b — Reconvert** (Core, CLI, app).
+   - **6b — Reconvert** (Core, CLI, app). Spec: [milestone 6b](superpowers/specs/2026-10-23-milestone-6b-reconvert-design.md).
      - Criterion: Reconvert keeps `data\` and `_trophy\`.
 7. **V3 — Launcher.** Library, detached launch with log, per-game settings, Lavapipe (Mesa 7z), fonts, error diagnosis.
    - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe; the launcher closed and reopened finds the running game; a deliberately provoked error 126 is recognized and repaired.
