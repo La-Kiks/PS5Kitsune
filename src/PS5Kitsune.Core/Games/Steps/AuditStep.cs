@@ -12,7 +12,9 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// </summary>
 public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, PythonEmbeddableTool python, IProcessRunner processRunner) : IStep
 {
-    public string Name => "Audit the imports";
+    public const string StepName = "Audit the imports";
+
+    public string Name => StepName;
 
     // Always runs again: it is quick, and its result feeds the game record.
     public bool IsAlreadyDone() => false;

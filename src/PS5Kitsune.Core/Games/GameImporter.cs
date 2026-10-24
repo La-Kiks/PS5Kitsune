@@ -28,7 +28,7 @@ public sealed partial class GameImporter(
     ILogger<GameImporter> logger) : IGameImporter
 {
     public static readonly IReadOnlyList<string> Names =
-        ["Copy the game", "Copy the AnyPS5 libraries", "Unwrap SELF files", "Convert with the relinker", "Audit the imports", "Record the game"];
+        [CopyGameStep.StepName, CopyLibsStep.StepName, UnwrapSelfStep.StepName, RelinkStep.StepName, AuditStep.StepName, WriteGameRecordStep.StepName];
 
     public IReadOnlyList<string> StepNames => Names;
 

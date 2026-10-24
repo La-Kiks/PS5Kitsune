@@ -38,4 +38,13 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
     public string RelinkedMarker => Path.Combine(Meta, "relinked");
 
     public string RecordFile => Path.Combine(Meta, "game.json");
+
+    /// <summary>The conversion outputs set aside by a Reconvert that has not finished.</summary>
+    public string Previous => Path.Combine(Meta, "previous");
+
+    /// <summary>Outputs being set aside; renamed to <see cref="Previous"/> once all are moved.</summary>
+    public string PreviousPartial => Path.Combine(Meta, "previous.partial");
+
+    /// <summary>A set-aside conversion being deleted after a successful Reconvert; never restored.</summary>
+    public string PreviousDiscarded => Path.Combine(Meta, "previous.discarded");
 }

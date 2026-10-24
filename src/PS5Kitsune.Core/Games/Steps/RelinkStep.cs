@@ -12,7 +12,9 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// </summary>
 public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, AnyPS5Profile profile, IProcessRunner processRunner) : IStep
 {
-    public string Name => "Convert with the relinker";
+    public const string StepName = "Convert with the relinker";
+
+    public string Name => StepName;
 
     public bool IsAlreadyDone() => File.Exists(context.Game.RelinkedMarker) && File.Exists(context.Game.Executable) && File.Exists(context.Game.Registry);
 
