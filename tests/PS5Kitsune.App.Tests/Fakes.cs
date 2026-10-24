@@ -10,6 +10,8 @@ using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Profiles;
+using PS5Kitsune.Core.Tests;
+using PS5Kitsune.Core.Tests.Fakes;
 using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.App.Tests;
@@ -189,6 +191,10 @@ internal sealed class FakePages : IPages
     public object Reconvert(string titleId, string name) => $"reconvert:{titleId}";
 
     public object ReconvertResult(GameReconverted reconverted) => $"reconverted:{reconverted.Record.TitleId}";
+
+    public object Library() => "library";
+
+    public object Game(PlayingGame playing, bool firstLaunch) => $"game:{playing.Record.TitleId}";
 }
 
 internal sealed class FakeTool(string id, bool installed) : IPortableTool
@@ -360,4 +366,71 @@ internal sealed class ListLogger : Microsoft.Extensions.Logging.ILogger
 
     public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
         Entries.Add((logLevel, formatter(state, exception)));
+}
+
+/// <summary>A real library on a temp root with a fake launcher; games are written as an add leaves them (game.json and the executable).</summary>
+internal sealed class TestLibrary : IDisposable
+{
+    public static readonly AnyPS5InstallRecord Release =
+        new(1, "test-profile", AnyPS5Mode.Release, "v0.1.2", null, null, new DateTimeOffset(2026, 10, 21, 9, 0, 0, TimeSpan.Zero));
+
+    private readonly TempDirectory _temp = new();
+
+    public TestLibrary()
+    {
+        Layout = new DataLayout(_temp.Combine("root"));
+        Library = new GameLibrary(Layout, Platform, TimeProvider.System, NullLogger<GameLibrary>.Instance);
+        Running = new RunningGames(Launcher, NullLogger<RunningGames>.Instance);
+        Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Release);
+        Player = new GamePlayer(Library, Installer, Launcher, Running);
+        Cleaner = new GameCleaner(Library, Running, NullLogger<GameCleaner>.Instance);
+    }
+
+    public DataLayout Layout { get; }
+
+    public TestPlatform Platform { get; } = new();
+
+    public FakeGameLauncher Launcher { get; } = new();
+
+    public FakeInstaller Installer { get; } = new();
+
+    public GameLibrary Library { get; }
+
+    public RunningGames Running { get; }
+
+    public GamePlayer Player { get; }
+
+    public GameCleaner Cleaner { get; }
+
+    public GameLayout Game(string titleId) => new(Layout.GameDirectory(titleId), titleId, Platform);
+
+    public async Task<GameLayout> AddAsync(string titleId, string name, ConversionInfo? convertedWith = null, DateTimeOffset? lastPlayedAt = null)
+    {
+        var game = Game(titleId);
+        Directory.CreateDirectory(game.Root);
+        await File.WriteAllTextAsync(game.Executable, "exe");
+        await GameRecordStore.WriteAsync(game.RecordFile, new GameRecord
+        {
+            SchemaVersion = GameRecord.CurrentSchemaVersion,
+            TitleId = titleId,
+            Name = name,
+            Executable = titleId + ".exe",
+            ConvertedWith = convertedWith ?? new ConversionInfo("test-profile", "release", "v0.1.2", null, false),
+            Audit = new AuditRecord(361, 3, 0, AuditVerdict.Orange),
+            AddedAt = DateTimeOffset.UnixEpoch,
+            LastPlayedAt = lastPlayedAt,
+        }, CancellationToken.None);
+        return game;
+    }
+
+    public void Dispose()
+    {
+        // Ends every fake game, so no test leaves a wait running.
+        foreach (var game in Launcher.Games.Values)
+        {
+            game.Exit(0);
+        }
+
+        _temp.Dispose();
+    }
 }

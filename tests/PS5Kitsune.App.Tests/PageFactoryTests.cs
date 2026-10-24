@@ -4,9 +4,11 @@ using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tests;
+using PS5Kitsune.Core.Tests.Fakes;
 
 namespace PS5Kitsune.App.Tests;
 
@@ -37,6 +39,9 @@ public sealed class PageFactoryTests : IDisposable
         Assert.IsType<AddResultViewModel>(pages.AddResult(TestGameData.Added()));
         Assert.Equal(6, Assert.IsType<ReconvertViewModel>(pages.Reconvert("PPSA99666", "DOOM")).Steps.Count);
         Assert.IsType<AddResultViewModel>(pages.ReconvertResult(TestGameData.Reconverted()));
+        var game = new GameLayout(_temp.Combine("root", "games", "PPSA99666"), "PPSA99666", platform);
+        var process = new FakeLaunchedGame(4812, _temp.Combine("game.log"), DateTimeOffset.UnixEpoch);
+        Assert.IsType<GameViewModel>(pages.Game(new PlayingGame(game, TestGameData.Added().Record, process), firstLaunch: false));
     }
 
     public void Dispose() => _temp.Dispose();

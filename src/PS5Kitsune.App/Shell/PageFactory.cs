@@ -66,4 +66,10 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
         new ReconvertViewModel(Session.Get<IGameReconverter>(), titleId, name, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy, Session.Get<ILogger<StepRunViewModel>>());
 
     public object ReconvertResult(GameReconverted reconverted) => new AddResultViewModel(reconverted, platform, navigator, this);
+
+    // Task 7 replaces this with the Library page.
+    public object Library() => Home();
+
+    public object Game(PlayingGame playing, bool firstLaunch) =>
+        new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this);
 }
