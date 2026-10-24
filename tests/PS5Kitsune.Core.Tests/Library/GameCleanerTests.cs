@@ -136,5 +136,26 @@ public sealed class GameCleanerTests : IDisposable
         Assert.False(Directory.Exists(_game.Root));
     }
 
+    [Fact]
+    public async Task A_game_running_unrecorded_fails_the_removal_before_the_saves_are_touched()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to delete an open file.");
+        }
+
+        await AddDoomAsync();
+        TestFiles.Write(Path.Combine(_game.Data, "save.dat"), "save");
+
+        // An open image stands for a game started outside PS5Kitsune.
+        using (new FileStream(_game.Executable, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.ThrowsAny<IOException>(() => _cleaner.Remove(TestGames.TitleId));
+        }
+
+        Assert.True(File.Exists(Path.Combine(_game.Data, "save.dat")));
+        Assert.True(File.Exists(_game.RecordFile));
+    }
+
     public void Dispose() => _temp.Dispose();
 }

@@ -53,6 +53,14 @@ public sealed partial class GameCleaner(GameLibrary library, RunningGames runnin
         using (GameLock.TryAcquire(game) ?? throw new GameBusyException(titleId))
         {
             RefuseRunning(game, library.ReadHeld(game));
+
+            // The executable first: Windows refuses to delete a running image, so a game running unrecorded (started outside
+            // PS5Kitsune) fails the removal here, before data\ (the saves) is touched.
+            if (File.Exists(game.Executable))
+            {
+                File.Delete(game.Executable);
+            }
+
             foreach (var directory in Directory.GetDirectories(game.Root))
             {
                 if (!SamePath(directory, game.Meta))
