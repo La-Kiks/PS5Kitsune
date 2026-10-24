@@ -109,6 +109,72 @@ public sealed class ConversionBackupTests : IDisposable
     }
 
     [Fact]
+    public void A_restore_stopped_while_moving_back_can_be_retried()
+    {
+        var before = ConvertedGames.Snapshot(_game.Root);
+        ConversionBackup.SetAside(_game);
+        WriteNewOutputs();
+        var locked = Path.Combine(_game.Previous, "app0", "sce_module", "libc.guest.prx");
+
+        using (new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.ThrowsAny<IOException>(() => ConversionBackup.Restore(_game));
+        }
+
+        Assert.True(ConversionBackup.Restore(_game));
+
+        Assert.Equal(before, ConvertedGames.Snapshot(_game.Root));
+        Assert.False(Directory.Exists(_game.Previous));
+        Assert.False(Directory.Exists(_game.PreviousPartial));
+    }
+
+    [Fact]
+    public void A_restore_stopped_while_deleting_the_new_outputs_can_be_retried()
+    {
+        var before = ConvertedGames.Snapshot(_game.Root);
+        ConversionBackup.SetAside(_game);
+        WriteNewOutputs();
+
+        using (new FileStream(_game.Executable, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.ThrowsAny<IOException>(() => ConversionBackup.Restore(_game));
+        }
+
+        Assert.True(Directory.Exists(_game.Previous));
+        Assert.True(ConversionBackup.Restore(_game));
+
+        Assert.Equal(before, ConvertedGames.Snapshot(_game.Root));
+    }
+
+    [Fact]
+    public void A_half_finished_restore_is_finished_without_losing_files()
+    {
+        var before = ConvertedGames.Snapshot(_game.Root);
+        ConversionBackup.SetAside(_game);
+        // The state an interrupted restore leaves: some files already back, the rest in previous.partial.
+        File.Move(Path.Combine(_game.Previous, "PPSA99666.exe"), _game.Executable);
+        Directory.Move(Path.Combine(_game.Previous, "libs"), _game.Libs);
+        Directory.Move(_game.Previous, _game.PreviousPartial);
+
+        Assert.True(ConversionBackup.Restore(_game));
+
+        Assert.Equal(before, ConvertedGames.Snapshot(_game.Root));
+        Assert.False(Directory.Exists(_game.PreviousPartial));
+    }
+
+    [Fact]
+    public void Discarding_over_a_leftover_discarded_folder_leaves_neither()
+    {
+        ConversionBackup.SetAside(_game);
+        TestFiles.Write(Path.Combine(_game.PreviousDiscarded, "PPSA99666.exe"), "older exe");
+
+        ConversionBackup.Discard(_game);
+
+        Assert.False(Directory.Exists(_game.Previous));
+        Assert.False(Directory.Exists(_game.PreviousDiscarded));
+    }
+
+    [Fact]
     public void A_leftover_discarded_folder_is_deleted_by_the_next_restore()
     {
         TestFiles.Write(Path.Combine(_game.PreviousDiscarded, "PPSA99666.exe"), "older exe");

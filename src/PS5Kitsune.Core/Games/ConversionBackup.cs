@@ -3,7 +3,8 @@ namespace PS5Kitsune.Core.Games;
 /// <summary>
 /// Sets a game's conversion outputs aside during a Reconvert and moves them back when it does not finish. One rule per folder:
 /// .ps5kitsune/previous.partial means the move was interrupted (nothing new was built); .ps5kitsune/previous means the new
-/// conversion did not finish. See docs/superpowers/specs/2026-10-23-milestone-6b-reconvert-design.md, "Recovery".
+/// conversion did not finish. A restore deletes the new outputs first, then renames previous to previous.partial before moving
+/// anything back, so a restore stopped halfway is retried as "move back without deleting". See docs/superpowers/specs/2026-10-23-milestone-6b-reconvert-design.md, "Recovery".
 /// </summary>
 public static class ConversionBackup
 {
@@ -62,12 +63,15 @@ public static class ConversionBackup
         TryDelete(game.PreviousDiscarded);
         if (Directory.Exists(game.Previous))
         {
+            // Delete the new outputs, then rename previous in one step: a stop while deleting leaves previous (the delete runs
+            // again), a stop while moving back leaves previous.partial (moved back without deleting, so nothing already restored is lost).
             foreach (var relative in Outputs(game))
             {
                 Delete(Path.Combine(game.Root, relative));
             }
 
-            MoveBack(game.Previous, game);
+            Directory.Move(game.Previous, game.PreviousPartial);
+            MoveBack(game.PreviousPartial, game);
             return true;
         }
 
@@ -86,6 +90,7 @@ public static class ConversionBackup
         ArgumentNullException.ThrowIfNull(game);
         if (Directory.Exists(game.Previous))
         {
+            TryDelete(game.PreviousDiscarded);
             Directory.Move(game.Previous, game.PreviousDiscarded);
         }
 
