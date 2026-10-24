@@ -71,7 +71,8 @@ public sealed partial class GameReconverter(
         {
             await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception exception) when (exception is StepFailedException or OperationCanceledException)
+        // Any exception, not only a failed step or a cancel: a throwing progress or event callback must not leave the conversion set aside.
+        catch (Exception exception)
         {
             try
             {

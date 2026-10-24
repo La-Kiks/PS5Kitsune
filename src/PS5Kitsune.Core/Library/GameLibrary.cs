@@ -16,6 +16,8 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
 {
     /// <exception cref="GameNotFoundException">No game.json for this title ID.</exception>
     /// <exception cref="InvalidGameRecordException">The game.json is malformed.</exception>
+    /// <exception cref="IOException">Restoring an interrupted Reconvert failed; the next read retries it.</exception>
+    /// <exception cref="UnauthorizedAccessException">Restoring an interrupted Reconvert was denied; the next read retries it.</exception>
     public (GameLayout Game, GameRecord Record) Find(string titleId)
     {
         var game = Layout(titleId);

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Games.Steps;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Tests.AnyPS5;
@@ -195,8 +196,33 @@ public sealed class GameReconverterTests : IDisposable
     }
 
     [Fact]
+    public async Task A_throwing_event_callback_restores_the_previous_conversion()
+    {
+        await AddDoomConvertedWithTheBuildAsync();
+        var before = ConvertedGames.Snapshot(Game.Root);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _reconverter.ReconvertAsync(
+            TestGames.TitleId,
+            onEvent: stepEvent =>
+            {
+                if (stepEvent is { Kind: StepEventKind.Completed, StepName: RelinkStep.StepName })
+                {
+                    throw new InvalidOperationException("The callback failed.");
+                }
+            },
+            cancellationToken: _cancellation.Token));
+
+        Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
+    }
+
+    [Fact]
     public async Task A_failed_restore_is_reported_and_retried_later()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to move or delete an open file.");
+        }
+
         await AddDoomConvertedWithTheBuildAsync();
         var before = ConvertedGames.Snapshot(Game.Root);
         _relinkerExitCode = 2;
@@ -289,6 +315,11 @@ public sealed class GameReconverterTests : IDisposable
     [Fact]
     public async Task A_failed_restore_of_an_interrupted_reconvert_is_reported_as_not_restored()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to move or delete an open file.");
+        }
+
         await AddDoomConvertedWithTheBuildAsync();
         ConversionBackup.SetAside(Game);
         TestFiles.Write(Game.Executable, "half-built exe");

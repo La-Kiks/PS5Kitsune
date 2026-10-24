@@ -111,6 +111,11 @@ public sealed class ConversionBackupTests : IDisposable
     [Fact]
     public void A_restore_that_fails_to_rename_the_set_aside_folder_succeeds_when_retried()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to move or delete an open file.");
+        }
+
         var before = ConvertedGames.Snapshot(_game.Root);
         ConversionBackup.SetAside(_game);
         WriteNewOutputs();
@@ -131,6 +136,11 @@ public sealed class ConversionBackupTests : IDisposable
     [Fact]
     public void A_restore_stopped_while_deleting_the_new_outputs_can_be_retried()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Only Windows refuses to move or delete an open file.");
+        }
+
         var before = ConvertedGames.Snapshot(_game.Root);
         ConversionBackup.SetAside(_game);
         WriteNewOutputs();
