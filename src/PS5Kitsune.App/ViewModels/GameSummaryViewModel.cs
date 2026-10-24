@@ -3,12 +3,15 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>What was read from the game, before anything is copied, and the Intel option. Owns the prepared game until the add starts.</summary>
-public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIntel, IPlatform platform, Navigator navigator, IPages pages)
+/// <param name="conversionText">For an added game, whether it was converted with the AnyPS5 in use (<see cref="ConversionLine"/>).</param>
+public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIntel, IPlatform platform, Navigator navigator, IPages pages, string? conversionText = null)
     : ObservableObject, IPreparedGameOwner
 {
     private bool _handedOver;
@@ -52,6 +55,20 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
 
     public string? AlreadyAddedText => game.AlreadyAdded ? $"{TitleId} is already in your games ({game.GameDirectory})." : null;
 
+    /// <summary>For an already added game, how its conversion compares with the AnyPS5 in use; null otherwise.</summary>
+    public string? ConversionText { get; } = conversionText;
+
+    public bool CanReconvert => game.AlreadyAdded && !game.IsDisposed;
+
+    public static string ConversionLine(GameRecord record, AnyPS5InstallRecord? install)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        var converted = ConversionLabels.Of(record.ConvertedWith);
+        return install is null ? $"Converted with {converted}."
+            : GameLibrary.NeedsReconversion(record, install) ? $"Converted with {converted}; the AnyPS5 in use is {ConversionLabels.Of(install)}."
+            : "Converted with the AnyPS5 in use.";
+    }
+
     public string? ResumeText => game.Resumes
         ? "A previous add of this game stopped; adding it resumes where it stopped. The Intel option only applies if the conversion has not run yet."
         : null;
@@ -88,8 +105,21 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
         var disposing = game.DisposeAsync();
         AddCommand.NotifyCanExecuteChanged();
         BackCommand.NotifyCanExecuteChanged();
+        ReconvertCommand.NotifyCanExecuteChanged();
         await disposing.ConfigureAwait(true);
         navigator.GoBack();
+    }
+
+    /// <summary>The prepared game (and a zip's staging folder) is released first: Reconvert works on the added game's folder.</summary>
+    [RelayCommand(CanExecute = nameof(CanReconvert))]
+    private async Task ReconvertAsync()
+    {
+        var disposing = game.DisposeAsync();
+        AddCommand.NotifyCanExecuteChanged();
+        BackCommand.NotifyCanExecuteChanged();
+        ReconvertCommand.NotifyCanExecuteChanged();
+        await disposing.ConfigureAwait(true);
+        navigator.GoTo(pages.Reconvert(TitleId, Name));
     }
 
     [RelayCommand]

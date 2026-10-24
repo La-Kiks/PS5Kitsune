@@ -1,6 +1,8 @@
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Tests;
 
 namespace PS5Kitsune.App.Tests;
@@ -142,5 +144,44 @@ public sealed class GameSummaryViewModelTests
         await viewModel.ReleaseAsync();
 
         Assert.False(game.IsDisposed);
+    }
+
+    [Fact]
+    public async Task An_added_game_can_be_reconverted()
+    {
+        var game = TestGameData.Prepared(alreadyAdded: true);
+        _navigator.GoTo("choose");
+        var viewModel = new GameSummaryViewModel(game, false, _platform, _navigator, new FakePages(), "Converted with the AnyPS5 in use.");
+        _navigator.GoTo(viewModel);
+
+        Assert.Equal("Converted with the AnyPS5 in use.", viewModel.ConversionText);
+        Assert.True(viewModel.ReconvertCommand.CanExecute(null));
+
+        await viewModel.ReconvertCommand.ExecuteAsync(null);
+
+        Assert.True(game.IsDisposed);
+        Assert.Equal("reconvert:PPSA99666", _navigator.CurrentPage);
+        Assert.False(viewModel.BackCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void A_new_game_cannot_be_reconverted()
+    {
+        var viewModel = Create(TestGameData.Prepared());
+
+        Assert.Null(viewModel.ConversionText);
+        Assert.False(viewModel.ReconvertCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void The_conversion_line_compares_with_the_install_in_use()
+    {
+        var record = TestGameData.Added().Record with { ConvertedWith = new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false) };
+        var release = new AnyPS5InstallRecord(2, "test-profile", AnyPS5Mode.Release, "v0.1.2", null, null, DateTimeOffset.UnixEpoch);
+        var build = new AnyPS5InstallRecord(2, "test-profile", AnyPS5Mode.Build, "3fd1cc3", new string('3', 40), null, DateTimeOffset.UnixEpoch);
+
+        Assert.Equal("Converted with build 3fd1cc3; the AnyPS5 in use is release v0.1.2.", GameSummaryViewModel.ConversionLine(record, release));
+        Assert.Equal("Converted with the AnyPS5 in use.", GameSummaryViewModel.ConversionLine(record, build));
+        Assert.Equal("Converted with build 3fd1cc3.", GameSummaryViewModel.ConversionLine(record, null));
     }
 }

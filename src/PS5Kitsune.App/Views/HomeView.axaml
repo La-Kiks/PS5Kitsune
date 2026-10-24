@@ -16,6 +16,25 @@
       </StackPanel>
     </Border>
 
+    <StackPanel Spacing="8" IsVisible="{Binding HasGamesToReconvert}">
+      <TextBlock Text="Games to reconvert" FontWeight="SemiBold" />
+      <ItemsControl ItemsSource="{Binding GamesToReconvert}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:GameToReconvert">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding TitleId}" Opacity="0.85" />
+                <TextBlock Text="{Binding Detail}" Opacity="0.85" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Column="1" VerticalAlignment="Center" Content="Reconvert"
+                      Command="{Binding $parent[ItemsControl].((vm:HomeViewModel)DataContext).ReconvertCommand}" CommandParameter="{Binding}" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
     <StackPanel Spacing="6">
       <TextBlock Text="Data folder" FontWeight="SemiBold" />
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">

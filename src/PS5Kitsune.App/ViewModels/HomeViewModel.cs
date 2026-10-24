@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
 
@@ -16,7 +17,7 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     private int _generation;
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AddGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddGameCommand), nameof(ReconvertCommand))]
     [NotifyPropertyChangedFor(nameof(AddGameHint))]
     public partial AnyPS5InstallStatus Status { get; private set; }
 
@@ -45,9 +46,16 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
 
     /// <summary>True while the install is being checked: the done-checks can hash hundreds of MB.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(StartCommand), nameof(AddGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand), nameof(AddGameCommand), nameof(ReconvertCommand))]
     [NotifyPropertyChangedFor(nameof(AddGameHint))]
     public partial bool IsChecking { get; private set; }
+
+    /// <summary>Games converted with another AnyPS5 than the one in use; empty hides the section.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGamesToReconvert))]
+    public partial IReadOnlyList<GameToReconvert> GamesToReconvert { get; private set; } = [];
+
+    public bool HasGamesToReconvert => GamesToReconvert.Count > 0;
 
     public bool CanStart => !IsChecking;
 
@@ -65,6 +73,7 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         var session = sessions.Current;
         var profile = session.Get<AnyPS5Profile>();
         var installer = session.Get<IAnyPS5Installer>();
+        var library = session.Get<GameLibrary>();
         DataRoot = session.Layout.Root;
         ProfileText = $"{profile.Id} ({(profile.Validated ? "validated" : "not validated yet")})";
         IsChecking = true;
@@ -74,13 +83,14 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         HomeCheck check;
         try
         {
-            check = await Task.Run(() => Check(installer)).ConfigureAwait(true);
+            check = await Task.Run(() => Check(installer, library)).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
             if (generation == _generation)
             {
                 (StateTitle, StateDetail, ActionText) = ("Cannot read the AnyPS5 install", exception.Message, "Install AnyPS5");
+                GamesToReconvert = [];
                 IsChecking = false;
             }
 
@@ -94,22 +104,32 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
 
         Apply(check.State, check.Mode);
         ApplyBothInstalls(check);
+        GamesToReconvert = check.ToReconvert;
         IsChecking = false;
     }
 
     /// <param name="Mode">The install described: the active one, else an unfinished one, else release.</param>
     /// <param name="Other">The record of the other mode's install; null when it never finished or no install is active.</param>
-    private sealed record HomeCheck(AnyPS5Mode Mode, AnyPS5InstallState State, AnyPS5Mode? Active, AnyPS5Mode? Requested, AnyPS5InstallRecord? Other);
+    /// <param name="ToReconvert">Games converted with another install than the one in use; empty unless AnyPS5 is installed.</param>
+    private sealed record HomeCheck(AnyPS5Mode Mode, AnyPS5InstallState State, AnyPS5Mode? Active, AnyPS5Mode? Requested, AnyPS5InstallRecord? Other,
+        IReadOnlyList<GameToReconvert> ToReconvert);
 
-    /// <summary>Runs on a worker thread: the migration moves a folder and the done-checks can hash hundreds of MB.</summary>
-    private static HomeCheck Check(IAnyPS5Installer installer)
+    /// <summary>Runs on a worker thread: the migration moves a folder, the done-checks can hash hundreds of MB, and the library reads every game.json.</summary>
+    private static HomeCheck Check(IAnyPS5Installer installer, GameLibrary library)
     {
         installer.MigrateLegacyInstall();
         var active = installer.ActiveMode;
         var requested = installer.RequestedMode;
         var mode = active ?? requested ?? AnyPS5Mode.Release;
         var other = active is { } activeMode ? installer.ReadRecord(OtherMode(activeMode)) : null;
-        return new HomeCheck(mode, installer.GetState(mode), active, requested, other);
+        var state = installer.GetState(mode);
+        IReadOnlyList<GameToReconvert> toReconvert = state.Status == AnyPS5InstallStatus.Installed && installer.ReadRecord() is { } install
+            ? [.. library.All()
+                .Where(entry => GameLibrary.NeedsReconversion(entry.Record, install))
+                .Select(entry => new GameToReconvert(
+                    entry.Record.TitleId, entry.Record.Name, $"Converted with {ConversionLabels.Of(entry.Record.ConvertedWith)} · in use: {ConversionLabels.Of(install)}"))]
+            : [];
+        return new HomeCheck(mode, state, active, requested, other, toReconvert);
     }
 
     private static AnyPS5Mode OtherMode(AnyPS5Mode mode) => mode == AnyPS5Mode.Release ? AnyPS5Mode.Build : AnyPS5Mode.Release;
@@ -171,6 +191,9 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
 
     [RelayCommand(CanExecute = nameof(CanAddGame))]
     private void AddGame() => navigator.GoTo(pages.ChooseGame());
+
+    [RelayCommand(CanExecute = nameof(CanAddGame))]
+    private void Reconvert(GameToReconvert game) => navigator.GoTo(pages.Reconvert(game.TitleId, game.Name));
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start() => navigator.GoTo(pages.Mode());

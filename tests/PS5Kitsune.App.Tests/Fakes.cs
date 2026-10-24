@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.Core;
@@ -245,6 +246,7 @@ internal static class TestSessions
         var services = new ServiceCollection();
         services.AddSingleton(installer);
         services.AddSingleton(Profile);
+        services.AddSingleton(new GameLibrary(new DataLayout(root), new TestPlatform(), TimeProvider.System, NullLogger<GameLibrary>.Instance));
         return new RootSession(new DataLayout(root), services.BuildServiceProvider(), Path.Combine(root, "logs", "app.log"));
     }
 }
