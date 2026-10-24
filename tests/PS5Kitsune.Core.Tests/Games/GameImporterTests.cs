@@ -193,7 +193,6 @@ public sealed class GameImporterTests : IDisposable
         await Assert.ThrowsAsync<AnyPS5NotInstalledException>(() => AddAsync(_temp.Combine("nothing.txt")));
     }
 
-    public void Dispose() => _temp.Dispose();
     [Fact]
     public async Task A_disposed_game_is_refused()
     {
@@ -203,4 +202,6 @@ public sealed class GameImporterTests : IDisposable
 
         await Assert.ThrowsAsync<ObjectDisposedException>(() => _importer.AddAsync(game, false, cancellationToken: TestContext.Current.CancellationToken));
     }
+
+    public void Dispose() => _temp.Dispose();
 }

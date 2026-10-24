@@ -51,5 +51,24 @@ public sealed class UpdateGameRecordStepTests : IDisposable
         Assert.Equal(previous with { ConvertedWith = record.ConvertedWith, Audit = record.Audit, ReconvertedAt = record.ReconvertedAt }, record);
     }
 
+    [Fact]
+    public async Task A_cancelled_step_keeps_the_old_conversion_and_the_record()
+    {
+        ConvertedGames.Create(_game);
+        ConversionBackup.SetAside(_game);
+        var record = TestRecords.Sample();
+        await GameRecordStore.WriteAsync(_game.RecordFile, record, TestContext.Current.CancellationToken);
+        var recordBefore = File.ReadAllText(_game.RecordFile);
+        var step = new UpdateGameRecordStep(_context, record, Build, _time);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => step.ExecuteAsync(null, cancelled.Token));
+
+        Assert.True(Directory.Exists(_game.Previous));
+        Assert.False(Directory.Exists(_game.PreviousDiscarded));
+        Assert.Equal(recordBefore, File.ReadAllText(_game.RecordFile));
+    }
+
     public void Dispose() => _temp.Dispose();
 }

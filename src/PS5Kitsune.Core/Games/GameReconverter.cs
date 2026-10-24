@@ -66,8 +66,7 @@ public sealed partial class GameReconverter(
             }
             catch (Exception restoreFailure) when (restoreFailure is IOException or UnauthorizedAccessException)
             {
-                var root = game.Root;
-                LogRestoreFailed(restoreFailure, root);
+                LogRestoreFailed(restoreFailure, game.Root);
                 throw new ReconvertRestoreException(exception, restoreFailure);
             }
 

@@ -8,7 +8,8 @@ public interface IGameReconverter
     /// <summary>The Reconvert steps' names, in order, to list before it starts.</summary>
     IReadOnlyList<string> StepNames { get; }
 
-    /// <summary>Sets the conversion aside, rebuilds it and rewrites game.json; a failure or a cancel puts the previous conversion back.</summary>
+    /// <summary>Sets the conversion aside, rebuilds it and rewrites game.json; a failure or a cancel puts the previous conversion back.
+    /// If writing game.json fails after the old conversion was discarded, the game keeps the new conversion and its old record, and shows as needing a Reconvert.</summary>
     /// <exception cref="AnyPS5NotInstalledException">AnyPS5 is not installed.</exception>
     /// <exception cref="Library.GameNotFoundException">No game with this title ID.</exception>
     /// <exception cref="Library.InvalidGameRecordException">The game.json is malformed.</exception>

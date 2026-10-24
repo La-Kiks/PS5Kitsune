@@ -21,6 +21,8 @@ public sealed class GameReconverterTests : IDisposable
     private int _auditExitCode;
     private bool _cancelDuringRelink;
     private string _relinkerOutput = "add";
+    private bool _holdPreviousExecutable;
+    private FileStream? _heldFile;
 
     public GameReconverterTests()
     {
@@ -60,6 +62,12 @@ public sealed class GameReconverterTests : IDisposable
         TestFiles.Write(Path.Combine(root, "PPSA99666.exe"), _relinkerOutput + " exe");
         TestFiles.Write(Path.Combine(root, "PPSA99666.registry.json"), _relinkerOutput + " registry");
         TestFiles.Write(Path.Combine(root, "app0", "sce_module", "libc.guest.prx"), _relinkerOutput + " pe");
+        if (_holdPreviousExecutable)
+        {
+            // An exclusive handle inside previous makes the restore's rename of the folder fail.
+            _heldFile = new FileStream(Path.Combine(Game.Previous, "PPSA99666.exe"), FileMode.Open, FileAccess.Read, FileShare.None);
+        }
+
         if (_cancelDuringRelink)
         {
             _cancellation.Cancel();
@@ -183,6 +191,34 @@ public sealed class GameReconverterTests : IDisposable
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(ReconvertAsync);
 
+        Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
+    }
+
+    [Fact]
+    public async Task A_failed_restore_is_reported_and_retried_later()
+    {
+        await AddDoomConvertedWithTheBuildAsync();
+        var before = ConvertedGames.Snapshot(Game.Root);
+        _relinkerExitCode = 2;
+        _holdPreviousExecutable = true;
+
+        ReconvertRestoreException failure;
+        try
+        {
+            failure = await Assert.ThrowsAsync<ReconvertRestoreException>(ReconvertAsync);
+        }
+        finally
+        {
+            _heldFile?.Dispose();
+            _heldFile = null;
+        }
+
+        var run = Assert.IsType<StepFailedException>(failure.InnerException);
+        Assert.Equal("Convert with the relinker", run.StepName);
+        Assert.NotNull(failure.RestoreFailure);
+        Assert.True(Directory.Exists(Game.Previous) || Directory.Exists(Game.PreviousPartial));
+
+        Assert.True(ConversionBackup.Restore(Game));
         Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
     }
 

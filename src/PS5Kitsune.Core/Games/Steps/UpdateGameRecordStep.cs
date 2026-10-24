@@ -16,9 +16,10 @@ public sealed class UpdateGameRecordStep(GameImportContext context, GameRecord p
 
     public bool IsAlreadyDone() => false;
 
-    public Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken)
+    public async Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken)
     {
         var audit = context.Audit ?? throw new InvalidOperationException("The audit must run before the game is recorded.");
+        cancellationToken.ThrowIfCancellationRequested();
         ConversionBackup.Discard(context.Game);
         var record = previous with
         {
@@ -26,6 +27,7 @@ public sealed class UpdateGameRecordStep(GameImportContext context, GameRecord p
             Audit = new AuditRecord(audit.Implemented, audit.Stub, audit.Absent, audit.Verdict),
             ReconvertedAt = time.GetLocalNow(),
         };
-        return GameRecordStore.WriteAsync(context.Game.RecordFile, record, cancellationToken);
+        // Not cancellable: once the old conversion is discarded, a cancel could no longer restore it.
+        await GameRecordStore.WriteAsync(context.Game.RecordFile, record, CancellationToken.None).ConfigureAwait(false);
     }
 }
