@@ -343,10 +343,40 @@ public sealed class GameViewModelTests : IDisposable
         var page = await OpenLaunchPageAsync();
 
         page.OnNavigatedTo();
-        await Assert.ThrowsAsync<InvalidOperationException>(() => page.Launching);
+        await page.Launching;
         await page.BackToLibraryCommand.ExecuteAsync(null);
 
         Assert.Equal("library", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task An_unexpected_launch_error_is_shown()
+    {
+        _library.Launcher.LaunchFailure = new InvalidOperationException("boom");
+        var page = await OpenLaunchPageAsync();
+
+        page.OnNavigatedTo();
+        await page.Launching;
+
+        Assert.Equal("Could not launch DOOM: boom", page.Message);
+        Assert.Equal("Not running", page.StatusText);
+        Assert.True(page.CanLaunchAgain);
+    }
+
+    [Fact]
+    public async Task An_unexpected_error_on_launch_again_is_shown_and_keeps_the_exit_code()
+    {
+        var (page, process) = await LaunchAsync();
+        process.Exit(0);
+        page.OnNavigatedTo();
+        await FinishedAsync(page);
+        _library.Launcher.LaunchFailure = new InvalidOperationException("boom");
+
+        await page.LaunchAgainCommand.ExecuteAsync(null);
+
+        Assert.Equal("Could not launch DOOM: boom", page.Message);
+        Assert.Equal("Exited with code 0", page.StatusText);
+        Assert.True(page.CanLaunchAgain);
     }
 
     [Fact]

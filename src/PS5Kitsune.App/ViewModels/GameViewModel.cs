@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Games;
@@ -25,14 +27,15 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     private readonly IUiDispatcher _ui;
     private readonly Navigator _navigator;
     private readonly IPages _pages;
+    private readonly ILogger<GameViewModel> _logger;
     private PlayingGame? _playing;
     private CancellationTokenSource? _following;
     private CancellationTokenSource? _launching;
     private bool _started;
 
     /// <summary>A game found running: the page follows it.</summary>
-    public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages)
-        : this(playing.Game, playing.Record.Name, firstLaunch, player, platform, ui, navigator, pages)
+    public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null)
+        : this(playing.Game, playing.Record.Name, firstLaunch, player, platform, ui, navigator, pages, logger)
     {
         _playing = playing;
         IsPreparing = false;
@@ -40,8 +43,9 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     }
 
     /// <summary>A game to launch: the page launches it when shown.</summary>
-    public GameViewModel(GameLayout game, string name, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages)
+    public GameViewModel(GameLayout game, string name, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null)
     {
+        _logger = logger ?? NullLogger<GameViewModel>.Instance;
         _game = game;
         _player = player;
         _platform = platform;
@@ -128,38 +132,47 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         PlayingGame playing;
         try
         {
-            var progress = new DispatchedProgress<LaunchProgress>(_ui, ShowDownload);
-            playing = await Task.Run(() => _player.LaunchAsync(_game.TitleId, progress, cancellation.Token), CancellationToken.None).ConfigureAwait(true);
+            try
+            {
+                var progress = new DispatchedProgress<LaunchProgress>(_ui, ShowDownload);
+                playing = await Task.Run(() => _player.LaunchAsync(_game.TitleId, progress, cancellation.Token), CancellationToken.None).ConfigureAwait(true);
+            }
+            catch (GameRunningException)
+            {
+                // Started elsewhere (the CLI, say) since the Library refreshed: follow it as if this page had launched it.
+                var attached = await Task.Run(() => _player.Attach(_game.TitleId)).ConfigureAwait(true);
+                if (attached is null)
+                {
+                    Message = $"{Title} is no longer running.";
+                    StatusText = _playing is null ? "Not running" : previousStatus;
+                    return;
+                }
+
+                playing = attached;
+            }
         }
         catch (OperationCanceledException)
         {
             StatusText = "Launch cancelled";
             return;
         }
-        catch (GameRunningException)
+        catch (Exception exception)
         {
-            // Started elsewhere (the CLI, say) since the Library refreshed: follow it as if this page had launched it.
-            _launching = null;
-            IsPreparing = false;
-            var attached = await Task.Run(() => _player.Attach(_game.TitleId)).ConfigureAwait(true);
-            if (attached is null)
-            {
-                Message = $"{Title} is no longer running.";
-                StatusText = _playing is null ? "Not running" : previousStatus;
-                return;
-            }
-
-            playing = attached;
-        }
-        catch (Exception exception) when (LaunchErrors.Describe(exception, Title) is { } message)
-        {
-            Message = message;
+            var mapped = LaunchErrors.Describe(exception, Title);
+            Message = mapped ?? $"Could not launch {Title}: {exception.Message}";
             // A refused relaunch keeps the exit code on screen.
             StatusText = _playing is null ? "Not running" : previousStatus;
+            if (mapped is null)
+            {
+                var titleId = _game.TitleId;
+                LogLaunchFailed(exception, titleId);
+            }
+
             return;
         }
         finally
         {
+            // Only now, so Launch again cannot start while an attach is still running.
             _launching = null;
             IsPreparing = false;
         }
@@ -285,4 +298,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
 
     [RelayCommand]
     private void OpenSettings() => _navigator.GoTo(_pages.GameSettings(_game.TitleId));
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Could not launch {TitleId}.")]
+    private partial void LogLaunchFailed(Exception exception, string titleId);
 }
