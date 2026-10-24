@@ -8,7 +8,7 @@ Reconvert an added game after an AnyPS5 update: new libs, new executable, new au
 
 **Criterion (roadmap):** Reconvert keeps `data\` and `_trophy\`.
 
-**Out of scope:** the library screen and its "Needs reconversion" badge (milestone 7; Home's list stands in until then); reconverting several games in one action; locking against a concurrent `add` or `reconvert` of the same game from another process; detecting a running game by PID (milestone 7).
+**Out of scope:** the library screen and its "Needs reconversion" badge (milestone 7; Home's list stands in until then); reconverting several games in one action; locking against a concurrent `add` of the same game from another process (a Reconvert does hold `.ps5kitsune\reconvert.lock`, added after the final review: reads skip the restore, `run` and a second Reconvert are refused); detecting a running game by PID (milestone 7).
 
 ## Facts checked on 2026-10-23
 
