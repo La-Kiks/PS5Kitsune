@@ -136,6 +136,21 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
             StatusText = "Launch cancelled";
             return;
         }
+        catch (GameRunningException)
+        {
+            // Started elsewhere (the CLI, say) since the Library refreshed: follow it as if this page had launched it.
+            _launching = null;
+            IsPreparing = false;
+            var attached = await Task.Run(() => _player.Attach(_game.TitleId)).ConfigureAwait(true);
+            if (attached is null)
+            {
+                Message = $"{Title} is no longer running.";
+                StatusText = _playing is null ? "Not running" : previousStatus;
+                return;
+            }
+
+            playing = attached;
+        }
         catch (Exception exception) when (LaunchErrors.Describe(exception, Title) is { } message)
         {
             Message = message;
@@ -253,7 +268,8 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
             await launching.CancelAsync().ConfigureAwait(true);
         }
 
-        await Launching.ConfigureAwait(true);
+        // Leaving must not depend on how the launch ended: an unexpected error is not rethrown here.
+        await Launching.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ContinueOnCapturedContext);
         if (_following is { } following)
         {
             await following.CancelAsync().ConfigureAwait(true);

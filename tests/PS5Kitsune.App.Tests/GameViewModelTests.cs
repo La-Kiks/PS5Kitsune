@@ -307,5 +307,54 @@ public sealed class GameViewModelTests : IDisposable
         Assert.Empty(_library.Launcher.Launches);
     }
 
+    [Fact]
+    public async Task A_game_already_running_is_followed_instead_of_refused()
+    {
+        var page = await OpenLaunchPageAsync();
+        var started = await _library.Player.LaunchAsync("PPSA99666", TestContext.Current.CancellationToken);
+
+        page.OnNavigatedTo();
+        await page.Launching;
+
+        Assert.True(page.IsRunning);
+        Assert.False(page.IsPreparing);
+        Assert.Equal("Running (PID 4812)", page.StatusText);
+        Assert.Null(page.Message);
+        Assert.Single(_library.Launcher.Launches);
+        ((FakeLaunchedGame)started.Process).Exit(0);
+        await FinishedAsync(page);
+        Assert.Equal("Exited with code 0", page.StatusText);
+    }
+
+    [Fact]
+    public async Task Leaving_still_works_after_an_unexpected_launch_error()
+    {
+        _library.Launcher.LaunchFailure = new InvalidOperationException("boom");
+        var page = await OpenLaunchPageAsync();
+
+        page.OnNavigatedTo();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => page.Launching);
+        await page.BackToLibraryCommand.ExecuteAsync(null);
+
+        Assert.Equal("library", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task A_download_without_a_total_shows_only_the_received_size()
+    {
+        _library.Fonts.Installed = false;
+        _library.Fonts.Reports = [34L << 20];
+        _library.Fonts.ReportedTotal = null;
+        _library.Fonts.Gate = new TaskCompletionSource();
+        var page = await OpenLaunchPageAsync();
+
+        page.OnNavigatedTo();
+        await WaitUntilAsync(() => page.StatusText.StartsWith("Downloading", StringComparison.Ordinal));
+
+        Assert.Equal("Downloading fonts… 34 MB", page.StatusText);
+        page.CancelLaunchCommand.Execute(null);
+        await page.Launching;
+    }
+
     public void Dispose() => _library.Dispose();
 }

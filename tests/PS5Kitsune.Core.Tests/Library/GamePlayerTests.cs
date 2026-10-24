@@ -59,6 +59,18 @@ public sealed class GamePlayerTests : IDisposable
     }
 
     [Fact]
+    public async Task Attaching_to_a_running_game_returns_the_same_process_and_to_a_stopped_one_returns_null()
+    {
+        await AddDoomAsync();
+        Assert.Null(_player.Attach(TestGames.TitleId));
+
+        var playing = await LaunchAsync();
+
+        using var attached = _player.Attach(TestGames.TitleId)!.Process;
+        Assert.Equal(playing.Process.ProcessId, attached.ProcessId);
+    }
+
+    [Fact]
     public async Task Listing_shows_which_games_run()
     {
         await AddDoomAsync();

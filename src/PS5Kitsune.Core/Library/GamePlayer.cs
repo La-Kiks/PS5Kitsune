@@ -103,6 +103,17 @@ public sealed partial class GamePlayer(
         return saved;
     }
 
+    /// <summary>Opens the game again when it already runs (started from the CLI, say), so a page can follow it.</summary>
+    /// <returns>The running game; null when it does not run. Dispose its process.</returns>
+    /// <exception cref="GameNotFoundException">No game with this title ID.</exception>
+    /// <exception cref="InvalidGameRecordException">The game.json is malformed.</exception>
+    public PlayingGame? Attach(string titleId)
+    {
+        ArgumentNullException.ThrowIfNull(titleId);
+        var (game, record) = library.Find(titleId);
+        return running.Attach(game) is { } process ? new PlayingGame(game, record, process) : null;
+    }
+
     /// <summary>Deletes the game's running.json once its exit was seen.</summary>
     public void Forget(PlayingGame playing)
     {

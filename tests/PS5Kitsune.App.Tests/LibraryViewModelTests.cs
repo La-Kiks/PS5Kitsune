@@ -89,6 +89,18 @@ public sealed class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Clicking_a_game_started_after_the_last_refresh_still_opens_its_launch_page()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        var page = await CreateAsync();
+        using var started = (await StartAsync("PPSA00001")).Process;
+
+        await page.OpenCommand.ExecuteAsync(Tile(page, "Alpha"));
+
+        Assert.Equal("launch:PPSA00001", _navigator.CurrentPage);
+    }
+
+    [Fact]
     public async Task Clicking_a_running_game_opens_its_page_without_launching_it_again()
     {
         await _library.AddAsync("PPSA00001", "Alpha");

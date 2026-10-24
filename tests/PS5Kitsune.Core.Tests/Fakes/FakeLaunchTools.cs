@@ -60,6 +60,8 @@ internal sealed class FakeFontPack : IFontPack
 
     public long[] Reports { get; set; } = [];
 
+    public long? ReportedTotal { get; set; } = Total;
+
     public TaskCompletionSource? Gate { get; set; }
 
     public bool IsInstalled() => Installed;
@@ -69,7 +71,7 @@ internal sealed class FakeFontPack : IFontPack
         Installs++;
         foreach (var received in Reports)
         {
-            progress?.Report(new DownloadProgress(received, Total));
+            progress?.Report(new DownloadProgress(received, ReportedTotal));
         }
 
         if (Gate is not null)
