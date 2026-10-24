@@ -51,7 +51,7 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
     /// <summary>Held by any action that changes the game folder; not a conversion output. See <see cref="GameLock"/>.</summary>
     public string Lock => Path.Combine(Meta, "game.lock");
 
-    /// <summary>The game launched by PS5Kitsune that may still run (see RunningGames).</summary>
+    /// <summary>The game launched by PS5Kitsune that may still run. See <see cref="Library.RunningGames"/>.</summary>
     public string RunningRecord => Path.Combine(Meta, "running.json");
 
     /// <summary>Created by the game; can reach several GB.</summary>

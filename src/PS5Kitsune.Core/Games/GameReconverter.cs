@@ -15,6 +15,7 @@ namespace PS5Kitsune.Core.Games;
 /// </summary>
 public sealed partial class GameReconverter(
     GameLibrary library,
+    RunningGames running,
     AnyPS5Paths paths,
     AnyPS5Profile profile,
     AnyPS5Installer installer,
@@ -55,6 +56,11 @@ public sealed partial class GameReconverter(
 
         var game = layout;
         var record = library.ReadHeld(game);
+        if (running.Check(game) is { } current)
+        {
+            throw new GameRunningException(record.Name, current);
+        }
+
         List<string> modules = [.. GameValidator.ModuleDirectoryNames.Where(name => Directory.Exists(Path.Combine(game.App0, name)))];
         var context = new GameImportContext(
             new GameSource(game.App0, null), new GameMetadata(record.TitleId, record.Name), modules, game, record.ConvertedWith.ToIntel);

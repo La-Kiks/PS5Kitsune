@@ -17,6 +17,7 @@ public interface IGameReconverter
     /// <exception cref="StepFailedException">A step failed; the previous conversion is back (except a failed game.json write after the discard; see above).</exception>
     /// <exception cref="OperationCanceledException">Cancelled; the previous conversion is back.</exception>
     /// <exception cref="GameBusyException">Another action holds the game's lock; nothing was changed.</exception>
+    /// <exception cref="Library.GameRunningException">The game runs; nothing was changed.</exception>
     /// <exception cref="ReconvertRestoreException">A step failed or the run was cancelled, and the restore failed; or restoring an earlier
     /// Reconvert that did not finish failed before this one started (then the inner exception is the restore failure).</exception>
     Task<GameReconverted> ReconvertAsync(string titleId, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default);
