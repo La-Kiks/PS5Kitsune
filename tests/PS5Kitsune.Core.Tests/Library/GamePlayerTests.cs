@@ -216,6 +216,21 @@ public sealed class GamePlayerTests : IDisposable
     }
 
     [Fact]
+    public async Task A_cancel_requested_as_the_preparation_finishes_stops_the_launch()
+    {
+        await AddDoomAsync();
+        _fonts.Installed = false;
+        using var cancellation = new CancellationTokenSource();
+        _fonts.OnInstalled = cancellation.Cancel;
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _player.LaunchAsync(TestGames.TitleId, cancellation.Token));
+
+        Assert.Equal(1, _fonts.Installs);
+        Assert.Empty(_launcher.Launches);
+        Assert.False(GameLock.IsHeld(Game));
+    }
+
+    [Fact]
     public async Task A_failed_launch_is_not_counted_as_played()
     {
         await AddDoomAsync();

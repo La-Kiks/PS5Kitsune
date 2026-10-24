@@ -64,6 +64,9 @@ internal sealed class FakeFontPack : IFontPack
 
     public TaskCompletionSource? Gate { get; set; }
 
+    /// <summary>Called once the install succeeded, before it returns.</summary>
+    public Action? OnInstalled { get; set; }
+
     public bool IsInstalled() => Installed;
 
     public async Task InstallAsync(IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
@@ -85,5 +88,6 @@ internal sealed class FakeFontPack : IFontPack
         }
 
         Installed = true;
+        OnInstalled?.Invoke();
     }
 }

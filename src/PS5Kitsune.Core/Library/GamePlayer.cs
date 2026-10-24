@@ -45,6 +45,8 @@ public sealed partial class GamePlayer(
 
         var resources = await preparation.PrepareAsync(before.Settings, progress, cancellationToken).ConfigureAwait(false);
 
+        // A Cancel or Back pressed as a download finishes must not start the game. Once launched, recording it ignores cancellation.
+        cancellationToken.ThrowIfCancellationRequested();
         using var held = GameLock.TryAcquire(game) ?? throw new GameBusyException(titleId);
         var record = library.ReadHeld(game);
         if (running.Check(game) is { } current)
