@@ -87,4 +87,7 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object Game(PlayingGame playing, bool firstLaunch) =>
         new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this);
+
+    public object Launch(GameLayout game, string name, bool firstLaunch) =>
+        new GameViewModel(game, name, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this);
 }

@@ -42,4 +42,8 @@ public interface IPages
     /// <summary>A running game. Takes ownership of <paramref name="playing"/>'s process handle.</summary>
     /// <param name="firstLaunch">The game was never played before: shaders are prepared, so it may stutter.</param>
     object Game(PlayingGame playing, bool firstLaunch);
+
+    /// <summary>A game to launch: the page downloads what it needs, launches it, then follows it.</summary>
+    /// <param name="firstLaunch">The game was never played before: shaders are prepared, so it may stutter.</param>
+    object Launch(GameLayout game, string name, bool firstLaunch);
 }

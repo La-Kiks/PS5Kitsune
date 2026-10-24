@@ -4,36 +4,53 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.App.ViewModels;
 
-/// <summary>A running game: its log followed live, Stop, then its exit code. Leaving the page never stops the game.</summary>
+/// <summary>
+/// A game's page: launches it (downloading Lavapipe and the fonts first when needed), follows its log live, Stop, then its exit code.
+/// Leaving the page never stops the game; leaving during a download cancels the launch.
+/// </summary>
 public sealed partial class GameViewModel : ObservableObject, INavigationAware
 {
     /// <summary>Log lines kept on screen; the file keeps them all.</summary>
     public const int KeptLines = 500;
 
+    private readonly GameLayout _game;
     private readonly GamePlayer _player;
     private readonly IPlatform _platform;
     private readonly IUiDispatcher _ui;
     private readonly Navigator _navigator;
     private readonly IPages _pages;
-    private PlayingGame _playing;
+    private PlayingGame? _playing;
     private CancellationTokenSource? _following;
+    private CancellationTokenSource? _launching;
     private bool _started;
 
+    /// <summary>A game found running: the page follows it.</summary>
     public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages)
+        : this(playing.Game, playing.Record.Name, firstLaunch, player, platform, ui, navigator, pages)
     {
         _playing = playing;
+        IsPreparing = false;
+        ShowRunning(playing);
+    }
+
+    /// <summary>A game to launch: the page launches it when shown.</summary>
+    public GameViewModel(GameLayout game, string name, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages)
+    {
+        _game = game;
         _player = player;
         _platform = platform;
         _ui = ui;
         _navigator = navigator;
         _pages = pages;
-        Title = playing.Record.Name;
+        Title = name;
         FirstLaunchHint = firstLaunch ? "The first launch may stutter while shaders are prepared." : null;
-        ShowRunning();
+        IsPreparing = true;
     }
 
     public string Title { get; }
@@ -41,44 +58,118 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     public ObservableCollection<string> Log { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasExited))]
+    [NotifyPropertyChangedFor(nameof(CanLaunchAgain))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand), nameof(LaunchAgainCommand))]
     public partial bool IsRunning { get; private set; }
 
-    public bool HasExited => !IsRunning;
-
-    /// <summary>"Running (PID n)", then "Exited with code n".</summary>
+    /// <summary>Downloading or starting: Cancel stops the launch.</summary>
     [ObservableProperty]
-    public partial string StatusText { get; private set; } = "";
+    [NotifyPropertyChangedFor(nameof(CanLaunchAgain))]
+    [NotifyCanExecuteChangedFor(nameof(CancelLaunchCommand), nameof(LaunchAgainCommand))]
+    public partial bool IsPreparing { get; private set; }
+
+    public bool CanLaunchAgain => !IsRunning && !IsPreparing;
+
+    /// <summary>"Starting…", a download, "Running (PID n)", "Exited with code n", "Launch cancelled" or "Not running".</summary>
+    [ObservableProperty]
+    public partial string StatusText { get; private set; } = "Starting…";
 
     [ObservableProperty]
     public partial string? FirstLaunchHint { get; private set; }
 
+    /// <summary>The fonts warning of the current launch; null otherwise.</summary>
+    [ObservableProperty]
+    public partial string? FontsWarning { get; private set; }
+
     /// <summary>Why the last action failed; null otherwise.</summary>
     [ObservableProperty]
     public partial string? Message { get; private set; }
+
+    /// <summary>Completes when the current launch has started the game, failed or been cancelled.</summary>
+    public Task Launching { get; private set; } = Task.CompletedTask;
 
     /// <summary>Completes when the page stops following the current process: it exited, or the page was left.</summary>
     public Task Following { get; private set; } = Task.CompletedTask;
 
     public void OnNavigatedTo()
     {
-        if (!_started)
+        if (_started)
         {
-            StartFollowing();
+            return;
+        }
+
+        _started = true;
+        if (_playing is { } playing)
+        {
+            Following = FollowAsync(playing);
+        }
+        else
+        {
+            Launching = LaunchAsync();
         }
     }
 
-    private void ShowRunning()
+    private void ShowRunning(PlayingGame playing)
     {
         IsRunning = true;
-        StatusText = string.Create(CultureInfo.InvariantCulture, $"Running (PID {_playing.Process.ProcessId})");
+        StatusText = string.Create(CultureInfo.InvariantCulture, $"Running (PID {playing.Process.ProcessId})");
     }
 
-    private void StartFollowing()
+    // Launches, then starts following the game without waiting for it to exit.
+    private async Task LaunchAsync()
     {
-        _started = true;
-        Following = FollowAsync(_playing);
+        var previousStatus = StatusText;
+        Message = null;
+        FontsWarning = null;
+        IsPreparing = true;
+        StatusText = "Starting…";
+        using var cancellation = new CancellationTokenSource();
+        _launching = cancellation;
+        PlayingGame playing;
+        try
+        {
+            var progress = new DispatchedProgress<LaunchProgress>(_ui, ShowDownload);
+            playing = await Task.Run(() => _player.LaunchAsync(_game.TitleId, progress, cancellation.Token), CancellationToken.None).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Launch cancelled";
+            return;
+        }
+        catch (Exception exception) when (LaunchErrors.Describe(exception, Title) is { } message)
+        {
+            Message = message;
+            // A refused relaunch keeps the exit code on screen.
+            StatusText = _playing is null ? "Not running" : previousStatus;
+            return;
+        }
+        finally
+        {
+            _launching = null;
+            IsPreparing = false;
+        }
+
+        _playing?.Process.Dispose();
+        _playing = playing;
+        Log.Clear();
+        FontsWarning = playing.FontsWarning;
+        ShowRunning(playing);
+        Following = FollowAsync(playing);
+    }
+
+    private void ShowDownload(LaunchProgress value)
+    {
+        // A report can arrive after the launch moved on.
+        if (!IsPreparing)
+        {
+            return;
+        }
+
+        var what = value.Download == LaunchDownload.Lavapipe ? "Lavapipe" : "fonts";
+        var received = value.Progress.ReceivedBytes >> 20;
+        StatusText = value.Progress.TotalBytes is { } total
+            ? string.Create(CultureInfo.InvariantCulture, $"Downloading {what}… {received} MB / {total >> 20} MB")
+            : string.Create(CultureInfo.InvariantCulture, $"Downloading {what}… {received} MB");
     }
 
     private async Task FollowAsync(PlayingGame playing)
@@ -124,13 +215,21 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         }
     }
 
+    [RelayCommand(CanExecute = nameof(IsPreparing))]
+    private void CancelLaunch() => _launching?.Cancel();
+
     [RelayCommand(CanExecute = nameof(IsRunning))]
     private async Task StopAsync()
     {
+        if (_playing is not { } playing)
+        {
+            return;
+        }
+
         Message = null;
         try
         {
-            await _playing.Process.StopAsync().ConfigureAwait(true);
+            await playing.Process.StopAsync().ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -138,43 +237,33 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         }
     }
 
-    [RelayCommand(CanExecute = nameof(HasExited))]
-    private async Task LaunchAgainAsync()
+    [RelayCommand(CanExecute = nameof(CanLaunchAgain))]
+    private Task LaunchAgainAsync()
     {
-        Message = null;
-        var titleId = _playing.Record.TitleId;
-        PlayingGame playing;
-        try
-        {
-            playing = await Task.Run(() => _player.LaunchAsync(titleId, CancellationToken.None)).ConfigureAwait(true);
-        }
-        catch (Exception exception) when (LaunchErrors.Describe(exception, Title) is { } message)
-        {
-            Message = message;
-            return;
-        }
-
-        _playing.Process.Dispose();
-        _playing = playing;
-        Log.Clear();
         FirstLaunchHint = null;
-        ShowRunning();
-        StartFollowing();
+        Launching = LaunchAsync();
+        return Launching;
     }
 
     [RelayCommand]
     private async Task BackToLibraryAsync()
     {
+        if (_launching is { } launching)
+        {
+            await launching.CancelAsync().ConfigureAwait(true);
+        }
+
+        await Launching.ConfigureAwait(true);
         if (_following is { } following)
         {
             await following.CancelAsync().ConfigureAwait(true);
         }
 
         await Following.ConfigureAwait(true);
-        _playing.Process.Dispose();
+        _playing?.Process.Dispose();
         _navigator.GoHome(_pages.Library());
     }
 
     [RelayCommand]
-    private void OpenFolder() => Message = PathOpener.TryOpen(_platform, _playing.Game.Root);
+    private void OpenFolder() => Message = PathOpener.TryOpen(_platform, _game.Root);
 }

@@ -123,24 +123,8 @@ public sealed partial class LibraryViewModel(
             return;
         }
 
-        PlayingGame playing;
-        try
-        {
-            playing = await Task.Run(() => player.LaunchAsync(tile.TitleId, CancellationToken.None)).ConfigureAwait(true);
-        }
-        catch (GameRunningException)
-        {
-            // Started elsewhere (the CLI) since the last refresh.
-            await ShowAsync(tile).ConfigureAwait(true);
-            return;
-        }
-        catch (Exception exception) when (LaunchErrors.Describe(exception, tile.Name) is { } message)
-        {
-            Message = message;
-            return;
-        }
-
-        navigator.GoTo(pages.Game(playing, firstLaunch: tile.LastPlayedAt is null));
+        // The Game page downloads what is missing and launches; a game started elsewhere is reported there.
+        navigator.GoTo(pages.Launch(tile.Entry.Game, tile.Name, firstLaunch: tile.LastPlayedAt is null));
     }
 
     private async Task ShowAsync(GameTileViewModel tile)
