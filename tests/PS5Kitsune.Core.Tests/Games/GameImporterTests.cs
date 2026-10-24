@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Tests.AnyPS5;
@@ -13,6 +14,7 @@ public sealed class GameImporterTests : IDisposable
     private readonly TempDirectory _temp = new();
     private readonly AnyPS5TestSetup _setup;
     private readonly GameImporter _importer;
+    private readonly FakeVulkanProbeRunner _probe = new();
     private int _relinkerExitCode;
 
     public GameImporterTests()
@@ -22,7 +24,7 @@ public sealed class GameImporterTests : IDisposable
         _importer = new GameImporter(
             _setup.Layout, _setup.Platform, _setup.Profile, _setup.Paths, _setup.Installer,
             new GameSourceResolver(_setup.Layout), new GameValidator(_ => long.MaxValue),
-            _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time, NullLogger<GameImporter>.Instance);
+            _setup.PythonTool, _setup.Runner, _setup.StepRunner, _probe, _setup.Time, NullLogger<GameImporter>.Instance);
     }
 
     private string GameDirectory => _setup.Layout.GameDirectory(TestGames.TitleId);
@@ -201,6 +203,44 @@ public sealed class GameImporterTests : IDisposable
         await game.DisposeAsync();
 
         await Assert.ThrowsAsync<ObjectDisposedException>(() => _importer.AddAsync(game, false, cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Lavapipe_is_on_by_default_when_no_gpu_supports_anyps5(bool gpuSupportsAnyPS5, bool lavapipe)
+    {
+        _probe.Outcome = new VulkanProbeOutcome(
+            VulkanProbeStatus.Succeeded,
+            new VulkanProbeReport(true, null, [new VulkanGpu("Intel(R) Iris(R) Xe Graphics", 0x8086, "integrated", "1.3.289", "IntelProprietaryWindows", "Intel Corporation", "101.5762", gpuSupportsAnyPS5, true)]),
+            null);
+
+        var added = await AddTheGameAsync();
+
+        Assert.Equal(lavapipe, added.Record.Settings.Lavapipe);
+    }
+
+    [Fact]
+    public async Task A_failed_probe_leaves_lavapipe_off()
+    {
+        _probe.Outcome = VulkanProbeOutcome.Failed("crashed");
+
+        var added = await AddTheGameAsync();
+
+        Assert.False(added.Record.Settings.Lavapipe);
+    }
+
+    [Fact]
+    public void The_default_needs_the_vulkan_loader_and_counts_an_empty_gpu_list()
+    {
+        Assert.True(GameImporter.DefaultLavapipe(new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(true, null, []), null)));
+        Assert.False(GameImporter.DefaultLavapipe(new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(false, "no loader", []), null)));
+    }
+
+    private async Task<GameAdded> AddTheGameAsync()
+    {
+        await _setup.InstallAsync();
+        return Assert.IsType<GameAdded>(await AddAsync(WriteZip()));
     }
 
     public void Dispose() => _temp.Dispose();

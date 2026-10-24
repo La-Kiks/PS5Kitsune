@@ -21,7 +21,7 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
     {
         var game = Layout(titleId);
         RestoreInterrupted(game);
-        return (game, GameRecordStore.Read(game.RecordFile) ?? throw NotFound(titleId));
+        return (game, Normalized(GameRecordStore.Read(game.RecordFile) ?? throw NotFound(titleId)));
     }
 
     /// <summary>The folder of an added game, without reading or restoring it.</summary>
@@ -63,7 +63,7 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
                 RestoreInterrupted(game);
                 if (GameRecordStore.Read(game.RecordFile) is { } record)
                 {
-                    games.Add((game, record));
+                    games.Add((game, Normalized(record)));
                 }
             }
             catch (Exception exception) when (exception is InvalidGameRecordException or IOException or UnauthorizedAccessException)
@@ -111,7 +111,7 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
             LogRestored(root);
         }
 
-        return GameRecordStore.Read(game.RecordFile) ?? throw NotFound(game.TitleId);
+        return Normalized(GameRecordStore.Read(game.RecordFile) ?? throw NotFound(game.TitleId));
     }
 
     /// <summary>True when at least one game folder has a game.json; reads nothing and restores nothing.</summary>
@@ -121,6 +121,19 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
             Path.GetFileName(directory) is var titleId
             && GameValidator.IsValidTitleId(titleId)
             && File.Exists(new GameLayout(directory, titleId, platform).RecordFile));
+
+    // game.json may say "settings": null; a value AnyPS5 would refuse is replaced in memory only, so the file shows what was written.
+    private GameRecord Normalized(GameRecord record)
+    {
+        var (settings, replaced) = GameSettingsValidator.Normalize(record.Settings ?? new GameSettings());
+        foreach (var field in replaced)
+        {
+            var titleId = record.TitleId;
+            LogSettingReplaced(titleId, field);
+        }
+
+        return record with { Settings = settings };
+    }
 
     private GameNotFoundException NotFound(string titleId) => new($"No game {titleId} in {layout.Games}.");
 
@@ -146,4 +159,7 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Skipped the game in {Directory}: it cannot be read.")]
     private partial void LogGameSkipped(Exception exception, string directory);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{TitleId}: the setting {Field} in game.json is not valid; its default is used.")]
+    private partial void LogSettingReplaced(string titleId, string field);
 }
