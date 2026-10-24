@@ -59,11 +59,56 @@ public sealed class GameLibraryTests : IDisposable
     public async Task Marking_a_game_played_records_the_time()
     {
         await WriteSampleAsync();
-        var (game, record) = _library.Find("PPSA99666");
+        var game = _library.Layout("PPSA99666");
 
-        await _library.MarkPlayedAsync(game, record, TestContext.Current.CancellationToken);
+        var written = await _library.MarkPlayedAsync(game, TestContext.Current.CancellationToken);
 
+        Assert.Equal(_time.GetLocalNow(), written.LastPlayedAt);
         Assert.Equal(_time.GetLocalNow(), _library.Find("PPSA99666").Record.LastPlayedAt);
+    }
+
+    [Fact]
+    public async Task Marking_a_game_played_keeps_what_was_written_since_it_was_found()
+    {
+        await WriteSampleAsync();
+        var (game, record) = _library.Find("PPSA99666");
+        await GameRecordStore.WriteAsync(game.RecordFile, record with { Settings = new GameSettings { Language = 5 } }, TestContext.Current.CancellationToken);
+
+        await _library.MarkPlayedAsync(game, TestContext.Current.CancellationToken);
+
+        Assert.Equal(5, _library.Find("PPSA99666").Record.Settings.Language);
+    }
+
+    [Fact]
+    public async Task Reading_a_held_game_restores_an_interrupted_reconvert()
+    {
+        var game = new GameLayout(_layout.GameDirectory("PPSA99666"), "PPSA99666", new FakePlatform());
+        ConvertedGames.Create(game);
+        await WriteSampleAsync();
+        var before = ConvertedGames.Snapshot(game.Root);
+        ConversionBackup.SetAside(game);
+        TestFiles.Write(game.Executable, "half-built exe");
+
+        GameRecord record;
+        using (GameLock.TryAcquireNow(game))
+        {
+            record = _library.ReadHeld(game);
+        }
+
+        Assert.Equal("DOOM", record.Name);
+        Assert.Equal(before, ConvertedGames.Snapshot(game.Root));
+    }
+
+    [Fact]
+    public async Task Has_games_once_a_game_json_exists()
+    {
+        Assert.False(_library.HasGames());
+        Directory.CreateDirectory(_layout.GameDirectory("PPSA00004"));
+        Assert.False(_library.HasGames());
+
+        await WriteSampleAsync();
+
+        Assert.True(_library.HasGames());
     }
 
     [Fact]
@@ -87,7 +132,7 @@ public sealed class GameLibraryTests : IDisposable
         await WriteSampleAsync();
         var game = _library.Find("PPSA99666").Game;
 
-        Assert.False(File.Exists(game.ReconvertLock));
+        Assert.False(File.Exists(game.Lock));
     }
 
     [Fact]
@@ -101,8 +146,8 @@ public sealed class GameLibraryTests : IDisposable
         _library.Find("PPSA99666");
 
         Assert.False(Directory.Exists(game.Previous));
-        Assert.False(File.Exists(game.ReconvertLock));
-        Assert.False(ReconvertLock.IsHeld(game));
+        Assert.False(File.Exists(game.Lock));
+        Assert.False(GameLock.IsHeld(game));
     }
 
     [Fact]
@@ -115,7 +160,7 @@ public sealed class GameLibraryTests : IDisposable
         ConversionBackup.SetAside(game);
         TestFiles.Write(game.Executable, "half-built exe");
 
-        using (ReconvertLock.TryAcquire(game))
+        using (GameLock.TryAcquireNow(game))
         {
             Assert.Equal("DOOM", _library.Find("PPSA99666").Record.Name);
             Assert.True(Directory.Exists(game.Previous));
@@ -137,7 +182,7 @@ public sealed class GameLibraryTests : IDisposable
         ConversionBackup.SetAside(game);
         TestFiles.Write(game.Executable, "half-built exe");
 
-        using (ReconvertLock.TryAcquire(game))
+        using (GameLock.TryAcquireNow(game))
         {
             Assert.Equal(["DOOM"], _library.All().Select(entry => entry.Record.Name));
             Assert.True(Directory.Exists(game.Previous));

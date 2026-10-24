@@ -87,14 +87,14 @@ public sealed class ReconvertViewModelTests
     }
 
     [Fact]
-    public async Task Cancelling_goes_home()
+    public async Task Cancelling_goes_to_the_library()
     {
         _reconverter.Reconvert = (_, _, _, _) => Task.FromCanceled<GameReconverted>(new CancellationToken(canceled: true));
         var viewModel = Create();
 
         await viewModel.RunAsync();
 
-        Assert.Equal("home", _navigator.CurrentPage);
+        Assert.Equal("library", _navigator.CurrentPage);
     }
 
     [Fact]

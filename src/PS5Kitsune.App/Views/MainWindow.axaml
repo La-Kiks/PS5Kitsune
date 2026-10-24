@@ -38,6 +38,12 @@
     <DataTemplate DataType="vm:AddResultViewModel">
       <views:AddResultView />
     </DataTemplate>
+    <DataTemplate DataType="vm:LibraryViewModel">
+      <views:LibraryView />
+    </DataTemplate>
+    <DataTemplate DataType="vm:GameViewModel">
+      <views:GameView />
+    </DataTemplate>
     <DataTemplate DataType="vm:DoneViewModel">
       <views:DoneView />
     </DataTemplate>

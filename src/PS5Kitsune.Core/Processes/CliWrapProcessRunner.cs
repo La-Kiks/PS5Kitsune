@@ -5,7 +5,7 @@ using PS5Kitsune.Core.Abstractions;
 
 namespace PS5Kitsune.Core.Processes;
 
-public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> logger) : IProcessRunner
+public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> logger, IChildProcessJob? job = null) : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(ProcessSpec spec, Action<OutputLine>? onOutput = null, CancellationToken cancellationToken = default)
     {
@@ -36,6 +36,9 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
         // CliWrap's cancellation may stop only the direct child; Ninja's g++ and cc1plus would keep running.
         // So the command runs without CliWrap's token, and cancellation kills the whole tree.
         var task = command.ExecuteAsync(CancellationToken.None);
+
+        // As early as possible, so the processes the tool starts afterwards join the job too (a child started in the first microseconds escapes).
+        job?.Assign(task.ProcessId);
         CommandResult result;
         using (cancellationToken.Register(() => KillTree(spec.FileName, task.ProcessId)))
         {

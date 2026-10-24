@@ -20,6 +20,13 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     private const uint HandleFlagInherit = 0x00000001;
     private const uint ExtendedStartupInfoPresent = 0x00080000;
     private const nint ProcThreadAttributeHandleList = 0x00020002;
+    private const uint ProcessTerminate = 0x0001;
+    private const uint ProcessQueryLimitedInformation = 0x1000;
+    private const uint Synchronize = 0x00100000;
+    private const uint StillActive = 259;
+
+    /// <summary>How long Stop waits for the game to close its windows before ending it.</summary>
+    internal TimeSpan StopGrace { get; init; } = TimeSpan.FromSeconds(5);
 
     public ILaunchedGame Launch(GameLaunchRequest request)
     {
@@ -39,8 +46,61 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         var process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle());
 
         CloseHandle(process.Thread);
+        var handle = new SafeProcessHandle(process.Process, ownsHandle: true);
+        DateTimeOffset startedAt;
+        try
+        {
+            startedAt = CreationTime(handle);
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
+
         LogLaunched(request.Executable, process.ProcessId, logFile);
-        return new LaunchedGame(new SafeProcessHandle(process.Process, ownsHandle: true), process.ProcessId, logFile);
+        return new LaunchedGame(handle, process.ProcessId, logFile, startedAt, StopGrace);
+    }
+
+    public ILaunchedGame? Attach(RunningGame record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        var process = OpenProcess(ProcessQueryLimitedInformation | Synchronize | ProcessTerminate, inheritHandle: false, record.ProcessId);
+        // Not opened: the process is gone, or belongs to someone else (another user, an elevated process): not our game either way.
+        bool ours;
+        try
+        {
+            ours = !process.IsInvalid
+                && GetExitCodeProcess(process, out var exitCode) && exitCode == StillActive
+                && CreationTime(process) == record.StartedAt
+                && ImagePath(process) is { } path
+                && string.Equals(Path.GetFullPath(path), Path.GetFullPath(record.Executable), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (exception is Win32Exception or ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            ours = false;
+        }
+
+        if (!ours)
+        {
+            process.Dispose();
+            return null;
+        }
+
+        LogAttached(record.Executable, record.ProcessId);
+        return new LaunchedGame(process, record.ProcessId, record.LogFile, record.StartedAt, StopGrace);
+    }
+
+    private static DateTimeOffset CreationTime(SafeProcessHandle process) =>
+        GetProcessTimes(process, out var creation, out _, out _, out _)
+            ? DateTimeOffset.FromFileTime(creation).ToUniversalTime()
+            : throw new Win32Exception(Marshal.GetLastPInvokeError());
+
+    private static string? ImagePath(SafeProcessHandle process)
+    {
+        var buffer = new char[32768];
+        var size = buffer.Length;
+        return QueryFullProcessImageName(process, 0, ref buffer[0], ref size) ? new string(buffer, 0, size) : null;
     }
 
     // bInheritHandles = TRUE alone would hand the game every inheritable handle of this process (a parent's
@@ -108,6 +168,9 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     [LoggerMessage(Level = LogLevel.Information, Message = "Started {Executable} (PID {ProcessId}), output in {LogFile}")]
     private partial void LogLaunched(string executable, int processId, string logFile);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Found {Executable} still running (PID {ProcessId})")]
+    private partial void LogAttached(string executable, int processId);
+
     [LibraryImport("kernel32.dll", EntryPoint = "CreateProcessW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool CreateProcess(
@@ -140,6 +203,21 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool GetExitCodeProcess(SafeProcessHandle process, out uint exitCode);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial SafeProcessHandle OpenProcess(uint access, [MarshalAs(UnmanagedType.Bool)] bool inheritHandle, int processId);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool GetProcessTimes(SafeProcessHandle process, out long creationTime, out long exitTime, out long kernelTime, out long userTime);
+
+    [LibraryImport("kernel32.dll", EntryPoint = "QueryFullProcessImageNameW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool QueryFullProcessImageName(SafeProcessHandle process, uint flags, ref char name, ref int size);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool TerminateProcess(SafeProcessHandle process, uint exitCode);
 
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -186,11 +264,48 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     }
 #pragma warning restore CS0649
 
-    private sealed class LaunchedGame(SafeProcessHandle process, int processId, string logFile) : ILaunchedGame
+    private sealed class LaunchedGame(SafeProcessHandle process, int processId, string logFile, DateTimeOffset startedAt, TimeSpan stopGrace) : ILaunchedGame
     {
         public int ProcessId { get; } = processId;
 
         public string LogFile { get; } = logFile;
+
+        public DateTimeOffset StartedAt { get; } = startedAt;
+
+        public async Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            CloseWindows();
+            var exit = WaitForExitAsync(cancellationToken);
+            var finished = await Task.WhenAny(exit, Task.Delay(stopGrace, cancellationToken)).ConfigureAwait(false) == exit;
+
+            // A cancelled delay also completes WhenAny: cancelling only abandons the wait, it never ends the game.
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!finished && !TerminateProcess(process, 1))
+            {
+                var error = Marshal.GetLastPInvokeError();
+                // Access denied once the process has already exited: nothing left to stop.
+                if (!exit.IsCompleted && !(GetExitCodeProcess(process, out var code) && code != StillActive))
+                {
+                    throw new Win32Exception(error);
+                }
+            }
+
+            await exit.ConfigureAwait(false);
+        }
+
+        // The handle held here keeps the PID from being reused, so the process found by ID is the game.
+        private void CloseWindows()
+        {
+            try
+            {
+                using var running = System.Diagnostics.Process.GetProcessById(ProcessId);
+                running.CloseMainWindow();
+            }
+            catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
+            {
+                // Already exited.
+            }
+        }
 
         public async Task<int> WaitForExitAsync(CancellationToken cancellationToken = default)
         {

@@ -1,5 +1,6 @@
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.App.Navigation;
 
@@ -34,4 +35,11 @@ public interface IPages
     object Reconvert(string titleId, string name);
 
     object ReconvertResult(GameReconverted reconverted);
+
+    /// <summary>The added games; the first page once AnyPS5 is installed and a game is added.</summary>
+    object Library();
+
+    /// <summary>A running game. Takes ownership of <paramref name="playing"/>'s process handle.</summary>
+    /// <param name="firstLaunch">The game was never played before: shaders are prepared, so it may stutter.</param>
+    object Game(PlayingGame playing, bool firstLaunch);
 }

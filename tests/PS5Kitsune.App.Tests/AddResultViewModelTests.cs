@@ -83,7 +83,7 @@ public sealed class AddResultViewModelTests
     }
 
     [Fact]
-    public void The_buttons_open_the_folder_add_another_or_go_home()
+    public void The_buttons_open_the_folder_add_another_or_go_to_the_library()
     {
         var viewModel = Create(TestGameData.Added());
 
@@ -93,9 +93,9 @@ public sealed class AddResultViewModelTests
         viewModel.AddAnotherCommand.Execute(null);
         Assert.Equal("choose", _navigator.CurrentPage);
         _navigator.GoBack();
-        Assert.Equal("home", _navigator.CurrentPage);
+        Assert.Equal("library", _navigator.CurrentPage);
 
-        viewModel.BackHomeCommand.Execute(null);
-        Assert.Equal("home", _navigator.CurrentPage);
+        viewModel.BackToLibraryCommand.Execute(null);
+        Assert.Equal("library", _navigator.CurrentPage);
     }
 }

@@ -93,10 +93,10 @@ public sealed partial class AddResultViewModel : ObservableObject
     [RelayCommand]
     private void AddAnother()
     {
-        _navigator.GoHome(_pages.Home());
+        _navigator.GoHome(_pages.Library());
         _navigator.GoTo(_pages.ChooseGame());
     }
 
     [RelayCommand]
-    private void BackHome() => _navigator.GoHome(_pages.Home());
+    private void BackToLibrary() => _navigator.GoHome(_pages.Library());
 }

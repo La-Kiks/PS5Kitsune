@@ -12,28 +12,10 @@
         <TextBlock Text="{Binding OtherInstallText}" Opacity="0.85" IsVisible="{Binding OtherInstallText, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Button Content="{Binding ActionText}" Command="{Binding StartCommand}" Classes="accent" Margin="0,8,0,0" />
         <Button Content="Add a game" Command="{Binding AddGameCommand}" />
+        <Button Content="Library" Command="{Binding LibraryCommand}" />
         <TextBlock Text="{Binding AddGameHint}" Opacity="0.85" IsVisible="{Binding AddGameHint, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
     </Border>
-
-    <StackPanel Spacing="8" IsVisible="{Binding HasGamesToReconvert}">
-      <TextBlock Text="Games to reconvert" FontWeight="SemiBold" />
-      <ItemsControl ItemsSource="{Binding GamesToReconvert}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:GameToReconvert">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4">
-              <StackPanel>
-                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding TitleId}" Opacity="0.85" />
-                <TextBlock Text="{Binding Detail}" Opacity="0.85" TextWrapping="Wrap" />
-              </StackPanel>
-              <Button Grid.Column="1" VerticalAlignment="Center" Content="Reconvert"
-                      Command="{Binding $parent[ItemsControl].((vm:HomeViewModel)DataContext).ReconvertCommand}" CommandParameter="{Binding}" />
-            </Grid>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </StackPanel>
 
     <StackPanel Spacing="6">
       <TextBlock Text="Data folder" FontWeight="SemiBold" />

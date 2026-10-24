@@ -131,4 +131,22 @@ public sealed class CliWrapProcessRunnerTests
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
             Entries.Add((logLevel, formatter(state, exception)));
     }
+
+    private sealed class RecordingJob : IChildProcessJob
+    {
+        public List<int> Assigned { get; } = [];
+
+        public void Assign(int processId) => Assigned.Add(processId);
+    }
+
+    [Fact]
+    public async Task Assigns_each_tool_to_the_job()
+    {
+        var job = new RecordingJob();
+        var runner = new CliWrapProcessRunner(NullLogger<CliWrapProcessRunner>.Instance, job);
+
+        await runner.RunAsync(new ProcessSpec("dotnet", ["--version"]), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(Assert.Single(job.Assigned) > 0);
+    }
 }

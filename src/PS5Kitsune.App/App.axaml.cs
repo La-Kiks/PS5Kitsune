@@ -39,7 +39,7 @@ public sealed partial class App : Application
             var dialogs = new AvaloniaDialogService(() => window);
             var pages = new PageFactory(sessions, navigator, dialogs, settings, new AvaloniaUiDispatcher(), platform);
             window.DataContext = new MainWindowViewModel(sessions, navigator, platform, dialogs);
-            navigator.GoHome(pages.Home());
+            navigator.GoHome(pages.Start());
             desktop.MainWindow = window;
             desktop.Exit += (_, _) => sessions.Dispose();
         }

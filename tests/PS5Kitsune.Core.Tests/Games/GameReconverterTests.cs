@@ -16,6 +16,8 @@ public sealed class GameReconverterTests : IDisposable
     private readonly AnyPS5TestSetup _setup;
     private readonly GameImporter _importer;
     private readonly GameLibrary _library;
+    private readonly FakeGameLauncher _launcher = new();
+    private readonly RunningGames _running;
     private readonly GameReconverter _reconverter;
     private readonly CancellationTokenSource _cancellation = new();
     private int _relinkerExitCode;
@@ -34,8 +36,9 @@ public sealed class GameReconverterTests : IDisposable
             new GameSourceResolver(_setup.Layout), new GameValidator(_ => long.MaxValue),
             _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time, NullLogger<GameImporter>.Instance);
         _library = new GameLibrary(_setup.Layout, _setup.Platform, _setup.Time, NullLogger<GameLibrary>.Instance);
+        _running = new RunningGames(_launcher, NullLogger<RunningGames>.Instance);
         _reconverter = new GameReconverter(
-            _library, _setup.Paths, _setup.Profile, _setup.Installer, _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time,
+            _library, _running, _setup.Paths, _setup.Profile, _setup.Installer, _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time,
             NullLogger<GameReconverter>.Instance);
     }
 
@@ -143,6 +146,23 @@ public sealed class GameReconverterTests : IDisposable
         Assert.Equal(previous.AddedAt, record.AddedAt);
         Assert.Equal(previous.Settings, record.Settings);
         Assert.False(GameLibrary.NeedsReconversion(record, _setup.Installer.ReadRecord()!));
+    }
+
+    [Fact]
+    public async Task A_running_game_is_refused_with_nothing_changed()
+    {
+        await AddDoomConvertedWithTheBuildAsync();
+        var process = _launcher.Launch(new GameLaunchRequest(Game.Executable, Game.Root, Game.Logs));
+        await _running.RecordAsync(Game, process, Game.Executable);
+        var before = ConvertedGames.Snapshot(Game.Root);
+        var callsBefore = _setup.Runner.Calls.Count;
+
+        var refused = await Assert.ThrowsAsync<GameRunningException>(ReconvertAsync);
+
+        Assert.Equal("DOOM", refused.Name);
+        Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
+        Assert.Equal(callsBefore, _setup.Runner.Calls.Count);
+        Assert.False(GameLock.IsHeld(Game));
     }
 
     [Fact]
@@ -285,13 +305,13 @@ public sealed class GameReconverterTests : IDisposable
         await AddDoomConvertedWithTheBuildAsync();
         var before = ConvertedGames.Snapshot(Game.Root);
 
-        ReconvertInProgressException refused;
-        using (ReconvertLock.TryAcquire(Game))
+        GameBusyException refused;
+        using (GameLock.TryAcquireNow(Game))
         {
-            refused = await Assert.ThrowsAsync<ReconvertInProgressException>(ReconvertAsync);
+            refused = await Assert.ThrowsAsync<GameBusyException>(ReconvertAsync);
         }
 
-        Assert.Equal("A Reconvert of PPSA99666 is already in progress.", refused.Message);
+        Assert.Equal("Another PS5Kitsune action is using PPSA99666. Try again when it finishes.", refused.Message);
         Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
     }
 
@@ -304,9 +324,9 @@ public sealed class GameReconverterTests : IDisposable
         var before = ConvertedGames.Snapshot(Game.Root);
 
         // The reader's hold on the lock while it restores, simulated.
-        using (ReconvertLock.TryAcquire(Game))
+        using (GameLock.TryAcquireNow(Game))
         {
-            await Assert.ThrowsAsync<ReconvertInProgressException>(ReconvertAsync);
+            await Assert.ThrowsAsync<GameBusyException>(ReconvertAsync);
         }
 
         Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
@@ -335,7 +355,7 @@ public sealed class GameReconverterTests : IDisposable
         Assert.Same(failure.RestoreFailure, failure.InnerException);
         Assert.Equal(callsBefore, _setup.Runner.Calls.Count);
         Assert.True(Directory.Exists(Game.Previous));
-        Assert.False(ReconvertLock.IsHeld(Game));
+        Assert.False(GameLock.IsHeld(Game));
     }
 
     [Fact]

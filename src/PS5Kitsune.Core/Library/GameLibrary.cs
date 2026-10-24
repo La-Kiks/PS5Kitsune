@@ -8,9 +8,8 @@ namespace PS5Kitsune.Core.Library;
 public sealed class GameNotFoundException(string message) : Exception(message);
 
 /// <summary>
-/// Games added under &lt;root&gt;/games, looked up by title ID. library.json comes with milestone 7.
-/// Reading a game first restores a Reconvert that did not finish, so a half-built conversion is never used; a Reconvert still
-/// running (its lock is held) is left alone.
+/// Games added under &lt;root&gt;/games, looked up by title ID.
+/// Reading a game first restores a Reconvert that did not finish, so a half-built conversion is never used; a game whose lock is held (a Reconvert or another action is running) is left alone.
 /// </summary>
 public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, TimeProvider time, ILogger<GameLibrary> logger)
 {
@@ -88,16 +87,44 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
             || converted.Commit != install.Commit;
     }
 
-    public Task MarkPlayedAsync(GameLayout game, GameRecord record, CancellationToken cancellationToken)
+    /// <summary>Re-reads game.json and writes it with lastPlayedAt set, so a change made since the game was found is kept.</summary>
+    /// <returns>The record written.</returns>
+    public async Task<GameRecord> MarkPlayedAsync(GameLayout game, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(game);
-        ArgumentNullException.ThrowIfNull(record);
-        return GameRecordStore.WriteAsync(game.RecordFile, record with { LastPlayedAt = time.GetLocalNow() }, cancellationToken);
+        var played = (GameRecordStore.Read(game.RecordFile) ?? throw NotFound(game.TitleId)) with { LastPlayedAt = time.GetLocalNow() };
+        await GameRecordStore.WriteAsync(game.RecordFile, played, cancellationToken).ConfigureAwait(false);
+        return played;
     }
+
+    /// <summary>Reads a game whose lock the caller holds: restores an interrupted Reconvert first (Find would skip it, the lock being held).</summary>
+    /// <exception cref="GameNotFoundException">No game.json.</exception>
+    /// <exception cref="InvalidGameRecordException">The game.json is malformed.</exception>
+    /// <exception cref="IOException">The restore failed; the next read retries it.</exception>
+    /// <exception cref="UnauthorizedAccessException">The restore was denied; the next read retries it.</exception>
+    public GameRecord ReadHeld(GameLayout game)
+    {
+        ArgumentNullException.ThrowIfNull(game);
+        if (ConversionBackup.Restore(game))
+        {
+            var root = game.Root;
+            LogRestored(root);
+        }
+
+        return GameRecordStore.Read(game.RecordFile) ?? throw NotFound(game.TitleId);
+    }
+
+    /// <summary>True when at least one game folder has a game.json; reads nothing and restores nothing.</summary>
+    public bool HasGames() =>
+        Directory.Exists(layout.Games)
+        && Directory.EnumerateDirectories(layout.Games).Any(directory =>
+            Path.GetFileName(directory) is var titleId
+            && GameValidator.IsValidTitleId(titleId)
+            && File.Exists(new GameLayout(directory, titleId, platform).RecordFile));
 
     private GameNotFoundException NotFound(string titleId) => new($"No game {titleId} in {layout.Games}.");
 
-    // A Reconvert in progress holds the lock: its set-aside conversion is not interrupted, so it is left alone. The reader holds the
+    // An action in progress holds the lock (a Reconvert's set-aside conversion is not interrupted), so the game is left alone. The reader holds the
     // lock while it restores, so a Reconvert cannot start in between; with nothing set aside, no lock file is opened.
     private void RestoreInterrupted(GameLayout game)
     {
@@ -106,7 +133,7 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
             return;
         }
 
-        using var held = ReconvertLock.TryAcquire(game);
+        using var held = GameLock.TryAcquireNow(game);
         if (held is not null && ConversionBackup.Restore(game))
         {
             var root = game.Root;
