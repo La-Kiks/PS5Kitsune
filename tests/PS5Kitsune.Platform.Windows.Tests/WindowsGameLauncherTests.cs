@@ -182,5 +182,22 @@ public sealed class WindowsGameLauncherTests : IDisposable
         Assert.Equal(1, await game.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(10), cancellationToken));
     }
 
+    [Fact]
+    public async Task Cancelling_a_stop_leaves_the_game_running()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var patient = new WindowsGameLauncher(NullLogger<WindowsGameLauncher>.Instance) { StopGrace = TimeSpan.FromSeconds(10) };
+        using var launched = patient.Launch(new GameLaunchRequest(Ping, _temp.Path, Logs) { Arguments = ["-n", "30", "127.0.0.1"] });
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => launched.StopAsync(cancellation.Token));
+
+        using var attached = _launcher.Attach(RecordOf(launched, Ping));
+        Assert.NotNull(attached);
+        await attached.StopAsync(cancellationToken);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

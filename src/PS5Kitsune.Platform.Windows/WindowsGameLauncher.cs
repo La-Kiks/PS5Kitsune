@@ -47,7 +47,17 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
 
         CloseHandle(process.Thread);
         var handle = new SafeProcessHandle(process.Process, ownsHandle: true);
-        var startedAt = CreationTime(handle);
+        DateTimeOffset startedAt;
+        try
+        {
+            startedAt = CreationTime(handle);
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
+
         LogLaunched(request.Executable, process.ProcessId, logFile);
         return new LaunchedGame(handle, process.ProcessId, logFile, startedAt, StopGrace);
     }
@@ -57,11 +67,21 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         ArgumentNullException.ThrowIfNull(record);
         var process = OpenProcess(ProcessQueryLimitedInformation | Synchronize | ProcessTerminate, inheritHandle: false, record.ProcessId);
         // Not opened: the process is gone, or belongs to someone else (another user, an elevated process): not our game either way.
-        if (process.IsInvalid
-            || !GetExitCodeProcess(process, out var exitCode) || exitCode != StillActive
-            || CreationTime(process) != record.StartedAt
-            || ImagePath(process) is not { } path
-            || !string.Equals(Path.GetFullPath(path), Path.GetFullPath(record.Executable), StringComparison.OrdinalIgnoreCase))
+        bool ours;
+        try
+        {
+            ours = !process.IsInvalid
+                && GetExitCodeProcess(process, out var exitCode) && exitCode == StillActive
+                && CreationTime(process) == record.StartedAt
+                && ImagePath(process) is { } path
+                && string.Equals(Path.GetFullPath(path), Path.GetFullPath(record.Executable), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (exception is Win32Exception or ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            ours = false;
+        }
+
+        if (!ours)
         {
             process.Dispose();
             return null;
@@ -256,12 +276,15 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         {
             CloseWindows();
             var exit = WaitForExitAsync(cancellationToken);
-            if (await Task.WhenAny(exit, Task.Delay(stopGrace, cancellationToken)).ConfigureAwait(false) != exit
-                && !TerminateProcess(process, 1))
+            var finished = await Task.WhenAny(exit, Task.Delay(stopGrace, cancellationToken)).ConfigureAwait(false) == exit;
+
+            // A cancelled delay also completes WhenAny: cancelling only abandons the wait, it never ends the game.
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!finished && !TerminateProcess(process, 1))
             {
                 var error = Marshal.GetLastPInvokeError();
                 // Access denied once the process has already exited: nothing left to stop.
-                if (!exit.IsCompleted)
+                if (!exit.IsCompleted && !(GetExitCodeProcess(process, out var code) && code != StillActive))
                 {
                     throw new Win32Exception(error);
                 }
