@@ -213,6 +213,56 @@ public sealed class GameSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Reset_keeps_a_hidden_disable_dozen()
+    {
+        _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Radeon);
+        var page = await OpenAsync(new GameSettings { DisableDozen = true, Language = 2 });
+        Assert.False(page.ShowDisableDozen);
+
+        page.ResetCommand.Execute(null);
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.True(Saved().DisableDozen);
+        Assert.Equal(1, Saved().Language);
+    }
+
+    [Fact]
+    public async Task Reset_clears_a_shown_disable_dozen()
+    {
+        _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Dozen, Radeon);
+        var page = await OpenAsync(new GameSettings { DisableDozen = true });
+        Assert.True(page.ShowDisableDozen);
+
+        page.ResetCommand.Execute(null);
+
+        Assert.False(page.DisableDozen);
+    }
+
+    [Fact]
+    public async Task A_probe_that_throws_ends_the_detection_as_a_failure()
+    {
+        _probe.Failure = new InvalidOperationException("boom");
+
+        var page = await OpenAsync();
+
+        Assert.Equal("Could not detect GPUs: boom", page.GpuStatus);
+        Assert.Equal(["Automatic"], page.Gpus.Select(choice => choice.Label));
+        Assert.True(page.CanEdit);
+    }
+
+    [Fact]
+    public async Task A_save_that_fails_says_why()
+    {
+        var page = await OpenAsync();
+        await File.WriteAllTextAsync(_library.Game("PPSA99666").RecordFile, "{", TestContext.Current.CancellationToken);
+        page.Overlay = true;
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Could not save the settings of DOOM: ", page.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task An_unreadable_game_says_why()
     {
         var page = await OpenAsync(titleId: "PPSA00009");

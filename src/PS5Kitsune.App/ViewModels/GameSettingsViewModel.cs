@@ -156,7 +156,16 @@ public sealed partial class GameSettingsViewModel(
         }
 
         IsLoading = false;
-        var outcome = await Task.Run(() => probe.RunAsync()).ConfigureAwait(true);
+        VulkanProbeOutcome outcome;
+        try
+        {
+            outcome = await Task.Run(() => probe.RunAsync()).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            outcome = VulkanProbeOutcome.Failed(exception.Message);
+        }
+
         _detectionDone = outcome.Report is not null;
         if (outcome.Report is { } report)
         {
@@ -203,7 +212,8 @@ public sealed partial class GameSettingsViewModel(
         SelectedPlayGo = PlayGoChoices.First(choice => choice.Value == settings.PlayGoUnlistedChunks);
     }
 
-    // A hidden Disable Dozen keeps its saved value.
+    // A hidden Disable Dozen keeps its saved value because nothing writes DisableDozen while it is hidden;
+    // the `with` on _saved keeps nothing itself, as every property is overwritten.
     private GameSettings Current() => _saved with
     {
         Gpu = SelectedGpu?.Name,
@@ -247,7 +257,8 @@ public sealed partial class GameSettingsViewModel(
     private void Reset()
     {
         Notice = null;
-        Apply(new GameSettings());
+        // A hidden Disable Dozen is not the user's to reset: keep its saved value.
+        Apply(new GameSettings { DisableDozen = !ShowDisableDozen && DisableDozen });
     }
 
     [RelayCommand]

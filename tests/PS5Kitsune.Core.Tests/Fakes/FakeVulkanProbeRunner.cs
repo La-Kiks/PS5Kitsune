@@ -10,11 +10,18 @@ internal sealed class FakeVulkanProbeRunner : IVulkanProbeRunner
         new VulkanProbeReport(true, null, [new VulkanGpu("AMD Radeon(TM) Graphics", 0x1002, "integrated", "1.3.280", "AmdProprietary", "AMD proprietary driver", "25.10.1", true, true)]),
         null);
 
+    public Exception? Failure { get; set; }
+
     public int Runs { get; private set; }
 
     public Task<VulkanProbeOutcome> RunAsync(CancellationToken cancellationToken = default)
     {
         Runs++;
+        if (Failure is not null)
+        {
+            throw Failure;
+        }
+
         return Task.FromResult(Outcome);
     }
 }
