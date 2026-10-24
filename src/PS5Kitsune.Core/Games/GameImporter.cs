@@ -68,6 +68,7 @@ public sealed partial class GameImporter(
         PreparedGame game, bool toIntel, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(game);
+        ObjectDisposedException.ThrowIf(game.IsDisposed, game);
         if (!installer.IsInstalled())
         {
             throw new AnyPS5NotInstalledException();

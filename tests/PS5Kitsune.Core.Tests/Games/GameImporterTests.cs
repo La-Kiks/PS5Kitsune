@@ -194,4 +194,13 @@ public sealed class GameImporterTests : IDisposable
     }
 
     public void Dispose() => _temp.Dispose();
+    [Fact]
+    public async Task A_disposed_game_is_refused()
+    {
+        await _setup.InstallAsync();
+        var game = await _importer.PrepareAsync(WriteZip(), TestContext.Current.CancellationToken);
+        await game.DisposeAsync();
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => _importer.AddAsync(game, false, cancellationToken: TestContext.Current.CancellationToken));
+    }
 }
