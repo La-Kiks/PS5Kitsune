@@ -1,8 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
-using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
-using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.Cli;
@@ -17,20 +15,12 @@ internal static class RunCommand
         {
             var installer = services.GetRequiredService<AnyPS5Installer>();
             installer.MigrateLegacyInstall();
-            if (!installer.IsInstalled())
-            {
-                throw new AnyPS5NotInstalledException();
-            }
+            var player = services.GetRequiredService<GamePlayer>();
 
-            var library = services.GetRequiredService<GameLibrary>();
-            var (game, record) = library.Find(parseResult.GetRequiredValue(titleIdArgument));
-            if (GameLock.IsHeld(game))
-            {
-                var reconvertedTitleId = record.TitleId;
-                logger.ReconvertInProgress(reconvertedTitleId);
-                return 1;
-            }
-
+            // A running game, a busy game or a missing executable throws: CommandHost prints the message and exits with 1.
+            var playing = await player.LaunchAsync(parseResult.GetRequiredValue(titleIdArgument), cancellationToken);
+            var record = playing.Record;
+            using var launched = playing.Process;
             if (installer.ReadRecord() is { } install && GameLibrary.NeedsReconversion(record, install))
             {
                 var convertedWith = ConversionLabels.Of(record.ConvertedWith);
@@ -38,28 +28,21 @@ internal static class RunCommand
                 var titleId = record.TitleId;
                 logger.NeedsReconversion(convertedWith, inUse, titleId);
             }
-            var executable = Path.Combine(game.Root, record.Executable);
-            if (!File.Exists(executable))
-            {
-                logger.ExecutableMissing(executable);
-                return 1;
-            }
 
-            await library.MarkPlayedAsync(game, cancellationToken);
-            using var launched = services.GetRequiredService<IGameLauncher>().Launch(new GameLaunchRequest(executable, game.Root, game.Logs));
             logger.GameStarted(record.Name, launched.ProcessId, launched.LogFile);
-
             var exit = launched.WaitForExitAsync(cancellationToken);
             try
             {
                 await LogTail.FollowAsync(launched.LogFile, Console.WriteLine, exit, cancellationToken);
                 var exitCode = await exit;
+                player.Forget(playing);
                 logger.GameExited(record.Name, exitCode);
                 return exitCode;
             }
             catch (OperationCanceledException)
             {
-                // Ctrl+C stops following the log, not the game. Let the wait unregister before the handle is released.
+                // Ctrl+C stops following the log, not the game; running.json stays, so the app finds the game.
+                // Let the wait unregister before the handle is released.
                 await exit.ContinueWith(static _ => { }, TaskScheduler.Default);
                 logger.StoppedFollowing(record.Name, launched.ProcessId, launched.LogFile);
                 return 130;

@@ -52,9 +52,6 @@ internal static partial class CliLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Verdict: red. Not playable yet: wait for an AnyPS5 update. The game stays added and will need a reconversion.")]
     public static partial void VerdictRed(this ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "{Executable} is missing; an antivirus may have deleted it. Add an exclusion for the games folder, delete the game folder, then add the game again.")]
-    public static partial void ExecutableMissing(this ILogger logger, string executable);
-
     [LoggerMessage(Level = LogLevel.Information, Message = "{Name} started (PID {ProcessId}). Log: {LogFile}")]
     public static partial void GameStarted(this ILogger logger, string name, int processId, string logFile);
 
@@ -121,6 +118,15 @@ internal static partial class CliLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Converted with {ConvertedWith}; the AnyPS5 in use is {InUse}. Run ps5kitsune reconvert {TitleId}.")]
     public static partial void NeedsReconversion(this ILogger logger, string convertedWith, string inUse, string titleId);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "A Reconvert of {TitleId} is in progress; run the game when it finishes.")]
-    public static partial void ReconvertInProgress(this ILogger logger, string titleId);
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Line}")]
+    public static partial void GameListed(this ILogger logger, string line);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "No games. Add one with: ps5kitsune add <folder>")]
+    public static partial void NoGames(this ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Nothing was removed.")]
+    public static partial void NothingRemoved(this ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Name} ({TitleId}) is removed: {Directory} is deleted.")]
+    public static partial void GameRemoved(this ILogger logger, string name, string titleId, string directory);
 }
