@@ -6,7 +6,7 @@ using PS5Kitsune.Core.Profiles;
 namespace PS5Kitsune.Core.Tools;
 
 /// <summary>
-/// A tool distributed as a zip archive. Installing downloads and verifies the archive, extracts it
+/// A tool distributed as an archive, a zip unless <see cref="ExtractAsync"/> is overridden. Installing downloads and verifies the archive, extracts it
 /// beside the final folder, then swaps it in, so an interrupted install never leaves a half-extracted tool.
 /// A marker file records the archive hash: <see cref="IsInstalled"/> compares it with the profile.
 /// </summary>
@@ -58,8 +58,7 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
             Directory.Delete(staging, recursive: true);
         }
 
-        // ExtractToDirectory rejects entries that would land outside the target folder.
-        await ZipFile.ExtractToDirectoryAsync(archive, staging, cancellationToken).ConfigureAwait(false);
+        await ExtractAsync(archive, staging, cancellationToken).ConfigureAwait(false);
         PrepareExtracted(staging);
         await File.WriteAllTextAsync(
             Path.Combine(staging, MarkerFileName),
@@ -73,6 +72,11 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
 
         Directory.Move(staging, InstallDirectory);
     }
+
+    /// <summary>Extracts the downloaded archive into the staging folder.</summary>
+    protected virtual Task ExtractAsync(string archive, string directory, CancellationToken cancellationToken) =>
+        // ExtractToDirectory rejects entries that would land outside the target folder.
+        ZipFile.ExtractToDirectoryAsync(archive, directory, cancellationToken);
 
     /// <summary>Adjusts the extracted files in the staging folder, before the marker is written and the folder is swapped in.</summary>
     protected virtual void PrepareExtracted(string directory)

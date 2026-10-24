@@ -8,6 +8,7 @@ using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Downloads;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.IO;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Processes;
@@ -70,6 +71,18 @@ public static class ServiceCollectionExtensions
         AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);
         AddTool<MinGitTool>(services, profile, MinGitTool.ToolId);
         AddTool<WinLibsTool>(services, profile, WinLibsTool.ToolId);
+        AddTool<MesaTool>(services, profile, MesaTool.ToolId);
+        if (profile.Tools.ContainsKey(MesaTool.ToolId))
+        {
+            services.AddSingleton<ILavapipe>(provider => provider.GetRequiredService<MesaTool>());
+        }
+
+        if (profile.Fonts.Count > 0)
+        {
+            services.AddSingleton<FontPack>();
+            services.AddSingleton<IFontPack>(provider => provider.GetRequiredService<FontPack>());
+        }
+
         services.AddSingleton<BuildToolsSummary>();
         services.AddSingleton<BuildEnvironment>();
         services.AddSingleton<IFreeSpace, DriveFreeSpace>();

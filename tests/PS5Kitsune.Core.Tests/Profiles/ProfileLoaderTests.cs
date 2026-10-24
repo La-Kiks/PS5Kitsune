@@ -237,5 +237,56 @@ public sealed class ProfileLoaderTests
         Assert.Contains("size", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Embedded_profile_pins_mesa_and_the_fonts()
+    {
+        var profile = ProfileLoader.LoadEmbedded();
+
+        var mesa = profile.Tools["mesa"];
+        Assert.Equal("26.2.4", mesa.Version);
+        Assert.Equal("351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695", mesa.Sha256);
+        Assert.Equal(24, profile.Fonts.Count);
+        Assert.Equal(86_522_532, profile.Fonts.Sum(font => font.Size));
+        Assert.Contains(profile.Fonts, font => font.Name == "NotoSansCJK-Regular.ttc");
+    }
+
+    [Theory]
+    [InlineData("fonts/NotoSans-Regular.ttf")]
+    [InlineData(@"fonts\NotoSans-Regular.ttf")]
+    [InlineData("..")]
+    [InlineData("")]
+    public void Rejects_a_font_name_that_is_not_a_plain_file_name(string name)
+    {
+        Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "fonts": [ { "name": "{{name.Replace(@"\", @"\\", StringComparison.Ordinal)}}", "url": "https://example.test/f.ttf", "sha256": "{{new string('a', 64)}}", "size": 1 } ]
+            }
+            """));
+    }
+
+    [Fact]
+    public void Rejects_a_font_listed_twice()
+    {
+        var font = $$"""{ "name": "NotoSans-Regular.ttf", "url": "https://example.test/f.ttf", "sha256": "{{new string('a', 64)}}", "size": 1 }""";
+        Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "fonts": [ {{font}}, {{font}} ]
+            }
+            """));
+    }
+
+    [Fact]
+    public void Rejects_a_font_over_plain_http()
+    {
+        Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "fonts": [ { "name": "f.ttf", "url": "http://example.test/f.ttf", "sha256": "{{new string('a', 64)}}", "size": 1 } ]
+            }
+            """));
+    }
+
     private static AnyPS5Profile Load(string json) => ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes(json)));
 }

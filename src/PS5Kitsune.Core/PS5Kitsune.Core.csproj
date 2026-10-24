@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="NLog.Extensions.Logging" />
+    <PackageReference Include="SharpCompress" />
     <PackageReference Include="Silk.NET.Vulkan" />
   </ItemGroup>
 

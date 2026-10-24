@@ -24,6 +24,9 @@ public sealed class DataLayout(string root)
 
     public string Games => Path.Combine(Root, "games");
 
+    /// <summary>The Noto fonts, shared by every game through ANYPS5_SYSTEM_FONTS.</summary>
+    public string Fonts => Path.Combine(Root, "fonts");
+
     /// <summary>Zips of games extracted before they are copied.</summary>
     public string Staging => Path.Combine(Downloads, "staging");
 
