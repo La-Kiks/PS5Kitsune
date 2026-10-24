@@ -37,7 +37,7 @@ public sealed partial class CliWrapProcessRunner(ILogger<CliWrapProcessRunner> l
         // So the command runs without CliWrap's token, and cancellation kills the whole tree.
         var task = command.ExecuteAsync(CancellationToken.None);
 
-        // Before the tool starts its own children, so they join the job too (a child started in the first microseconds escapes).
+        // As early as possible, so the processes the tool starts afterwards join the job too (a child started in the first microseconds escapes).
         job?.Assign(task.ProcessId);
         CommandResult result;
         using (cancellationToken.Register(() => KillTree(spec.FileName, task.ProcessId)))

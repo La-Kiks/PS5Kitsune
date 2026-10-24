@@ -8,7 +8,7 @@ namespace PS5Kitsune.Core.Library;
 public sealed class GameNotFoundException(string message) : Exception(message);
 
 /// <summary>
-/// Games added under &lt;root&gt;/games, looked up by title ID. library.json comes with milestone 7.
+/// Games added under &lt;root&gt;/games, looked up by title ID.
 /// Reading a game first restores a Reconvert that did not finish, so a half-built conversion is never used; a game whose lock is held (a Reconvert or another action is running) is left alone.
 /// </summary>
 public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, TimeProvider time, ILogger<GameLibrary> logger)
