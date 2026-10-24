@@ -124,6 +124,7 @@ public sealed class GameViewModelTests : IDisposable
         await FinishedAsync(page);
 
         await page.LaunchAgainCommand.ExecuteAsync(null);
+        Assert.Null(page.Message);
 
         Assert.Equal(2, _library.Launcher.Launches.Count);
         Assert.Equal("Running (PID 4813)", page.StatusText);
