@@ -17,8 +17,9 @@ internal static class RunCommand
             installer.MigrateLegacyInstall();
             var player = services.GetRequiredService<GamePlayer>();
 
-            // A running game, a busy game or a missing executable throws: CommandHost prints the message and exits with 1.
-            var playing = await player.LaunchAsync(parseResult.GetRequiredValue(titleIdArgument), cancellationToken);
+            // Ctrl+C during a download cancels the launch; LavapipeUnavailableException is printed by CommandHost (exit code 1).
+            // A running game, a busy game or a missing executable throws too: CommandHost prints the message and exits with 1.
+            var playing = await player.LaunchAsync(parseResult.GetRequiredValue(titleIdArgument), new ConsoleLaunchProgress(), cancellationToken);
             var record = playing.Record;
             using var launched = playing.Process;
             if (installer.ReadRecord() is { } install && GameLibrary.NeedsReconversion(record, install))
@@ -27,6 +28,11 @@ internal static class RunCommand
                 var inUse = ConversionLabels.Of(install);
                 var titleId = record.TitleId;
                 logger.NeedsReconversion(convertedWith, inUse, titleId);
+            }
+
+            if (playing.FontsWarning is { } warning)
+            {
+                logger.FontsMissing(warning);
             }
 
             logger.GameStarted(record.Name, launched.ProcessId, launched.LogFile);

@@ -24,6 +24,7 @@ var rootCommand = new RootCommand("PS5Kitsune: installer and launcher for AnyPS5
     ReconvertCommand.Create(rootOption),
     RunCommand.Create(rootOption),
     ListCommand.Create(rootOption),
+    SettingsCommand.Create(rootOption),
     RemoveCommand.Create(rootOption),
     ToolsCommand.Create(rootOption),
 };
