@@ -49,6 +49,7 @@
                     <Button.Flyout>
                       <MenuFlyout>
                         <MenuItem Header="Launch" Command="{Binding Owner.LaunchCommand}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Settings" Command="{Binding Owner.SettingsCommand}" CommandParameter="{Binding}" />
                         <MenuItem Header="Open folder" Command="{Binding Owner.OpenFolderCommand}" CommandParameter="{Binding}" />
                         <MenuItem Header="View last log" Command="{Binding Owner.ViewLastLogCommand}" CommandParameter="{Binding}" />
                         <MenuItem Header="Reconvert" Command="{Binding Owner.ReconvertCommand}" CommandParameter="{Binding}" />

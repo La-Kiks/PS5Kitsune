@@ -46,4 +46,7 @@ public interface IPages
     /// <summary>A game to launch: the page downloads what it needs, launches it, then follows it.</summary>
     /// <param name="firstLaunch">The game was never played before: shaders are prepared, so it may stutter.</param>
     object Launch(GameLayout game, string name, bool firstLaunch);
+
+    /// <summary>A game's settings; Back returns to the page that opened it.</summary>
+    object GameSettings(string titleId);
 }

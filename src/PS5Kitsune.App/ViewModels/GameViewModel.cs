@@ -282,4 +282,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
 
     [RelayCommand]
     private void OpenFolder() => Message = PathOpener.TryOpen(_platform, _game.Root);
+
+    [RelayCommand]
+    private void OpenSettings() => _navigator.GoTo(_pages.GameSettings(_game.TitleId));
 }

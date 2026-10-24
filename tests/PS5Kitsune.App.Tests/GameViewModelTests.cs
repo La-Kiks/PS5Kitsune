@@ -161,6 +161,16 @@ public sealed class GameViewModelTests : IDisposable
         Assert.Equal([_library.Game("PPSA99666").Root], _library.Platform.OpenedPaths);
     }
 
+    [Fact]
+    public async Task Settings_opens_the_game_settings()
+    {
+        var (page, _) = await LaunchAsync();
+
+        page.OpenSettingsCommand.Execute(null);
+
+        Assert.Equal("settings:PPSA99666", _navigator.CurrentPage);
+    }
+
     private async Task<GameViewModel> OpenLaunchPageAsync(bool firstLaunch = true)
     {
         await _library.AddAsync("PPSA99666", "DOOM");

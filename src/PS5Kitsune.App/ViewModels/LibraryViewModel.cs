@@ -143,6 +143,9 @@ public sealed partial class LibraryViewModel(
     [RelayCommand]
     private void OpenFolder(GameTileViewModel tile) => Message = PathOpener.TryOpen(platform, tile.Entry.Game.Root);
 
+    [RelayCommand]
+    private void Settings(GameTileViewModel tile) => navigator.GoTo(pages.GameSettings(tile.TitleId));
+
     private static bool CanViewLastLog(GameTileViewModel? tile) => tile?.HasLog == true;
 
     // Log names sort by date, so the greatest is the newest.

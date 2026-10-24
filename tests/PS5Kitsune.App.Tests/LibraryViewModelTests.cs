@@ -284,5 +284,16 @@ public sealed class LibraryViewModelTests : IDisposable
         Assert.False(LibraryViewModel.OpensFirst(_library.Installer, _library.Library));
     }
 
+    [Fact]
+    public async Task Settings_opens_the_game_settings()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        var page = await CreateAsync();
+
+        page.SettingsCommand.Execute(Tile(page, "Alpha"));
+
+        Assert.Equal("settings:PPSA00001", _navigator.CurrentPage);
+    }
+
     public void Dispose() => _library.Dispose();
 }

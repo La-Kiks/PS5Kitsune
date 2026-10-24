@@ -198,6 +198,8 @@ internal sealed class FakePages : IPages
     public object Game(PlayingGame playing, bool firstLaunch) => $"game:{playing.Record.TitleId}";
 
     public object Launch(GameLayout game, string name, bool firstLaunch) => $"launch:{game.TitleId}";
+
+    public object GameSettings(string titleId) => $"settings:{titleId}";
 }
 
 internal sealed class FakeTool(string id, bool installed) : IPortableTool

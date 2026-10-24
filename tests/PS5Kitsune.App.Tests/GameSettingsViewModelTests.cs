@@ -1,0 +1,225 @@
+using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
+using PS5Kitsune.Core.Tests.Fakes;
+
+namespace PS5Kitsune.App.Tests;
+
+public sealed class GameSettingsViewModelTests : IDisposable
+{
+    private static readonly VulkanGpu Radeon = new("AMD Radeon(TM) Graphics", 0x1002, "integrated", "1.3.280", "AmdProprietary", "AMD proprietary driver", "25.10.1", true, true);
+    private static readonly VulkanGpu IrisXe = new("Intel(R) Iris(R) Xe Graphics", 0x8086, "integrated", "1.3.289", "IntelProprietaryWindows", "Intel Corporation", "101.5762", false, true);
+    private static readonly VulkanGpu Dozen = new("Microsoft Direct3D12 (Intel(R) Iris(R) Xe Graphics)", 0x8086, "integrated", "1.2.335", "MesaDozen", "Dozen", "26.0", false, false);
+
+    private readonly TestLibrary _library = new();
+    private readonly FakeVulkanProbeRunner _probe = new();
+    private readonly FakeDialogs _dialogs = new();
+    private readonly Navigator _navigator = new();
+
+    private static VulkanProbeOutcome Probe(VulkanProbeStatus status, params VulkanGpu[] gpus) => new(status, new VulkanProbeReport(true, null, gpus), null);
+
+    private async Task<GameSettingsViewModel> OpenAsync(GameSettings? saved = null, string titleId = "PPSA99666")
+    {
+        if (!File.Exists(_library.Game("PPSA99666").RecordFile))
+        {
+            await _library.AddAsync("PPSA99666", "DOOM");
+        }
+
+        if (saved is not null)
+        {
+            await _library.Player.SaveSettingsAsync("PPSA99666", saved, TestContext.Current.CancellationToken);
+        }
+
+        var page = new GameSettingsViewModel(titleId, _library.Player, _library.Library, _library.Running, _probe, _dialogs, _navigator);
+        _navigator.GoTo("library");
+        _navigator.GoTo(page);
+        await page.Loading;
+        return page;
+    }
+
+    private GameSettings Saved() => _library.Library.Find("PPSA99666").Record.Settings;
+
+    [Fact]
+    public async Task Shows_the_saved_settings_and_the_detected_gpus()
+    {
+        _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Radeon, IrisXe);
+
+        var page = await OpenAsync(new GameSettings { Gpu = IrisXe.Name, Language = 2 });
+
+        Assert.Equal("DOOM settings", page.Title);
+        Assert.Equal(["Automatic", "AMD Radeon(TM) Graphics", "Intel(R) Iris(R) Xe Graphics (not supported)"], page.Gpus.Select(choice => choice.Label));
+        Assert.Equal(IrisXe.Name, page.SelectedGpu?.Name);
+        Assert.Equal(2, page.SelectedLanguage.Number);
+        Assert.Equal("fifo", page.SelectedPresentMode.Value);
+        Assert.Null(page.GpuStatus);
+        Assert.True(page.CanEdit);
+        Assert.False(page.ShowDisableDozen);
+    }
+
+    [Fact]
+    public async Task A_saved_gpu_that_is_not_detected_is_kept_and_marked()
+    {
+        _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Radeon);
+
+        var page = await OpenAsync(new GameSettings { Gpu = "GeForce" });
+
+        Assert.Equal(["Automatic", "AMD Radeon(TM) Graphics", "GeForce (not found)"], page.Gpus.Select(choice => choice.Label));
+        Assert.Equal("GeForce", page.SelectedGpu?.Name);
+    }
+
+    [Fact]
+    public async Task A_failed_probe_keeps_automatic_and_the_saved_gpu()
+    {
+        _probe.Outcome = VulkanProbeOutcome.Failed("the driver crashed");
+
+        var page = await OpenAsync(new GameSettings { Gpu = "GeForce" });
+
+        Assert.Equal(["Automatic", "GeForce"], page.Gpus.Select(choice => choice.Label));
+        Assert.Equal("Could not detect GPUs: the driver crashed", page.GpuStatus);
+        Assert.True(page.CanEdit);
+    }
+
+    [Theory]
+    [InlineData(VulkanProbeStatus.Succeeded, true, true)]
+    [InlineData(VulkanProbeStatus.Succeeded, false, false)]
+    [InlineData(VulkanProbeStatus.SucceededWithoutDozen, false, true)]
+    public async Task Disable_dozen_shows_when_dozen_is_there_with_another_driver(VulkanProbeStatus status, bool dozenListed, bool shown)
+    {
+        _probe.Outcome = dozenListed ? Probe(status, Dozen, Radeon) : Probe(status, Radeon);
+
+        var page = await OpenAsync();
+
+        Assert.Equal(shown, page.ShowDisableDozen);
+    }
+
+    [Fact]
+    public async Task Lavapipe_disables_the_gpu_and_dozen_choices()
+    {
+        var page = await OpenAsync();
+        Assert.True(page.CanChooseGpu);
+
+        page.Lavapipe = true;
+
+        Assert.False(page.CanChooseGpu);
+    }
+
+    [Fact]
+    public async Task The_overlay_position_is_chosen_only_with_the_overlay()
+    {
+        var page = await OpenAsync();
+        Assert.False(page.CanChooseOverlayPosition);
+
+        page.Overlay = true;
+
+        Assert.True(page.CanChooseOverlayPosition);
+    }
+
+    [Fact]
+    public async Task A_running_game_is_read_only()
+    {
+        await _library.AddAsync("PPSA99666", "DOOM");
+        await _library.Player.LaunchAsync("PPSA99666", TestContext.Current.CancellationToken);
+
+        var page = await OpenAsync();
+
+        Assert.True(page.IsRunning);
+        Assert.False(page.CanEdit);
+        Assert.False(page.SaveCommand.CanExecute(null));
+        Assert.Equal("Running: changes can't be saved until it stops", page.RunningNotice);
+    }
+
+    [Fact]
+    public async Task Save_writes_the_settings()
+    {
+        var page = await OpenAsync();
+        page.Overlay = true;
+        page.SelectedOverlayPosition = page.OverlayPositions[3];
+        page.SelectedPresentMode = page.PresentModes[3];
+        page.SelectedPlayGo = page.PlayGoChoices[1];
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("Saved", page.Notice);
+        Assert.Null(page.Message);
+        Assert.Equal(new GameSettings { Overlay = true, OverlayPosition = "br", PresentMode = "immediate", PlayGoUnlistedChunks = "installed" }, Saved());
+    }
+
+    [Fact]
+    public async Task Reset_fills_the_defaults_without_saving()
+    {
+        var page = await OpenAsync(new GameSettings { Language = 2, Lavapipe = true });
+
+        page.ResetCommand.Execute(null);
+
+        Assert.Equal(1, page.SelectedLanguage.Number);
+        Assert.False(page.Lavapipe);
+        Assert.Equal(2, Saved().Language);
+    }
+
+    [Fact]
+    public async Task Back_with_unsaved_changes_asks_first()
+    {
+        var page = await OpenAsync();
+        page.Overlay = true;
+
+        await page.BackCommand.ExecuteAsync(null);
+        Assert.Equal(["Your changes to the settings of DOOM are not saved."], _dialogs.Confirmations);
+        Assert.Same(page, _navigator.CurrentPage);
+
+        _dialogs.Confirm = true;
+        await page.BackCommand.ExecuteAsync(null);
+        Assert.Equal("library", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task Back_without_changes_goes_back_directly()
+    {
+        var page = await OpenAsync();
+
+        await page.BackCommand.ExecuteAsync(null);
+
+        Assert.Empty(_dialogs.Confirmations);
+        Assert.Equal("library", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task Saving_a_busy_game_says_so()
+    {
+        var page = await OpenAsync();
+        page.Overlay = true;
+
+        using (GameLock.TryAcquireNow(_library.Game("PPSA99666")))
+        {
+            await page.SaveCommand.ExecuteAsync(null);
+        }
+
+        Assert.Equal("DOOM is busy with another action. Try again.", page.Message);
+        Assert.False(Saved().Overlay);
+    }
+
+    [Fact]
+    public async Task Saving_a_game_started_meanwhile_says_so()
+    {
+        var page = await OpenAsync();
+        page.Overlay = true;
+        await _library.Player.LaunchAsync("PPSA99666", TestContext.Current.CancellationToken);
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("DOOM is running. Stop it to change its settings.", page.Message);
+        Assert.True(page.IsRunning);
+    }
+
+    [Fact]
+    public async Task An_unreadable_game_says_why()
+    {
+        var page = await OpenAsync(titleId: "PPSA00009");
+
+        Assert.StartsWith("Cannot read the settings of PPSA00009: ", page.Message, StringComparison.Ordinal);
+        Assert.False(page.CanEdit);
+    }
+
+    public void Dispose() => _library.Dispose();
+}

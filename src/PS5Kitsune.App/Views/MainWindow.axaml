@@ -44,6 +44,9 @@
     <DataTemplate DataType="vm:GameViewModel">
       <views:GameView />
     </DataTemplate>
+    <DataTemplate DataType="vm:GameSettingsViewModel">
+      <views:GameSettingsView />
+    </DataTemplate>
     <DataTemplate DataType="vm:DoneViewModel">
       <views:DoneView />
     </DataTemplate>
