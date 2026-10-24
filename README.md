@@ -30,6 +30,7 @@ ps5kitsune reconvert <title ID>      # convert a game again after an AnyPS5 upda
 ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ps5kitsune list                      # the added games, their verdict, and whether they run
 ps5kitsune remove <title ID>         # delete a game and its folder (asks first; --yes skips)
+ps5kitsune settings <title ID>       # show a game's settings and the environment variables they become at launch (edit them in the app)
 ```
 
 In the app, the Library lists the added games and opens first once a game is added: one click launches a game and follows its log, and closing the app leaves the game running (reopening finds it again). Each game's menu opens its folder or its last log, reconverts it, clears its shader cache or removes it. Home's "Add a game" takes a folder or a .zip (picked or dropped), shows its summary, adds it and shows the audit verdict. After an AnyPS5 update, `ps5kitsune reconvert <titleId>` (or Reconvert in the app) converts a game again without copying it, keeping its saves; a failure puts the previous conversion back.

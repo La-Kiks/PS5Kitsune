@@ -42,7 +42,7 @@ The stack is .NET LTS + Avalonia with MVVM, published as a self-contained execut
 | Process execution | CliWrap for tools (git, cmake, python, relinker); native `Process` with inherited file handles for the game | Tools are followed line by line; the game must not depend on the launcher staying alive (see V3) |
 | Logging | NLog via `Microsoft.Extensions.Logging` (file + view in the UI) | One log per operation, attachable to a report; BSD-3 license, GPLv2-compatible (Serilog, under Apache 2.0, is not) |
 | Downloads | `HttpClient` + GitHub REST API | Releases, WinLibs, MinGit, Python, Mesa; resume, progress, SHA-256 check |
-| Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z` (to be confirmed at the Lavapipe milestone); Linux `tar.gz` via `System.Formats.Tar` |
+| Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z`: only Lavapipe's manifest and driver are extracted, with SharpCompress's sequential reader; Linux `tar.gz` via `System.Formats.Tar` |
 | Tests | xUnit + fake test folders | Validate detection and folder validation without a real game |
 | Publishing | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true` | A single `.exe` (~80–100 MB), no .NET to install; Avalonia's native libraries are included |
 
@@ -161,7 +161,7 @@ All tools go into `<root>\tools\`, downloaded from their official source, verifi
 | Embeddable Python 3.14 | Both | Official python.org zip (`python-3.14.x-embed-amd64.zip`); the scripts need 3.9 or newer | Enough for the scripts (standard library only); no pip, no venv. No more Microsoft Store alias to work around |
 | MinGit 2.56.0.2 | Build | Official Git for Windows zip (`MinGit-2.56.0.2-64-bit.zip`) | Provides `git` and the CA bundle for `SSL_CERT_FILE`. The bundle is under `ucrt64`, with `mingw64` as the fallback |
 | WinLibs GCC 15.2.0 r7 | Build | `winlibs-x86_64-posix-seh-gcc-15.2.0-mingw-w64ucrt-14.0.0-r7.zip` | Only supported Windows toolchain (BUILD.md). Includes CMake 4.3.1 and Ninja 1.13.2 (checked in the r7 release notes), so no other zip is needed |
-| Mesa (Lavapipe) | On demand | `pal1000/mesa-dist-win` release | 7z archive, extracted with SharpCompress |
+| Mesa (Lavapipe) | On demand | `pal1000/mesa-dist-win` release 26.2.4, `mesa3d-26.2.4-release-msvc.7z` | Downloaded on the first launch with CPU rendering on. Only `x64/lvp_icd.x86_64.json` and `x64/vulkan_lvp.dll` (56 MB) are kept, in `tools\mesa` |
 
 ### Getting AnyPS5
 
@@ -267,8 +267,9 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 - The app opens on the Library once AnyPS5 is installed and a game is added; Home has a "Library" button.
 - Tile grid: `icon0.png`, name, title ID, audit verdict badge (green, orange, red), "Needs reconvert" when the game was converted with another AnyPS5 than the one in use, "Running" while it runs.
 - Search by name, sorted by last played (never played last, by name).
-- A click launches the game, or shows it when it runs. Per-game menu: Launch, Open folder, View last log, Reconvert, Clear shader cache (shows its size, which can reach several GB), Remove (deletes the game folder after a confirmation that flags saves present in `data\`). Settings comes with 7b.
-- The CLI has the same view: `ps5kitsune list` and `ps5kitsune remove <titleId> [--yes]`.
+- A click launches the game, or shows it when it runs. Per-game menu: Launch, Open folder, View last log, Reconvert, Clear shader cache (shows its size, which can reach several GB), Remove (deletes the game folder after a confirmation that flags saves present in `data\`). The menu reads Launch, Settings, Open folder, View last log, Reconvert, Clear shader cache, Remove.
+- The Game page does the launch. When the game needs Lavapipe or the fonts and they are missing, it shows "Downloading Lavapipe…" then "Downloading fonts…" with progress and a Cancel button, then follows the log. When the launch finds the game already running (started from the CLI, say), the page attaches to it and follows it instead of starting a second one.
+- The CLI has the same view: `ps5kitsune list` and `ps5kitsune remove <titleId> [--yes]`. `ps5kitsune settings <titleId>` shows a game's settings and the environment variables they become at launch; settings are edited in the app.
 
 ### Launching
 
@@ -278,24 +279,30 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 - Closing the launcher during a game **does not kill the game**: the game is never in a kill-on-close Job Object. A launch records the game in `.ps5kitsune\running.json` (PID, process creation time, executable, log file); on reopening, the launcher opens the process again and checks its start time and executable, so a PID reused by another process is never taken for the game. A record whose process is gone is deleted. One game runs at a time from the app.
 - The tools PS5Kitsune runs (git, CMake, Ninja, Python, the relinker) are in a kill-on-close Job Object: killing PS5Kitsune, even from the Task Manager, ends them.
 - Every action that changes a game folder (Reconvert, a launch until it is recorded, Remove, Clear shader cache, the restore of an interrupted Reconvert) holds `.ps5kitsune\game.lock`, retried for about 250 ms. A running game refuses Reconvert, Remove and Clear shader cache.
+- The game gets its settings as environment variables (see "Per-game settings") on top of the launcher's own environment.
+- The game starts with `CREATE_BREAKAWAY_FROM_JOB`, so a job PS5Kitsune runs in (a terminal, another launcher) does not end it. When that job forbids breakaway, the game starts without the flag and the log says so.
+- Exit is detected through the process handle, not the exit code: 259 (`STILL_ACTIVE`) is also a real exit code.
+- `lastPlayedAt` is written once the process has started.
 - First-launch message: it may stutter while shaders are prepared; the second run is smooth (shader cache and pipeline journal).
 
 ### Per-game settings
 
-| UI setting | Translated to | Values |
-| --- | --- | --- |
-| GPU | `ANYPS5_GPU` (part of the name, case-insensitive) | List of GPU names detected by the probe |
-| CPU rendering (Lavapipe) | `VK_DRIVER_FILES` = Mesa's `lvp_icd.x86_64.json` manifest + `ANYPS5_GPU=llvmpipe` | Offered by default if `shaderInt64` is missing |
-| Game language | `ANYPS5_LANGUAGE` | Default 1 (English, US); list of the 31 languages from the docs (0 to 30) |
-| Vertical sync | `ANYPS5_PRESENT_MODE` | `fifo` (default), `fifo_latest_ready`, `mailbox`, `immediate` |
-| Disable Dozen | `VK_LOADER_DRIVERS_DISABLE='*dzn*'` | Only if another Vulkan driver exists |
-| Performance overlay | `ANYPS5_OVERLAY=1` (+ `ANYPS5_OVERLAY_POS`) | Otherwise F10 in game |
-| Advanced: PlayGo chunks | `APS5_PLAYGO_UNLISTED_CHUNKS` | `installed`, `absent` or empty |
-| Keyboard and mouse bindings | `anyps5-input.ini` file beside the game exe | Simple action → key editor (`Action = KEY:Name` format, actions listed in `INPUT_MAPPING.md`) |
+| UI setting | `game.json` field | Translated to | Values |
+| --- | --- | --- | --- |
+| GPU | `gpu` | `ANYPS5_GPU` (part of the name, case-insensitive) | Automatic (`null`), or a GPU name detected by the probe |
+| CPU rendering (Lavapipe) | `lavapipe` | `VK_DRIVER_FILES` = Mesa's `lvp_icd.x86_64.json` manifest + `ANYPS5_GPU=llvmpipe` | On for a new game when Vulkan works but no GPU has `shaderInt64` and `bufferDeviceAddress`, off otherwise. It overrides the GPU and Disable Dozen |
+| Game language | `language` | `ANYPS5_LANGUAGE` | Default 1 (English, US); list of the 31 languages from the docs (0 to 30) |
+| Vertical sync | `presentMode` | `ANYPS5_PRESENT_MODE` | On (`fifo`, default), Latest frame (`fifo_latest_ready`), Mailbox (`mailbox`), Off, may tear (`immediate`) |
+| Disable Dozen | `disableDozen` | `VK_LOADER_DRIVERS_DISABLE='*dzn*'` | Shown when Dozen and another driver are found, or the probe only worked without Dozen |
+| Performance overlay | `overlay`, `overlayPosition` | `ANYPS5_OVERLAY=1` (+ `ANYPS5_OVERLAY_POS`) | Otherwise F10 in game. Position: `tl` (default), `tr`, `bl`, `br` |
+| Advanced: PlayGo chunks | `playGoUnlistedChunks` | `APS5_PLAYGO_UNLISTED_CHUNKS` | `installed`, `absent` or empty (`null`) |
+| Keyboard and mouse bindings | none | `anyps5-input.ini` file beside the game exe | Later milestone: until then, Open folder and edit `anyps5-input.ini` |
 
-These variables only apply to the game process, never to the system. An invalid setting stops the game with an error naming the variable: the UI therefore only offers valid values.
+These variables only apply to the game process, never to the system. A value equal to AnyPS5's default is not passed. A value AnyPS5 would refuse (hand-edited `game.json`) is read as its default and logged; the file is not rewritten. The Settings page only offers valid values.
 
-**Fonts (global option):** AnyPS5 looks for `anyps5-fonts\` beside each game's exe, or in the folder named by `ANYPS5_SYSTEM_FONTS`. The app downloads the Noto fonts (open license) once into `<root>\fonts\` and passes `ANYPS5_SYSTEM_FONTS` at every launch: no per-game copy.
+The Settings page (Library menu, then Settings) edits these fields and saves them to `game.json`. A running game cannot be changed until it stops. "Reset to defaults" restores every field except Disable Dozen, which is kept as it was: it is hidden unless Dozen and another driver are found.
+
+**Fonts (global option):** AnyPS5 looks for `anyps5-fonts\` beside each game's exe, or in the folder named by `ANYPS5_SYSTEM_FONTS`. The profile pins 24 Noto files (87 MB, open license) by commit and SHA-256: Noto Sans (regular and italic weights), Mono, Thai, Arabic, and CJK as `.ttc`. They are downloaded on the first launch into `<root>\fonts`, with a `.complete` marker written last, and `ANYPS5_SYSTEM_FONTS` is passed at every launch: no per-game copy. A failed download warns and the game still starts.
 
 ### Crash diagnosis
 
@@ -362,11 +369,11 @@ C:\PS5Kitsune\
 │   ├── python\                  embeddable Python (both modes)
 │   ├── mingit\                  portable Git (build mode)
 │   ├── winlibs\                 GCC 15.2.0 r7 + CMake + Ninja (build mode)
-│   └── mesa\                    Lavapipe, downloaded on demand
+│   └── mesa\                    Lavapipe only (manifest and driver), downloaded on first use
 ├── profiles\
 │   ├── downloaded.json          last fetched profile
 │   └── override.json            local override (optional)
-├── fonts\                       Noto fonts, passed via ANYPS5_SYSTEM_FONTS
+├── fonts\                       Noto fonts, .complete marker, passed via ANYPS5_SYSTEM_FONTS
 ├── anyps5\
 │   ├── source\                  git clone, fetched by SHA (build mode)
 │   ├── build\                   CMake build folder (build mode)
@@ -434,7 +441,7 @@ The data root itself is chosen on the app's home screen and saved in `%LOCALAPPD
   "icon": "app0/sce_sys/icon0.png",
   "convertedWith": { "profile": "doom-validated-2026-10", "mode": "release", "version": "v0.1.2", "commit": null, "toIntel": true },
   "audit": { "implemented": 262, "stub": 0, "absent": 0, "verdict": "green" },
-  "settings": { "gpu": null, "lavapipe": false, "language": 1, "presentMode": "fifo" },
+  "settings": { "gpu": null, "lavapipe": false, "language": 1, "presentMode": "fifo", "disableDozen": false, "overlay": false, "overlayPosition": "tl", "playGoUnlistedChunks": null },
   "addedAt": "2026-10-18T15:00:00+02:00",
   "lastPlayedAt": null,
   "reconvertedAt": null
@@ -477,7 +484,6 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 | `param.json` | `titleName` is in `localizedParameters.<language>`, not at the top level |
 | `anyps5-input.ini` | Beside the game exe, or the path given by `ANYPS5_INPUT_CONFIG` |
 | Fonts | `anyps5-fonts\` beside the exe, or `ANYPS5_SYSTEM_FONTS` |
-| Still to confirm | Mesa 7z format (at the Lavapipe milestone) |
 
 ### Legal framework
 
@@ -525,7 +531,7 @@ The order follows "end to end first, screens second": each milestone ends with a
 7. **V3 — Launcher**, in four parts.
    - **7a — Library and launch.** Library page (the start page once a game is added), launch in one click with the log followed live, Stop and the exit code, the running game found again after reopening (`running.json`), Open folder, View last log, Reconvert, Clear shader cache, Remove; CLI `list` and `remove`; the game lock and the tools' Job Object. Spec: [milestone 7a](superpowers/specs/2026-10-24-milestone-7a-library-launch-design.md).
      - Criterion: DOOM launched in one click from the Library; the launcher closed and reopened finds the running game and stops it.
-   - **7b — Per-game settings**, Lavapipe (Mesa 7z) and fonts.
+   - **7b — Per-game settings**, Lavapipe (Mesa 7z) and fonts. The Settings page and the `settings` command; the launch from the Game page with the Lavapipe and font downloads; settings passed as environment variables; breakaway from the parent job and exit detected by handle. Spec: [milestone 7b](superpowers/specs/2026-10-24-milestone-7b-settings-lavapipe-fonts-design.md).
      - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe.
    - **7c — Crash diagnosis.**
      - Criterion: a deliberately provoked error 126 is recognized and repaired.
