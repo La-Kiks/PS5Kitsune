@@ -9,7 +9,7 @@ namespace PS5Kitsune.Platform.Windows;
 
 /// <summary>
 /// Starts the game with CreateProcess, its stdout and stderr being an inherited handle to the log file:
-/// no pipe slows a verbose game down, and closing the launcher neither blocks nor kills it (no job object).
+/// no pipe slows a verbose game down, and closing the launcher neither blocks nor kills it: the game is started out of the launcher's job when the job allows it (see docs/architecture.md, "Launching").
 /// </summary>
 [SupportedOSPlatform("windows")]
 public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> logger) : IGameLauncher
@@ -23,7 +23,10 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     private const uint ProcessTerminate = 0x0001;
     private const uint ProcessQueryLimitedInformation = 0x1000;
     private const uint Synchronize = 0x00100000;
-    private const uint StillActive = 259;
+    private const uint CreateUnicodeEnvironment = 0x00000400;
+    private const uint CreateBreakawayFromJob = 0x01000000;
+    private const int ErrorAccessDenied = 5;
+    private const uint WaitObject0 = 0;
 
     /// <summary>How long Stop waits for the game to close its windows before ending it.</summary>
     internal TimeSpan StopGrace { get; init; } = TimeSpan.FromSeconds(5);
@@ -43,7 +46,19 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         }
 
         var commandLine = WindowsCommandLine.Build(request.Executable, request.Arguments);
-        var process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle());
+        var environment = request.Environment.Count == 0 ? null : EnvironmentBlock(request.Environment);
+        ProcessInformation process;
+        try
+        {
+            process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle(), environment, breakaway: true);
+        }
+        catch (Win32Exception exception) when (exception.NativeErrorCode == ErrorAccessDenied)
+        {
+            // The job PS5Kitsune runs in (a terminal, another launcher) forbids breakaway: the game then stays in that job.
+            var executable = request.Executable;
+            LogBreakawayRefused(executable);
+            process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle(), environment, breakaway: false);
+        }
 
         CloseHandle(process.Thread);
         var handle = new SafeProcessHandle(process.Process, ownsHandle: true);
@@ -71,7 +86,7 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         try
         {
             ours = !process.IsInvalid
-                && GetExitCodeProcess(process, out var exitCode) && exitCode == StillActive
+                && !HasExited(process)
                 && CreationTime(process) == record.StartedAt
                 && ImagePath(process) is { } path
                 && string.Equals(Path.GetFullPath(path), Path.GetFullPath(record.Executable), StringComparison.OrdinalIgnoreCase);
@@ -106,7 +121,7 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     // bInheritHandles = TRUE alone would hand the game every inheritable handle of this process (a parent's
     // output pipe, a concurrent child's redirect pipe), keeping them open as long as the game runs.
     // The handle list attribute restricts inheritance to the log.
-    private static unsafe ProcessInformation Start(string executable, string commandLine, string workingDirectory, nint log)
+    private static unsafe ProcessInformation Start(string executable, string commandLine, string workingDirectory, nint log, string? environment, bool breakaway)
     {
         nuint size = 0;
         InitializeProcThreadAttributeList(0, 1, 0, ref size); // Size query: fails with ERROR_INSUFFICIENT_BUFFER.
@@ -137,13 +152,19 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
                     },
                     AttributeList = attributes,
                 };
+                var flags = CreateNoWindow | ExtendedStartupInfoPresent
+                    | (breakaway ? CreateBreakawayFromJob : 0)
+                    | (environment is null ? 0 : CreateUnicodeEnvironment);
                 var commandLineBuffer = (commandLine + '\0').ToCharArray();
-                if (!CreateProcess(executable, ref commandLineBuffer[0], 0, 0, inheritHandles: true, CreateNoWindow | ExtendedStartupInfoPresent, 0, workingDirectory, ref startupInfo, out var process))
+                fixed (char* block = environment)
                 {
-                    throw new Win32Exception(Marshal.GetLastPInvokeError(), $"Could not start {executable}.");
-                }
+                    if (!CreateProcess(executable, ref commandLineBuffer[0], 0, 0, inheritHandles: true, flags, (nint)block, workingDirectory, ref startupInfo, out var process))
+                    {
+                        throw new Win32Exception(Marshal.GetLastPInvokeError(), $"Could not start {executable}.");
+                    }
 
-                return process;
+                    return process;
+                }
             }
             finally
             {
@@ -154,6 +175,32 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         {
             NativeMemory.Free((void*)attributes);
         }
+    }
+
+    // An exit code of 259 (STILL_ACTIVE) is also a real exit code: only the handle tells whether the process ended.
+    private static bool HasExited(SafeProcessHandle process) => WaitForSingleObject(process, 0) == WaitObject0;
+
+    // The launcher's environment with the game's variables on top, sorted by name as CreateProcess expects, double null-terminated.
+    private static string EnvironmentBlock(IReadOnlyDictionary<string, string> overrides)
+    {
+        var variables = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (System.Collections.DictionaryEntry entry in Environment.GetEnvironmentVariables())
+        {
+            variables[(string)entry.Key] = (string?)entry.Value ?? "";
+        }
+
+        foreach (var (name, value) in overrides)
+        {
+            variables[name] = value;
+        }
+
+        var block = new System.Text.StringBuilder();
+        foreach (var (name, value) in variables)
+        {
+            block.Append(name).Append('=').Append(value).Append(' ');
+        }
+
+        return block.Append(' ').ToString();
     }
 
     // Makes room for the new log by keeping the newest KeptLogs - 1. Names sort by date.
@@ -170,6 +217,12 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Found {Executable} still running (PID {ProcessId})")]
     private partial void LogAttached(string executable, int processId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Started {Executable} inside PS5Kitsune's parent job: that job does not allow breakaway, so closing it also ends the game.")]
+    private partial void LogBreakawayRefused(string executable);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    private static partial uint WaitForSingleObject(SafeProcessHandle handle, uint milliseconds);
 
     [LibraryImport("kernel32.dll", EntryPoint = "CreateProcessW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -284,7 +337,7 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
             {
                 var error = Marshal.GetLastPInvokeError();
                 // Access denied once the process has already exited: nothing left to stop.
-                if (!exit.IsCompleted && !(GetExitCodeProcess(process, out var code) && code != StillActive))
+                if (!exit.IsCompleted && !HasExited(process))
                 {
                     throw new Win32Exception(error);
                 }
