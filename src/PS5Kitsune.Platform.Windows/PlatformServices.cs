@@ -23,6 +23,7 @@ public static class PlatformServices
         if (OperatingSystem.IsWindows())
         {
             services.AddSingleton<IGameLauncher, WindowsGameLauncher>();
+            services.AddSingleton<IChildProcessJob, WindowsChildProcessJob>();
         }
 
         return services;

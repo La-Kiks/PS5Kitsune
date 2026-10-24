@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
             return client;
         });
         services.AddSingleton<IDownloader, HttpDownloader>();
+        services.TryAddSingleton<IChildProcessJob, NoChildProcessJob>();
         services.AddSingleton<IProcessRunner, CliWrapProcessRunner>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<ICpuInfo, X86CpuInfo>();
