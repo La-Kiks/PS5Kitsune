@@ -390,43 +390,27 @@ public sealed class HomeViewModelTests : IDisposable
         TestContext.Current.CancellationToken);
 
     [Fact]
-    public async Task Lists_the_games_converted_with_another_install()
+    public async Task The_library_button_opens_the_library_once_a_game_is_added()
     {
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
-        await WriteGameAsync("PPSA99666", "DOOM", new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false));
-        await WriteGameAsync("PPSA00001", "Up to date", new ConversionInfo("test-profile", "release", "v0.1.2", null, false));
+        await WriteGameAsync("PPSA99666", "DOOM", new ConversionInfo("test-profile", "release", "v0.1.2", null, false));
 
         var viewModel = await CreateAsync();
 
-        Assert.True(viewModel.HasGamesToReconvert);
-        var game = Assert.Single(viewModel.GamesToReconvert);
-        Assert.Equal(new GameToReconvert("PPSA99666", "DOOM", "Converted with build 3fd1cc3 · in use: release v0.1.2"), game);
-        Assert.True(viewModel.ReconvertCommand.CanExecute(game));
-
-        viewModel.ReconvertCommand.Execute(game);
-
-        Assert.Equal("reconvert:PPSA99666", _navigator.CurrentPage);
+        Assert.True(viewModel.HasGames);
+        Assert.True(viewModel.LibraryCommand.CanExecute(null));
+        viewModel.LibraryCommand.Execute(null);
+        Assert.Equal("library", _navigator.CurrentPage);
     }
 
     [Fact]
-    public async Task No_game_to_reconvert_hides_the_section()
+    public async Task Without_games_the_library_button_is_disabled()
     {
         _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
 
         var viewModel = await CreateAsync();
 
-        Assert.False(viewModel.HasGamesToReconvert);
-        Assert.Empty(viewModel.GamesToReconvert);
-    }
-
-    [Fact]
-    public async Task Without_an_install_no_game_is_listed_and_reconvert_is_disabled()
-    {
-        await WriteGameAsync("PPSA99666", "DOOM", new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false));
-
-        var viewModel = await CreateAsync();
-
-        Assert.Empty(viewModel.GamesToReconvert);
-        Assert.False(viewModel.ReconvertCommand.CanExecute(new GameToReconvert("PPSA99666", "DOOM", "")));
+        Assert.False(viewModel.HasGames);
+        Assert.False(viewModel.LibraryCommand.CanExecute(null));
     }
 }

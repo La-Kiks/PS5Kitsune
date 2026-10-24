@@ -65,13 +65,13 @@ public sealed partial class ReconvertViewModel : StepRunViewModel
 
     protected override Task OnCancelledAsync()
     {
-        _navigator.GoHome(_pages.Home());
+        _navigator.GoHome(_pages.Library());
         return Task.CompletedTask;
     }
 
     protected override Task LeaveAsync()
     {
-        _navigator.GoHome(_pages.Home());
+        _navigator.GoHome(_pages.Library());
         return Task.CompletedTask;
     }
 

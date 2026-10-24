@@ -67,8 +67,12 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
 
     public object ReconvertResult(GameReconverted reconverted) => new AddResultViewModel(reconverted, platform, navigator, this);
 
-    // Task 7 replaces this with the Library page.
-    public object Library() => Home();
+    public object Library() =>
+        new LibraryViewModel(
+            Session.Get<GamePlayer>(), Session.Get<GameCleaner>(), Session.Get<RunningGames>(), Session.Get<IAnyPS5Installer>(), platform, dialogs, navigator, this);
+
+    /// <summary>The first page: the Library once AnyPS5 is installed and a game is added, else Home.</summary>
+    public object Start() => LibraryViewModel.OpensFirst(Session.Get<IAnyPS5Installer>(), Session.Get<GameLibrary>()) ? Library() : Home();
 
     public object Game(PlayingGame playing, bool firstLaunch) =>
         new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this);

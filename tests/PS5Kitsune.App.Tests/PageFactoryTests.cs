@@ -39,6 +39,8 @@ public sealed class PageFactoryTests : IDisposable
         Assert.IsType<AddResultViewModel>(pages.AddResult(TestGameData.Added()));
         Assert.Equal(6, Assert.IsType<ReconvertViewModel>(pages.Reconvert("PPSA99666", "DOOM")).Steps.Count);
         Assert.IsType<AddResultViewModel>(pages.ReconvertResult(TestGameData.Reconverted()));
+        Assert.IsType<LibraryViewModel>(pages.Library());
+        Assert.IsType<HomeViewModel>(pages.Start());
         var game = new GameLayout(_temp.Combine("root", "games", "PPSA99666"), "PPSA99666", platform);
         var process = new FakeLaunchedGame(4812, _temp.Combine("game.log"), DateTimeOffset.UnixEpoch);
         Assert.IsType<GameViewModel>(pages.Game(new PlayingGame(game, TestGameData.Added().Record, process), firstLaunch: false));

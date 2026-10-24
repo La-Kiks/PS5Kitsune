@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PS5Kitsune.App.ViewModels"
+             xmlns:views="using:PS5Kitsune.App.Views"
+             x:Class="PS5Kitsune.App.Views.LibraryView"
+             x:DataType="vm:LibraryViewModel">
+  <DockPanel>
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,12">
+      <TextBlock Text="Library" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+      <TextBox Grid.Column="1" Text="{Binding Search}" PlaceholderText="Search by name" MaxWidth="320" HorizontalAlignment="Left" />
+      <Button Grid.Column="2" Content="Add a game" Command="{Binding AddGameCommand}" />
+      <Button Grid.Column="3" Content="Home" Command="{Binding HomeCommand}" />
+    </Grid>
+
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"
+               Foreground="#C42B1C" TextWrapping="Wrap" Margin="0,0,0,8" />
+
+    <StackPanel DockPanel.Dock="Top" Spacing="8" IsVisible="{Binding IsEmpty}" HorizontalAlignment="Left">
+      <TextBlock Text="No games yet" FontWeight="SemiBold" />
+      <Button Content="Add a game" Classes="accent" Command="{Binding AddGameCommand}" />
+    </StackPanel>
+
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Games}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:GameTileViewModel">
+            <Border Width="180" Margin="0,0,12,12" Padding="10" CornerRadius="6" BorderThickness="1" BorderBrush="#40808080">
+              <StackPanel Spacing="6">
+                <Button Padding="0" Background="Transparent" HorizontalAlignment="Stretch"
+                        Command="{Binding Owner.OpenCommand}" CommandParameter="{Binding}" ToolTip.Tip="Launch">
+                  <Panel Height="158">
+                    <Border Background="#20808080" CornerRadius="4" />
+                    <TextBlock Text="{Binding TitleId}" Opacity="0.6" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding IconPath, Converter={x:Static ObjectConverters.IsNull}}" />
+                    <Image Source="{Binding IconPath, Converter={x:Static views:PathToBitmapConverter.Instance}}" Stretch="Uniform" />
+                  </Panel>
+                </Button>
+                <Grid ColumnDefinitions="*,Auto">
+                  <StackPanel>
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding TitleId}" Opacity="0.7" FontSize="12" />
+                  </StackPanel>
+                  <Button Grid.Column="1" Content="…" Padding="8,2" VerticalAlignment="Top">
+                    <Button.Flyout>
+                      <MenuFlyout>
+                        <MenuItem Header="Launch" Command="{Binding Owner.LaunchCommand}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Open folder" Command="{Binding Owner.OpenFolderCommand}" CommandParameter="{Binding}" />
+                        <MenuItem Header="View last log" Command="{Binding Owner.ViewLastLogCommand}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Reconvert" Command="{Binding Owner.ReconvertCommand}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Clear shader cache" Command="{Binding Owner.ClearShaderCacheCommand}" CommandParameter="{Binding}" />
+                        <MenuItem Header="Remove" Command="{Binding Owner.RemoveCommand}" CommandParameter="{Binding}" />
+                      </MenuFlyout>
+                    </Button.Flyout>
+                  </Button>
+                </Grid>
+                <WrapPanel>
+                  <Border Background="#0F7B0F" CornerRadius="3" Padding="6,1" Margin="0,0,4,4" IsVisible="{Binding IsGreen}">
+                    <TextBlock Text="Green" Foreground="White" FontSize="11" />
+                  </Border>
+                  <Border Background="#9D5D00" CornerRadius="3" Padding="6,1" Margin="0,0,4,4" IsVisible="{Binding IsOrange}">
+                    <TextBlock Text="Orange" Foreground="White" FontSize="11" />
+                  </Border>
+                  <Border Background="#C42B1C" CornerRadius="3" Padding="6,1" Margin="0,0,4,4" IsVisible="{Binding IsRed}">
+                    <TextBlock Text="Red" Foreground="White" FontSize="11" />
+                  </Border>
+                  <Border Background="#9D5D00" CornerRadius="3" Padding="6,1" Margin="0,0,4,4" IsVisible="{Binding NeedsReconvert}">
+                    <TextBlock Text="Needs reconvert" Foreground="White" FontSize="11" />
+                  </Border>
+                  <Border Background="#005FB8" CornerRadius="3" Padding="6,1" Margin="0,0,4,4" IsVisible="{Binding IsRunning}">
+                    <TextBlock Text="Running" Foreground="White" FontSize="11" />
+                  </Border>
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>
