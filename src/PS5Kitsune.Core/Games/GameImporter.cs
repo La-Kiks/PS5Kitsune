@@ -89,7 +89,7 @@ public sealed partial class GameImporter(
 
         var install = installer.ReadRecord() ?? throw new AnyPS5NotInstalledException();
         var context = new GameImportContext(game.Source, metadata, game.Validation.ModuleDirectories, layoutGame, toIntel);
-        var lavapipe = DefaultLavapipe(await probe.RunAsync(cancellationToken).ConfigureAwait(false));
+        var lavapipe = await DefaultLavapipeAsync(metadata.TitleId, cancellationToken).ConfigureAwait(false);
         if (lavapipe)
         {
             var titleId = metadata.TitleId;
@@ -109,6 +109,20 @@ public sealed partial class GameImporter(
 
         var record = GameRecordStore.Read(layoutGame.RecordFile) ?? throw new InvalidOperationException($"{layoutGame.RecordFile} was not written.");
         return new GameAdded(record, layoutGame.Root, game.Validation.Warnings, context.Audit ?? AuditSummary.Read(layoutGame.AuditFile));
+    }
+
+    // A probe that throws must not fail the add: Lavapipe stays off.
+    private async Task<bool> DefaultLavapipeAsync(string titleId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return DefaultLavapipe(await probe.RunAsync(cancellationToken).ConfigureAwait(false));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogProbeFailed(exception, titleId);
+            return false;
+        }
     }
 
     private async Task<PreparedGame> PrepareCoreAsync(string input, CancellationToken cancellationToken)
@@ -169,6 +183,9 @@ public sealed partial class GameImporter(
         outcome.Status != VulkanProbeStatus.Failed
         && outcome.Report is { LoaderFound: true } report
         && !report.Gpus.Any(gpu => gpu.SupportsAnyPS5);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The GPU probe failed for {TitleId}: Lavapipe stays off.")]
+    private partial void LogProbeFailed(Exception exception, string titleId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "No GPU supports AnyPS5: CPU rendering (Lavapipe) is on for {TitleId}.")]
     private partial void LogLavapipeByDefault(string titleId);

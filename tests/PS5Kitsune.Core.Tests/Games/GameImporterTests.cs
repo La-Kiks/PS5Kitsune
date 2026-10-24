@@ -221,6 +221,16 @@ public sealed class GameImporterTests : IDisposable
     }
 
     [Fact]
+    public async Task A_throwing_probe_does_not_fail_the_add()
+    {
+        _probe.Failure = new InvalidOperationException("probe crashed");
+
+        var added = await AddTheGameAsync();
+
+        Assert.False(added.Record.Settings.Lavapipe);
+    }
+
+    [Fact]
     public async Task A_failed_probe_leaves_lavapipe_off()
     {
         _probe.Outcome = VulkanProbeOutcome.Failed("crashed");
