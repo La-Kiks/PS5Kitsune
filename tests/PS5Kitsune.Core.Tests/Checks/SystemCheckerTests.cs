@@ -4,6 +4,8 @@ using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Library;
+using PS5Kitsune.Core.Processes;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tests.Fakes;
 
@@ -79,6 +81,19 @@ public sealed class SystemCheckerTests : IDisposable
 
         Assert.IsType<SystemChecker>(provider.GetRequiredService<ISystemChecker>());
         Assert.Equal(10, provider.GetServices<ISystemCheck>().Count());
+    }
+
+    [Fact]
+    public void Core_registration_alone_falls_back_to_no_job_and_no_launcher()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IPlatform>(_platform);
+        services.AddPS5KitsuneCore(new DataLayout(_temp.Path), ProfileLoader.LoadEmbedded());
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<NoChildProcessJob>(provider.GetRequiredService<IChildProcessJob>());
+        Assert.IsType<UnsupportedGameLauncher>(provider.GetRequiredService<IGameLauncher>());
     }
 
     private sealed class FakeCpuInfo : ICpuInfo
