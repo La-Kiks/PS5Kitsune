@@ -197,10 +197,10 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         var block = new System.Text.StringBuilder();
         foreach (var (name, value) in variables)
         {
-            block.Append(name).Append('=').Append(value).Append(' ');
+            block.Append(name).Append('=').Append(value).Append('\0');
         }
 
-        return block.Append(' ').ToString();
+        return block.Append('\0').ToString();
     }
 
     // Makes room for the new log by keeping the newest KeptLogs - 1. Names sort by date.
