@@ -47,4 +47,7 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
 
     /// <summary>A set-aside conversion being deleted after a successful Reconvert; never restored.</summary>
     public string PreviousDiscarded => Path.Combine(Meta, "previous.discarded");
+
+    /// <summary>Held while a Reconvert runs; not a conversion output. See <see cref="Games.ReconvertLock"/>.</summary>
+    public string ReconvertLock => Path.Combine(Meta, "reconvert.lock");
 }

@@ -9,7 +9,8 @@ public sealed class GameNotFoundException(string message) : Exception(message);
 
 /// <summary>
 /// Games added under &lt;root&gt;/games, looked up by title ID. library.json comes with milestone 7.
-/// Reading a game first restores a Reconvert that did not finish, so a half-built conversion is never used.
+/// Reading a game first restores a Reconvert that did not finish, so a half-built conversion is never used; a Reconvert still
+/// running (its lock is held) is left alone.
 /// </summary>
 public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, TimeProvider time, ILogger<GameLibrary> logger)
 {
@@ -17,17 +18,25 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
     /// <exception cref="InvalidGameRecordException">The game.json is malformed.</exception>
     public (GameLayout Game, GameRecord Record) Find(string titleId)
     {
+        var game = Layout(titleId);
+        RestoreInterrupted(game);
+        return (game, GameRecordStore.Read(game.RecordFile) ?? throw NotFound(titleId));
+    }
+
+    /// <summary>The folder of an added game, without reading or restoring it.</summary>
+    /// <exception cref="GameNotFoundException">The title ID is not valid, or the game has no game.json.</exception>
+    public GameLayout Layout(string titleId)
+    {
         if (GameValidator.IsValidTitleId(titleId))
         {
             var game = new GameLayout(layout.GameDirectory(titleId), titleId, platform);
-            RestoreInterrupted(game);
-            if (GameRecordStore.Read(game.RecordFile) is { } record)
+            if (File.Exists(game.RecordFile))
             {
-                return (game, record);
+                return game;
             }
         }
 
-        throw new GameNotFoundException($"No game {titleId} in {layout.Games}.");
+        throw NotFound(titleId);
     }
 
     /// <summary>Every game whose game.json reads, ordered by name; a game that cannot be read is skipped and logged.</summary>
@@ -84,9 +93,12 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
         return GameRecordStore.WriteAsync(game.RecordFile, record with { LastPlayedAt = time.GetLocalNow() }, cancellationToken);
     }
 
+    private GameNotFoundException NotFound(string titleId) => new($"No game {titleId} in {layout.Games}.");
+
+    // A Reconvert in progress holds the lock: its set-aside conversion is not interrupted, so it is left alone.
     private void RestoreInterrupted(GameLayout game)
     {
-        if (ConversionBackup.Restore(game))
+        if (!ReconvertLock.IsHeld(game) && ConversionBackup.Restore(game))
         {
             var root = game.Root;
             LogRestored(root);

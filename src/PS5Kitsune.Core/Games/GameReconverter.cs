@@ -39,7 +39,20 @@ public sealed partial class GameReconverter(
         }
 
         var install = installer.ReadRecord() ?? throw new AnyPS5NotInstalledException();
-        // Find restores a Reconvert that did not finish, so this run starts from the last complete conversion.
+        var layout = library.Layout(titleId);
+        using var held = ReconvertLock.TryAcquire(layout) ?? throw new ReconvertInProgressException(titleId);
+        // Find skips the restore while the lock is held, ours included: restore a Reconvert that did not finish here, so this run
+        // starts from the last complete conversion.
+        try
+        {
+            ConversionBackup.Restore(layout);
+        }
+        catch (Exception restoreFailure) when (restoreFailure is IOException or UnauthorizedAccessException)
+        {
+            LogRestoreFailed(restoreFailure, layout.Root);
+            throw new ReconvertRestoreException(restoreFailure, restoreFailure);
+        }
+
         var (game, record) = library.Find(titleId);
         List<string> modules = [.. GameValidator.ModuleDirectoryNames.Where(name => Directory.Exists(Path.Combine(game.App0, name)))];
         var context = new GameImportContext(

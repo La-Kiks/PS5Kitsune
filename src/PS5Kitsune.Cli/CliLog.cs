@@ -120,4 +120,7 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Converted with {ConvertedWith}; the AnyPS5 in use is {InUse}. Run ps5kitsune reconvert {TitleId}.")]
     public static partial void NeedsReconversion(this ILogger logger, string convertedWith, string inUse, string titleId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "A Reconvert of {TitleId} is in progress; run the game when it finishes.")]
+    public static partial void ReconvertInProgress(this ILogger logger, string titleId);
 }

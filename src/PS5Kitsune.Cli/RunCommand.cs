@@ -2,6 +2,7 @@ using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.Cli;
@@ -23,6 +24,13 @@ internal static class RunCommand
 
             var library = services.GetRequiredService<GameLibrary>();
             var (game, record) = library.Find(parseResult.GetRequiredValue(titleIdArgument));
+            if (ReconvertLock.IsHeld(game))
+            {
+                var reconvertedTitleId = record.TitleId;
+                logger.ReconvertInProgress(reconvertedTitleId);
+                return 1;
+            }
+
             if (installer.ReadRecord() is { } install && GameLibrary.NeedsReconversion(record, install))
             {
                 var convertedWith = ConversionLabels.Of(record.ConvertedWith);

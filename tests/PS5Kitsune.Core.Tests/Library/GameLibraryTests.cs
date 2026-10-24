@@ -82,6 +82,50 @@ public sealed class GameLibraryTests : IDisposable
     }
 
     [Fact]
+    public async Task Finding_a_game_does_not_restore_while_it_is_reconverted()
+    {
+        var game = new GameLayout(_layout.GameDirectory("PPSA99666"), "PPSA99666", new FakePlatform());
+        ConvertedGames.Create(game);
+        await WriteSampleAsync();
+        var before = ConvertedGames.Snapshot(game.Root);
+        ConversionBackup.SetAside(game);
+        TestFiles.Write(game.Executable, "half-built exe");
+
+        using (ReconvertLock.TryAcquire(game))
+        {
+            Assert.Equal("DOOM", _library.Find("PPSA99666").Record.Name);
+            Assert.True(Directory.Exists(game.Previous));
+        }
+
+        _library.Find("PPSA99666");
+
+        Assert.False(Directory.Exists(game.Previous));
+        Assert.Equal(before, ConvertedGames.Snapshot(game.Root));
+    }
+
+    [Fact]
+    public async Task Listing_the_games_does_not_restore_while_one_is_reconverted()
+    {
+        var game = new GameLayout(_layout.GameDirectory("PPSA99666"), "PPSA99666", new FakePlatform());
+        ConvertedGames.Create(game);
+        await WriteSampleAsync();
+        var before = ConvertedGames.Snapshot(game.Root);
+        ConversionBackup.SetAside(game);
+        TestFiles.Write(game.Executable, "half-built exe");
+
+        using (ReconvertLock.TryAcquire(game))
+        {
+            Assert.Equal(["DOOM"], _library.All().Select(entry => entry.Record.Name));
+            Assert.True(Directory.Exists(game.Previous));
+        }
+
+        _library.All();
+
+        Assert.False(Directory.Exists(game.Previous));
+        Assert.Equal(before, ConvertedGames.Snapshot(game.Root));
+    }
+
+    [Fact]
     public async Task Lists_the_games_by_name_and_skips_a_malformed_record()
     {
         await WriteAsync("PPSA00002", "Zeta");

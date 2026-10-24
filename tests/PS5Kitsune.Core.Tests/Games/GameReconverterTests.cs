@@ -254,6 +254,43 @@ public sealed class GameReconverterTests : IDisposable
     }
 
     [Fact]
+    public async Task A_game_already_reconverted_elsewhere_is_refused_with_nothing_changed()
+    {
+        await AddDoomConvertedWithTheBuildAsync();
+        var before = ConvertedGames.Snapshot(Game.Root);
+
+        ReconvertInProgressException refused;
+        using (ReconvertLock.TryAcquire(Game))
+        {
+            refused = await Assert.ThrowsAsync<ReconvertInProgressException>(ReconvertAsync);
+        }
+
+        Assert.Equal("A Reconvert of PPSA99666 is already in progress.", refused.Message);
+        Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
+    }
+
+    [Fact]
+    public async Task A_failed_restore_of_an_interrupted_reconvert_is_reported_as_not_restored()
+    {
+        await AddDoomConvertedWithTheBuildAsync();
+        ConversionBackup.SetAside(Game);
+        TestFiles.Write(Game.Executable, "half-built exe");
+        var callsBefore = _setup.Runner.Calls.Count;
+
+        ReconvertRestoreException failure;
+        using (new FileStream(Path.Combine(Game.Previous, "PPSA99666.exe"), FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            failure = await Assert.ThrowsAsync<ReconvertRestoreException>(ReconvertAsync);
+        }
+
+        Assert.IsAssignableFrom<IOException>(failure.RestoreFailure);
+        Assert.Same(failure.RestoreFailure, failure.InnerException);
+        Assert.Equal(callsBefore, _setup.Runner.Calls.Count);
+        Assert.True(Directory.Exists(Game.Previous));
+        Assert.False(ReconvertLock.IsHeld(Game));
+    }
+
+    [Fact]
     public async Task Reconverting_requires_the_install()
     {
         await Assert.ThrowsAsync<AnyPS5NotInstalledException>(ReconvertAsync);
@@ -265,6 +302,7 @@ public sealed class GameReconverterTests : IDisposable
         await _setup.InstallAsync();
 
         await Assert.ThrowsAsync<GameNotFoundException>(ReconvertAsync);
+        Assert.False(Directory.Exists(Game.Root));
     }
 
     public void Dispose()
