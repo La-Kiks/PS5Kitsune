@@ -1,0 +1,81 @@
+using PS5Kitsune.Core.Launch;
+using PS5Kitsune.Core.Library;
+
+namespace PS5Kitsune.Core.Tests.Launch;
+
+public sealed class GameSettingsReportTests
+{
+    private const string Manifest = @"C:\PS5Kitsune\tools\mesa\lvp_icd.x86_64.json";
+
+    private const string Fonts = @"C:\PS5Kitsune\fonts";
+
+    [Fact]
+    public void Defaults_with_fonts_installed()
+    {
+        var lines = GameSettingsReport.Lines(new GameSettings(), Manifest, lavapipeInstalled: false, Fonts, fontsInstalled: true);
+
+        Assert.Equal(
+            [
+                "GPU: automatic (default)",
+                "CPU rendering (Lavapipe): off (default)",
+                "Game language: 1, English (United States) (default)",
+                "Vertical sync: fifo (default)",
+                "Disable Dozen: off (default)",
+                "Performance overlay: off (default)",
+                "Overlay position: tl (default)",
+                "PlayGo unlisted chunks: unset (default)",
+                "Environment at launch:",
+                @"  ANYPS5_SYSTEM_FONTS=C:\PS5Kitsune\fonts",
+            ],
+            lines);
+    }
+
+    [Fact]
+    public void Defaults_without_fonts_in_the_profile_pass_nothing()
+    {
+        var lines = GameSettingsReport.Lines(new GameSettings(), null, lavapipeInstalled: false, null, fontsInstalled: false);
+
+        Assert.Equal(["Environment at launch:", "  (none)"], lines.Skip(8));
+    }
+
+    [Fact]
+    public void A_full_set_before_the_first_launch()
+    {
+        var settings = new GameSettings
+        {
+            Gpu = "Radeon", Lavapipe = true, Language = 2, PresentMode = "mailbox", DisableDozen = true, Overlay = true, OverlayPosition = "br", PlayGoUnlistedChunks = "absent",
+        };
+
+        var lines = GameSettingsReport.Lines(settings, Manifest, lavapipeInstalled: false, Fonts, fontsInstalled: false);
+
+        Assert.Equal(
+            [
+                "GPU: Radeon",
+                "CPU rendering (Lavapipe): on",
+                "Game language: 2, French",
+                "Vertical sync: mailbox",
+                "Disable Dozen: on",
+                "Performance overlay: on",
+                "Overlay position: br",
+                "PlayGo unlisted chunks: absent",
+                "Environment at launch:",
+                "  ANYPS5_GPU=llvmpipe",
+                "  ANYPS5_LANGUAGE=2",
+                "  ANYPS5_OVERLAY=1",
+                "  ANYPS5_OVERLAY_POS=br",
+                "  ANYPS5_PRESENT_MODE=mailbox",
+                @"  ANYPS5_SYSTEM_FONTS=C:\PS5Kitsune\fonts (downloaded on first launch)",
+                "  APS5_PLAYGO_UNLISTED_CHUNKS=absent",
+                @"  VK_DRIVER_FILES=C:\PS5Kitsune\tools\mesa\lvp_icd.x86_64.json (downloaded on first launch)",
+            ],
+            lines);
+    }
+
+    [Fact]
+    public void Lavapipe_without_a_mesa_download_says_so()
+    {
+        var lines = GameSettingsReport.Lines(new GameSettings { Lavapipe = true }, null, lavapipeInstalled: false, null, fontsInstalled: false);
+
+        Assert.Equal(["Environment at launch:", "  (none)", "  Lavapipe is not available: this profile has no Mesa download."], lines.Skip(8));
+    }
+}
