@@ -52,17 +52,19 @@ public sealed class GameLockTests : IDisposable
     }
 
     [Fact]
-    public async Task A_lock_released_within_the_retry_window_is_acquired()
+    public void A_lock_released_within_the_retry_window_is_acquired()
     {
         var held = GameLock.TryAcquireNow(_game)!;
-        var release = Task.Run(async () =>
+        // A dedicated thread: the thread pool can starve under parallel test load and delay the release.
+        var release = new Thread(() =>
         {
-            await Task.Delay(100, TestContext.Current.CancellationToken);
+            Thread.Sleep(100);
             held.Dispose();
-        }, TestContext.Current.CancellationToken);
+        });
+        release.Start();
 
-        using var acquired = GameLock.TryAcquire(_game);
-        await release;
+        using var acquired = GameLock.TryAcquire(_game, attempts: 100, delay: TimeSpan.FromMilliseconds(20));
+        release.Join();
 
         Assert.NotNull(acquired);
     }

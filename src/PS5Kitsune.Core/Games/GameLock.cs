@@ -12,7 +12,9 @@ public static class GameLock
 
     /// <summary>Takes the lock, trying again for about 250 ms: a short hold elsewhere (a reader's restore, a launch) must not refuse an action.</summary>
     /// <returns>Null when the lock stayed held; dispose the result to release it.</returns>
-    public static IDisposable? TryAcquire(GameLayout game)
+    public static IDisposable? TryAcquire(GameLayout game) => TryAcquire(game, Attempts, RetryDelay);
+
+    internal static IDisposable? TryAcquire(GameLayout game, int attempts, TimeSpan delay)
     {
         for (var attempt = 1; ; attempt++)
         {
@@ -21,12 +23,12 @@ public static class GameLock
                 return held;
             }
 
-            if (attempt == Attempts)
+            if (attempt >= attempts)
             {
                 return null;
             }
 
-            Thread.Sleep(RetryDelay);
+            Thread.Sleep(delay);
         }
     }
 
