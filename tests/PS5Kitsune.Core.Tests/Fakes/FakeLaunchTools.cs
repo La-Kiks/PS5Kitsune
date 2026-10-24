@@ -54,6 +54,9 @@ internal sealed class FakeFontPack : IFontPack
 
     public bool Installed { get; set; }
 
+    /// <summary>Thrown by <see cref="IsInstalled"/> when set (an unreadable marker).</summary>
+    public Exception? InstalledFailure { get; set; }
+
     public Exception? Failure { get; set; }
 
     public int Installs { get; private set; }
@@ -67,7 +70,7 @@ internal sealed class FakeFontPack : IFontPack
     /// <summary>Called once the install succeeded, before it returns.</summary>
     public Action? OnInstalled { get; set; }
 
-    public bool IsInstalled() => Installed;
+    public bool IsInstalled() => InstalledFailure is null ? Installed : throw InstalledFailure;
 
     public async Task InstallAsync(IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
     {

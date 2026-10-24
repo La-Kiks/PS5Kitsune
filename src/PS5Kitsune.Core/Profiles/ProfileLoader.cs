@@ -100,7 +100,7 @@ public static class ProfileLoader
         var fontNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var font in profile.Fonts)
         {
-            if (string.IsNullOrEmpty(font.Name) || font.Name is "." or ".." || font.Name.IndexOfAny(['/', '\\']) >= 0 || !fontNames.Add(font.Name))
+            if (string.IsNullOrEmpty(font.Name) || font.Name is "." or ".." || font.Name.IndexOfAny(['/', '\\', ':']) >= 0 || Path.GetFileName(font.Name) != font.Name || font.Name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || !fontNames.Add(font.Name))
             {
                 throw new InvalidProfileException($"Profile {profile.Id}: font \"{font.Name}\" needs a unique file name without a folder.");
             }

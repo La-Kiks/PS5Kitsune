@@ -45,18 +45,18 @@ public sealed partial class LaunchPreparation(ILavapipe? lavapipe, IFontPack? fo
             return new LaunchResources(manifest, null, null);
         }
 
-        if (!fonts.IsInstalled())
+        try
         {
-            try
+            if (!fonts.IsInstalled())
             {
                 await fonts.InstallAsync(Relay(progress, LaunchDownload.Fonts), cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception exception) when (IsDownloadFailure(exception, cancellationToken))
-            {
-                var reason = exception.Message;
-                LogFontsFailed(exception, reason);
-                return new LaunchResources(manifest, null, $"Fonts could not be downloaded ({reason}); games that use system fonts may show no text or stop.");
-            }
+        }
+        catch (Exception exception) when (IsDownloadFailure(exception, cancellationToken))
+        {
+            var reason = exception.Message;
+            LogFontsFailed(exception, reason);
+            return new LaunchResources(manifest, null, $"Fonts could not be downloaded ({reason}); games that use system fonts may show no text or stop.");
         }
 
         return new LaunchResources(manifest, fonts.Folder, null);

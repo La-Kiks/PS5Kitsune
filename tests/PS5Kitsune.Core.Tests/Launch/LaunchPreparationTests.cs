@@ -87,6 +87,17 @@ public sealed class LaunchPreparationTests
     }
 
     [Fact]
+    public async Task An_unreadable_fonts_marker_only_warns()
+    {
+        _fonts.InstalledFailure = new IOException("marker locked");
+
+        var resources = await Create().PrepareAsync(new GameSettings(), null, TestContext.Current.CancellationToken);
+
+        Assert.Null(resources.FontsDirectory);
+        Assert.NotNull(resources.FontsWarning);
+    }
+
+    [Fact]
     public async Task A_timeout_is_a_failure_not_a_cancellation()
     {
         _fonts.Failure = new TaskCanceledException("timed out");

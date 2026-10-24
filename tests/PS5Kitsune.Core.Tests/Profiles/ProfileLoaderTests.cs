@@ -255,6 +255,8 @@ public sealed class ProfileLoaderTests
     [InlineData(@"fonts\NotoSans-Regular.ttf")]
     [InlineData("..")]
     [InlineData("")]
+    [InlineData("C:x.ttf")]
+    [InlineData("a.ttf:stream")]
     public void Rejects_a_font_name_that_is_not_a_plain_file_name(string name)
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""

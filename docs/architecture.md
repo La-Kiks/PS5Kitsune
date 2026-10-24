@@ -300,7 +300,7 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 
 These variables only apply to the game process, never to the system. A value equal to AnyPS5's default is not passed. A value AnyPS5 would refuse (hand-edited `game.json`) is read as its default and logged; the file is not rewritten. The Settings page only offers valid values.
 
-The Settings page (Library menu, then Settings) edits these fields and saves them to `game.json`. A running game cannot be changed until it stops. "Reset to defaults" restores every field except Disable Dozen, which is kept as it was: it is hidden unless Dozen and another driver are found.
+The Settings page (Library menu, then Settings) edits these fields and saves them to `game.json`. A running game cannot be changed until it stops. "Reset to defaults" restores every field except a hidden Disable Dozen, which keeps its saved value (it is hidden unless Dozen and another driver are found; when shown, Reset clears it).
 
 **Fonts (global option):** AnyPS5 looks for `anyps5-fonts\` beside each game's exe, or in the folder named by `ANYPS5_SYSTEM_FONTS`. The profile pins 24 Noto files (87 MB, open license) by commit and SHA-256: Noto Sans (regular and italic weights), Mono, Thai, Arabic, and CJK as `.ttc`. They are downloaded on the first launch into `<root>\fonts`, with a `.complete` marker written last, and `ANYPS5_SYSTEM_FONTS` is passed at every launch: no per-game copy. A failed download warns and the game still starts.
 
