@@ -95,10 +95,17 @@ public sealed partial class GameLibrary(DataLayout layout, IPlatform platform, T
 
     private GameNotFoundException NotFound(string titleId) => new($"No game {titleId} in {layout.Games}.");
 
-    // A Reconvert in progress holds the lock: its set-aside conversion is not interrupted, so it is left alone.
+    // A Reconvert in progress holds the lock: its set-aside conversion is not interrupted, so it is left alone. The reader holds the
+    // lock while it restores, so a Reconvert cannot start in between; with nothing set aside, no lock file is opened.
     private void RestoreInterrupted(GameLayout game)
     {
-        if (!ReconvertLock.IsHeld(game) && ConversionBackup.Restore(game))
+        if (!Directory.Exists(game.Previous) && !Directory.Exists(game.PreviousPartial) && !Directory.Exists(game.PreviousDiscarded))
+        {
+            return;
+        }
+
+        using var held = ReconvertLock.TryAcquire(game);
+        if (held is not null && ConversionBackup.Restore(game))
         {
             var root = game.Root;
             LogRestored(root);

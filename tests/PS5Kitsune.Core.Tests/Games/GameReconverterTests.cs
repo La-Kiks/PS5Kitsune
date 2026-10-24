@@ -270,6 +270,23 @@ public sealed class GameReconverterTests : IDisposable
     }
 
     [Fact]
+    public async Task A_reader_restoring_the_game_makes_the_reconvert_refuse_with_nothing_changed()
+    {
+        await AddDoomConvertedWithTheBuildAsync();
+        ConversionBackup.SetAside(Game);
+        TestFiles.Write(Game.Executable, "half-built exe");
+        var before = ConvertedGames.Snapshot(Game.Root);
+
+        // The reader's hold on the lock while it restores, simulated.
+        using (ReconvertLock.TryAcquire(Game))
+        {
+            await Assert.ThrowsAsync<ReconvertInProgressException>(ReconvertAsync);
+        }
+
+        Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
+    }
+
+    [Fact]
     public async Task A_failed_restore_of_an_interrupted_reconvert_is_reported_as_not_restored()
     {
         await AddDoomConvertedWithTheBuildAsync();

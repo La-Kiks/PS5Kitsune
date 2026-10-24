@@ -82,6 +82,30 @@ public sealed class GameLibraryTests : IDisposable
     }
 
     [Fact]
+    public async Task Finding_a_game_with_nothing_set_aside_opens_no_lock()
+    {
+        await WriteSampleAsync();
+        var game = _library.Find("PPSA99666").Game;
+
+        Assert.False(File.Exists(game.ReconvertLock));
+    }
+
+    [Fact]
+    public async Task A_restore_by_a_reader_leaves_no_lock_behind()
+    {
+        var game = new GameLayout(_layout.GameDirectory("PPSA99666"), "PPSA99666", new FakePlatform());
+        ConvertedGames.Create(game);
+        await WriteSampleAsync();
+        ConversionBackup.SetAside(game);
+
+        _library.Find("PPSA99666");
+
+        Assert.False(Directory.Exists(game.Previous));
+        Assert.False(File.Exists(game.ReconvertLock));
+        Assert.False(ReconvertLock.IsHeld(game));
+    }
+
+    [Fact]
     public async Task Finding_a_game_does_not_restore_while_it_is_reconverted()
     {
         var game = new GameLayout(_layout.GameDirectory("PPSA99666"), "PPSA99666", new FakePlatform());
@@ -137,6 +161,7 @@ public sealed class GameLibraryTests : IDisposable
 
         Assert.Equal(["Alpha", "Zeta"], games.Select(entry => entry.Record.Name));
         Assert.Equal(_layout.GameDirectory("PPSA00001"), games[0].Game.Root);
+        Assert.False(Directory.Exists(Path.Combine(_layout.GameDirectory("PPSA00004"), ".ps5kitsune")));
     }
 
     [Fact]

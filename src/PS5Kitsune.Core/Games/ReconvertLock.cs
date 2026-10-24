@@ -1,8 +1,8 @@
 namespace PS5Kitsune.Core.Games;
 
 /// <summary>
-/// Held for a whole Reconvert: .ps5kitsune/reconvert.lock opened with no sharing. Reading the game elsewhere does not restore it while
-/// the lock is held, and a second Reconvert is refused. The file is deleted on close; a leftover file with no open handle is not held.
+/// Held for a whole Reconvert, and by a reader while it restores: .ps5kitsune/reconvert.lock opened with no sharing. Reading the game
+/// elsewhere does not restore it while the lock is held, and a second Reconvert is refused. The file is deleted on close; a leftover file with no open handle is not held.
 /// </summary>
 public static class ReconvertLock
 {
@@ -16,7 +16,8 @@ public static class ReconvertLock
         {
             return new FileStream(game.ReconvertLock, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None, 1, FileOptions.DeleteOnClose);
         }
-        catch (IOException)
+        // A handle being closed with delete-on-close can make the open fail with access denied.
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             return null;
         }
