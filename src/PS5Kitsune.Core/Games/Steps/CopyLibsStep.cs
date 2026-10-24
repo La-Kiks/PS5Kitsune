@@ -10,7 +10,9 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// </summary>
 public sealed class CopyLibsStep(AnyPS5Paths paths, GameLayout game) : IStep
 {
-    public string Name => "Copy the AnyPS5 libraries";
+    public const string StepName = "Copy the AnyPS5 libraries";
+
+    public string Name => StepName;
 
     public bool IsAlreadyDone() => LibFiles().All(IsCopied);
 

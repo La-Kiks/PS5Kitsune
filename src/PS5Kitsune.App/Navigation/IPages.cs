@@ -30,4 +30,8 @@ public interface IPages
     object AddGame(PreparedGame game, bool toIntel);
 
     object AddResult(GameAdded added);
+
+    object Reconvert(string titleId, string name);
+
+    object ReconvertResult(GameReconverted reconverted);
 }

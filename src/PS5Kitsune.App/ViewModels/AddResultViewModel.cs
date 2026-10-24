@@ -4,15 +4,46 @@ using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.App.ViewModels;
 
-/// <summary>The audit verdict of the game just added, with what AnyPS5 does not implement yet.</summary>
-public sealed partial class AddResultViewModel(GameAdded added, IPlatform platform, Navigator navigator, IPages pages) : ObservableObject
+/// <summary>The audit verdict of the game just added or reconverted, with what AnyPS5 does not implement yet.</summary>
+public sealed partial class AddResultViewModel : ObservableObject
 {
-    public string Title => $"{added.Record.Name} is added";
+    private readonly AuditSummary _audit;
+    private readonly string _gameDirectory;
+    private readonly IPlatform _platform;
+    private readonly Navigator _navigator;
+    private readonly IPages _pages;
 
-    public AuditVerdict Verdict => added.Audit.Verdict;
+    public AddResultViewModel(GameAdded added, IPlatform platform, Navigator navigator, IPages pages)
+        : this($"{added.Record.Name} is added", added.GameDirectory, added.Audit, added.Warnings, null, platform, navigator, pages)
+    {
+    }
+
+    public AddResultViewModel(GameReconverted reconverted, IPlatform platform, Navigator navigator, IPages pages)
+        : this($"{reconverted.Record.Name} reconverted", reconverted.GameDirectory, reconverted.Audit, [], Before(reconverted.PreviousAudit), platform, navigator, pages)
+    {
+    }
+
+    private AddResultViewModel(
+        string title, string gameDirectory, AuditSummary audit, IReadOnlyList<ValidationIssue> warnings, string? beforeText, IPlatform platform, Navigator navigator, IPages pages)
+    {
+        Title = title;
+        _gameDirectory = gameDirectory;
+        _audit = audit;
+        BeforeText = beforeText;
+        _platform = platform;
+        _navigator = navigator;
+        _pages = pages;
+        UnresolvedLines = [.. audit.Unresolved.Select(Line)];
+        Warnings = [.. warnings.Select(issue => issue.Message)];
+    }
+
+    public string Title { get; }
+
+    public AuditVerdict Verdict => _audit.Verdict;
 
     public bool IsGreen => Verdict == AuditVerdict.Green;
 
@@ -27,23 +58,28 @@ public sealed partial class AddResultViewModel(GameAdded added, IPlatform platfo
         _ => "Red: not playable yet; wait for an AnyPS5 update.",
     };
 
-    public string CountsText => string.Create(
-        CultureInfo.InvariantCulture, $"{added.Audit.Implemented} implemented, {added.Audit.Stub} stubs, {added.Audit.Absent} absent");
+    public string CountsText => string.Create(CultureInfo.InvariantCulture, $"{_audit.Implemented} implemented, {_audit.Stub} stubs, {_audit.Absent} absent");
 
-    public string? MissingLibrariesText => added.Audit.MissingLibraries.Count == 0
+    /// <summary>The counts before a Reconvert; null after an add.</summary>
+    public string? BeforeText { get; }
+
+    public string? MissingLibrariesText => _audit.MissingLibraries.Count == 0
         ? null
-        : "Missing libraries: " + string.Join(", ", added.Audit.MissingLibraries.Keys);
+        : "Missing libraries: " + string.Join(", ", _audit.MissingLibraries.Keys);
 
-    public bool HasUnresolved => added.Audit.Unresolved.Count > 0;
+    public bool HasUnresolved => _audit.Unresolved.Count > 0;
 
-    public string UnresolvedHeader => string.Create(CultureInfo.InvariantCulture, $"Show the unresolved functions ({added.Audit.Unresolved.Count})");
+    public string UnresolvedHeader => string.Create(CultureInfo.InvariantCulture, $"Show the unresolved functions ({_audit.Unresolved.Count})");
 
-    public IReadOnlyList<string> UnresolvedLines { get; } = [.. added.Audit.Unresolved.Select(Line)];
+    public IReadOnlyList<string> UnresolvedLines { get; }
 
-    public IReadOnlyList<string> Warnings { get; } = [.. added.Warnings.Select(issue => issue.Message)];
+    public IReadOnlyList<string> Warnings { get; }
 
     [ObservableProperty]
     public partial string? OpenError { get; private set; }
+
+    private static string Before(AuditRecord audit) =>
+        string.Create(CultureInfo.InvariantCulture, $"Before: {audit.Implemented} implemented, {audit.Stub} stubs, {audit.Absent} absent");
 
     private static string Line(UnresolvedImport import)
     {
@@ -52,15 +88,15 @@ public sealed partial class AddResultViewModel(GameAdded added, IPlatform platfo
     }
 
     [RelayCommand]
-    private void OpenFolder() => OpenError = PathOpener.TryOpen(platform, added.GameDirectory);
+    private void OpenFolder() => OpenError = PathOpener.TryOpen(_platform, _gameDirectory);
 
     [RelayCommand]
     private void AddAnother()
     {
-        navigator.GoHome(pages.Home());
-        navigator.GoTo(pages.ChooseGame());
+        _navigator.GoHome(_pages.Home());
+        _navigator.GoTo(_pages.ChooseGame());
     }
 
     [RelayCommand]
-    private void BackHome() => navigator.GoHome(pages.Home());
+    private void BackHome() => _navigator.GoHome(_pages.Home());
 }

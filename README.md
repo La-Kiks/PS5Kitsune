@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 6 of 8 (add a game; 6a, add a game from the app, in progress). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding a game is also possible from the app. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 6 of 8 (add a game; 6a, add a game from the app, done; 6b, reconvert, in progress). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding a game is also possible from the app. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
@@ -26,10 +26,11 @@ ps5kitsune install                   # checks, then Python, relinker, libraries 
 ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
 ps5kitsune use release|build         # switch between the release and build installs, both kept side by side
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
+ps5kitsune reconvert <title ID>      # convert a game again after an AnyPS5 update
 ps5kitsune run <title ID>            # launch from the game folder, log in .ps5kitsune\logs
 ```
 
-In the app, Home's "Add a game" takes a folder or a .zip (picked or dropped), shows its summary, adds it and shows the audit verdict.
+In the app, Home's "Add a game" takes a folder or a .zip (picked or dropped), shows its summary, adds it and shows the audit verdict. After an AnyPS5 update, `ps5kitsune reconvert <titleId>` (or Reconvert in the app) converts a game again without copying it, keeping its saves; a failure puts the previous conversion back.
 
 Every command takes `--root <data root>`; without it, the CLI uses the data folder chosen in the app, else `C:\PS5Kitsune`. `check` and `install` exit with code 2 when a check is blocking.
 

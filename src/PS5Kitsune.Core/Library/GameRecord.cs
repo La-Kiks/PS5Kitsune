@@ -28,6 +28,9 @@ public sealed record GameRecord
     public required DateTimeOffset AddedAt { get; init; }
 
     public DateTimeOffset? LastPlayedAt { get; init; }
+
+    /// <summary>When Reconvert last rewrote the conversion; null for a game never reconverted. Optional, so schema 1 still reads.</summary>
+    public DateTimeOffset? ReconvertedAt { get; init; }
 }
 
 /// <param name="Mode">The install mode that converted the game: "release" or "build".</param>

@@ -6,7 +6,9 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// <summary>Copies the game root into app0 as it is. Done when every source file is there with the same size.</summary>
 public sealed class CopyGameStep(GameImportContext context) : IStep
 {
-    public string Name => "Copy the game";
+    public const string StepName = "Copy the game";
+
+    public string Name => StepName;
 
     public bool IsAlreadyDone() => FileTree.RelativeFiles(context.Source.Root).All(IsCopied);
 

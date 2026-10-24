@@ -28,7 +28,7 @@ public sealed partial class GameImporter(
     ILogger<GameImporter> logger) : IGameImporter
 {
     public static readonly IReadOnlyList<string> Names =
-        ["Copy the game", "Copy the AnyPS5 libraries", "Unwrap SELF files", "Convert with the relinker", "Audit the imports", "Record the game"];
+        [CopyGameStep.StepName, CopyLibsStep.StepName, UnwrapSelfStep.StepName, RelinkStep.StepName, AuditStep.StepName, WriteGameRecordStep.StepName];
 
     public IReadOnlyList<string> StepNames => Names;
 
@@ -68,6 +68,7 @@ public sealed partial class GameImporter(
         PreparedGame game, bool toIntel, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(game);
+        ObjectDisposedException.ThrowIf(game.IsDisposed, game);
         if (!installer.IsInstalled())
         {
             throw new AnyPS5NotInstalledException();

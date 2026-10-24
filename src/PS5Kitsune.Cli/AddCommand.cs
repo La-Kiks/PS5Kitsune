@@ -42,23 +42,7 @@ internal static class AddCommand
                     var titleId = record.TitleId;
                     var directory = added.GameDirectory;
                     logger.GameAdded(name, titleId, directory);
-                    var audit = record.Audit;
-                    var implemented = audit.Implemented;
-                    var stub = audit.Stub;
-                    var absent = audit.Absent;
-                    logger.AuditCounts(implemented, stub, absent);
-                    switch (audit.Verdict)
-                    {
-                        case AuditVerdict.Green:
-                            logger.VerdictGreen();
-                            break;
-                        case AuditVerdict.Orange:
-                            logger.VerdictOrange();
-                            break;
-                        default:
-                            logger.VerdictRed();
-                            break;
-                    }
+                    VerdictReport.Print(logger, record.Audit);
 
                     return 0;
                 default:

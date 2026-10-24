@@ -102,4 +102,25 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Installation stopped before downloading anything. Fix the blocking problems above, then run 'ps5kitsune install' again; 'ps5kitsune check' shows every check.")]
     public static partial void InstallBlocked(this ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Name} ({TitleId}) is reconverted in {Directory}.")]
+    public static partial void GameReconverted(this ILogger logger, string name, string titleId, string directory);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Before: {Implemented} implemented, {Stub} stubs, {Absent} absent.")]
+    public static partial void AuditBefore(this ILogger logger, int implemented, int stub, int absent);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Already converted with {Conversion}; reconverting anyway.")]
+    public static partial void AlreadyConverted(this ILogger logger, string conversion);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The previous conversion was restored.")]
+    public static partial void PreviousRestored(this ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "The previous conversion could not be restored yet; it will be restored on the next start or reconvert.")]
+    public static partial void PreviousNotRestored(this ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Converted with {ConvertedWith}; the AnyPS5 in use is {InUse}. Run ps5kitsune reconvert {TitleId}.")]
+    public static partial void NeedsReconversion(this ILogger logger, string convertedWith, string inUse, string titleId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "A Reconvert of {TitleId} is in progress; run the game when it finishes.")]
+    public static partial void ReconvertInProgress(this ILogger logger, string titleId);
 }

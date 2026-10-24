@@ -9,7 +9,9 @@ public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5Install
 {
     private const string IconPath = "app0/sce_sys/icon0.png";
 
-    public string Name => "Record the game";
+    public const string StepName = "Record the game";
+
+    public string Name => StepName;
 
     public bool IsAlreadyDone() => File.Exists(context.Game.RecordFile);
 

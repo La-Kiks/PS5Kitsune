@@ -57,6 +57,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GameImporter>();
         services.AddSingleton<IGameImporter>(provider => provider.GetRequiredService<GameImporter>());
         services.AddSingleton<GameLibrary>();
+        services.AddSingleton<GameReconverter>();
+        services.AddSingleton<IGameReconverter>(provider => provider.GetRequiredService<GameReconverter>());
 
         AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);
         AddTool<MinGitTool>(services, profile, MinGitTool.ToolId);

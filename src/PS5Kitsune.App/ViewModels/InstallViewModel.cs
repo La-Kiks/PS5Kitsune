@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
@@ -15,8 +16,8 @@ public sealed partial class InstallViewModel : StepRunViewModel
     private readonly IPages _pages;
 
     /// <param name="busyChanged">Told true when the install starts and false when it stops, so the data root cannot change meanwhile.</param>
-    public InstallViewModel(IAnyPS5Installer installer, AnyPS5Mode mode, string logFile, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, Action<bool>? busyChanged = null)
-        : base(logFile, platform, ui, busyChanged)
+    public InstallViewModel(IAnyPS5Installer installer, AnyPS5Mode mode, string logFile, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, Action<bool>? busyChanged = null, ILogger? logger = null)
+        : base(logFile, platform, ui, busyChanged, logger)
     {
         _installer = installer;
         _mode = mode;

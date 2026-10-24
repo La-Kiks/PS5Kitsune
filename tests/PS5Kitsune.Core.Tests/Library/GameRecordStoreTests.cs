@@ -46,5 +46,20 @@ public sealed class GameRecordStoreTests : IDisposable
         Assert.Throws<InvalidGameRecordException>(() => GameRecordStore.Read(RecordFile));
     }
 
+    [Fact]
+    public void A_record_without_reconverted_at_reads_as_never_reconverted()
+    {
+        TestFiles.Write(RecordFile, """
+            {
+              "schemaVersion": 1, "titleId": "PPSA99666", "name": "DOOM", "executable": "PPSA99666.exe",
+              "convertedWith": { "profile": "p", "mode": "release", "version": "v0.1.2", "commit": null, "toIntel": false },
+              "audit": { "implemented": 361, "stub": 3, "absent": 0, "verdict": "orange" },
+              "addedAt": "2026-10-23T10:00:00+02:00"
+            }
+            """);
+
+        Assert.Null(GameRecordStore.Read(RecordFile)!.ReconvertedAt);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

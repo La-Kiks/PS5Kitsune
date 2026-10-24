@@ -14,7 +14,9 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// </summary>
 public sealed class UnwrapSelfStep(GameImportContext context, AnyPS5Paths paths, PythonEmbeddableTool python, IProcessRunner processRunner) : IStep
 {
-    public string Name => "Unwrap SELF files";
+    public const string StepName = "Unwrap SELF files";
+
+    public string Name => StepName;
 
     public bool IsAlreadyDone() => !FilesToUnwrap().Any();
 

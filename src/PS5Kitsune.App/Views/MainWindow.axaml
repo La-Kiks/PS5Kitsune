@@ -32,6 +32,9 @@
     <DataTemplate DataType="vm:AddGameViewModel">
       <views:AddGameView />
     </DataTemplate>
+    <DataTemplate DataType="vm:ReconvertViewModel">
+      <views:ReconvertView />
+    </DataTemplate>
     <DataTemplate DataType="vm:AddResultViewModel">
       <views:AddResultView />
     </DataTemplate>

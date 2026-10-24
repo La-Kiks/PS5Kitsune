@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
@@ -17,8 +18,8 @@ public sealed partial class AddGameViewModel : StepRunViewModel, IPreparedGameOw
     private GameAdded? _added;
 
     public AddGameViewModel(
-        IGameImporter importer, PreparedGame game, bool toIntel, string logFile, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, Action<bool>? busyChanged = null)
-        : base(logFile, platform, ui, busyChanged)
+        IGameImporter importer, PreparedGame game, bool toIntel, string logFile, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, Action<bool>? busyChanged = null, ILogger? logger = null)
+        : base(logFile, platform, ui, busyChanged, logger)
     {
         _importer = importer;
         _game = game;

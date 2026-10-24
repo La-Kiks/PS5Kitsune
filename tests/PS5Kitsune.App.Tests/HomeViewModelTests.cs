@@ -3,6 +3,8 @@ using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tests;
 
@@ -371,5 +373,60 @@ public sealed class HomeViewModelTests : IDisposable
     {
         _sessions.Dispose();
         _temp.Dispose();
+    }
+
+    private Task WriteGameAsync(string titleId, string name, ConversionInfo convertedWith) => GameRecordStore.WriteAsync(
+        Path.Combine(_temp.Combine("root"), "games", titleId, ".ps5kitsune", "game.json"),
+        new GameRecord
+        {
+            SchemaVersion = GameRecord.CurrentSchemaVersion,
+            TitleId = titleId,
+            Name = name,
+            Executable = titleId + ".exe",
+            ConvertedWith = convertedWith,
+            Audit = new AuditRecord(360, 4, 0, AuditVerdict.Orange),
+            AddedAt = DateTimeOffset.UnixEpoch,
+        },
+        TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task Lists_the_games_converted_with_another_install()
+    {
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+        await WriteGameAsync("PPSA99666", "DOOM", new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false));
+        await WriteGameAsync("PPSA00001", "Up to date", new ConversionInfo("test-profile", "release", "v0.1.2", null, false));
+
+        var viewModel = await CreateAsync();
+
+        Assert.True(viewModel.HasGamesToReconvert);
+        var game = Assert.Single(viewModel.GamesToReconvert);
+        Assert.Equal(new GameToReconvert("PPSA99666", "DOOM", "Converted with build 3fd1cc3 · in use: release v0.1.2"), game);
+        Assert.True(viewModel.ReconvertCommand.CanExecute(game));
+
+        viewModel.ReconvertCommand.Execute(game);
+
+        Assert.Equal("reconvert:PPSA99666", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task No_game_to_reconvert_hides_the_section()
+    {
+        _installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Record);
+
+        var viewModel = await CreateAsync();
+
+        Assert.False(viewModel.HasGamesToReconvert);
+        Assert.Empty(viewModel.GamesToReconvert);
+    }
+
+    [Fact]
+    public async Task Without_an_install_no_game_is_listed_and_reconvert_is_disabled()
+    {
+        await WriteGameAsync("PPSA99666", "DOOM", new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false));
+
+        var viewModel = await CreateAsync();
+
+        Assert.Empty(viewModel.GamesToReconvert);
+        Assert.False(viewModel.ReconvertCommand.CanExecute(new GameToReconvert("PPSA99666", "DOOM", "")));
     }
 }
