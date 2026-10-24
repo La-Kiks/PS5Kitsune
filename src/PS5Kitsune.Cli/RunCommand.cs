@@ -23,6 +23,13 @@ internal static class RunCommand
 
             var library = services.GetRequiredService<GameLibrary>();
             var (game, record) = library.Find(parseResult.GetRequiredValue(titleIdArgument));
+            if (installer.ReadRecord() is { } install && GameLibrary.NeedsReconversion(record, install))
+            {
+                var convertedWith = ConversionLabels.Of(record.ConvertedWith);
+                var inUse = ConversionLabels.Of(install);
+                var titleId = record.TitleId;
+                logger.NeedsReconversion(convertedWith, inUse, titleId);
+            }
             var executable = Path.Combine(game.Root, record.Executable);
             if (!File.Exists(executable))
             {
