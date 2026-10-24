@@ -72,7 +72,18 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
             Session.Get<GamePlayer>(), Session.Get<GameCleaner>(), Session.Get<RunningGames>(), Session.Get<IAnyPS5Installer>(), platform, dialogs, navigator, this);
 
     /// <summary>The first page: the Library once AnyPS5 is installed and a game is added, else Home.</summary>
-    public object Start() => LibraryViewModel.OpensFirst(Session.Get<IAnyPS5Installer>(), Session.Get<GameLibrary>()) ? Library() : Home();
+    public object Start()
+    {
+        try
+        {
+            return LibraryViewModel.OpensFirst(Session.Get<IAnyPS5Installer>(), Session.Get<GameLibrary>()) ? Library() : Home();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Home shows what it can read.
+            return Home();
+        }
+    }
 
     public object Game(PlayingGame playing, bool firstLaunch) =>
         new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this);

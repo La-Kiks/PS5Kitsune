@@ -191,6 +191,35 @@ public sealed class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Clearing_the_shader_cache_of_a_game_removed_meanwhile_refreshes_the_list()
+    {
+        var game = await _library.AddAsync("PPSA00001", "Alpha");
+        await _library.AddAsync("PPSA00002", "Bravo");
+        Directory.CreateDirectory(Path.Combine(game.ShaderCache, "v1"));
+        await File.WriteAllBytesAsync(Path.Combine(game.ShaderCache, "v1", "cache.bin"), new byte[1024], TestContext.Current.CancellationToken);
+        var page = await CreateAsync();
+        File.Delete(game.RecordFile);
+        _dialogs.Confirm = true;
+
+        await page.ClearShaderCacheCommand.ExecuteAsync(Tile(page, "Alpha"));
+
+        Assert.Equal(["Bravo"], page.Games.Select(tile => tile.Name));
+    }
+
+    [Fact]
+    public async Task Removing_a_game_whose_record_became_malformed_says_so()
+    {
+        var game = await _library.AddAsync("PPSA00001", "Alpha");
+        var page = await CreateAsync();
+        await File.WriteAllTextAsync(game.RecordFile, "{", TestContext.Current.CancellationToken);
+        _dialogs.Confirm = true;
+
+        await page.RemoveCommand.ExecuteAsync(Tile(page, "Alpha"));
+
+        Assert.StartsWith("Could not remove Alpha completely: ", page.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task No_shader_cache_asks_nothing()
     {
         await _library.AddAsync("PPSA00001", "Alpha");

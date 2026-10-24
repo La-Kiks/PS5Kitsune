@@ -56,7 +56,7 @@ public sealed partial class LibraryViewModel(
         {
             tiles = await Task.Run(Read).ConfigureAwait(true);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             if (generation == _generation)
             {
@@ -183,7 +183,17 @@ public sealed partial class LibraryViewModel(
     private async Task ClearShaderCacheAsync(GameTileViewModel tile)
     {
         Message = null;
-        var size = await Task.Run(() => GameCleaner.ShaderCacheSize(tile.Entry.Game)).ConfigureAwait(true);
+        long size;
+        try
+        {
+            size = await Task.Run(() => GameCleaner.ShaderCacheSize(tile.Entry.Game)).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Message = $"Could not read the shader cache of {tile.Name}: {exception.Message}";
+            return;
+        }
+
         if (size == 0)
         {
             Message = $"{tile.Name} has no shader cache.";
@@ -208,6 +218,15 @@ public sealed partial class LibraryViewModel(
         {
             Message = $"Another PS5Kitsune action is using {tile.Name}. Try again when it finishes.";
         }
+        catch (GameNotFoundException)
+        {
+            // Removed elsewhere already: the refresh drops it.
+            await RefreshAsync().ConfigureAwait(true);
+        }
+        catch (InvalidGameRecordException exception)
+        {
+            Message = $"Could not clear the shader cache of {tile.Name}: {exception.Message}";
+        }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             Message = $"The shader cache of {tile.Name} may be partly cleared: {exception.Message}";
@@ -218,7 +237,18 @@ public sealed partial class LibraryViewModel(
     private async Task RemoveAsync(GameTileViewModel tile)
     {
         Message = null;
-        var hasSaves = await Task.Run(() => GameCleaner.HasSaves(tile.Entry.Game)).ConfigureAwait(true);
+        bool hasSaves;
+        try
+        {
+            hasSaves = await Task.Run(() => GameCleaner.HasSaves(tile.Entry.Game)).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Message = $"Could not remove {tile.Name} completely: {exception.Message}";
+            await RefreshAsync().ConfigureAwait(true);
+            return;
+        }
+
         var question = hasSaves ? $"Delete {tile.Name} and its folder? Its saves in data\\ are deleted too." : $"Delete {tile.Name} and its folder?";
         if (!await dialogs.ConfirmAsync($"Remove {tile.Name}?", question, "Delete").ConfigureAwait(true))
         {
@@ -241,7 +271,7 @@ public sealed partial class LibraryViewModel(
         {
             // Removed elsewhere already: the refresh drops it.
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidGameRecordException)
         {
             Message = $"Could not remove {tile.Name} completely: {exception.Message}";
         }
