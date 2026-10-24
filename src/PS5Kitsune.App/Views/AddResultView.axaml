@@ -18,6 +18,7 @@
         <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding IsOrange}" Foreground="#9D5D00" FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock Text="{Binding VerdictText}" IsVisible="{Binding IsRed}" Foreground="#C42B1C" FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock Text="{Binding CountsText}" Opacity="0.8" />
+        <TextBlock Text="{Binding BeforeText}" Opacity="0.8" IsVisible="{Binding BeforeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <TextBlock Text="{Binding MissingLibrariesText}" IsVisible="{Binding MissingLibrariesText, Converter={x:Static ObjectConverters.IsNotNull}}"
                    Foreground="#C42B1C" TextWrapping="Wrap" />
         <Expander Header="{Binding UnresolvedHeader}" IsVisible="{Binding HasUnresolved}" HorizontalAlignment="Stretch">

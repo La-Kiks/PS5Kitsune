@@ -35,6 +35,8 @@ public sealed class PageFactoryTests : IDisposable
         Assert.IsType<GameSummaryViewModel>(pages.GameSummary(TestGameData.Prepared()));
         Assert.IsType<AddGameViewModel>(pages.AddGame(TestGameData.Prepared(), false));
         Assert.IsType<AddResultViewModel>(pages.AddResult(TestGameData.Added()));
+        Assert.Equal(6, Assert.IsType<ReconvertViewModel>(pages.Reconvert("PPSA99666", "DOOM")).Steps.Count);
+        Assert.IsType<AddResultViewModel>(pages.ReconvertResult(TestGameData.Reconverted()));
     }
 
     public void Dispose() => _temp.Dispose();

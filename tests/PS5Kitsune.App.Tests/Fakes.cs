@@ -184,6 +184,10 @@ internal sealed class FakePages : IPages
     public object AddGame(PreparedGame game, bool toIntel) => $"adding:{game.Metadata?.TitleId}:{toIntel}";
 
     public object AddResult(GameAdded added) => $"result:{added.Record.TitleId}";
+
+    public object Reconvert(string titleId, string name) => $"reconvert:{titleId}";
+
+    public object ReconvertResult(GameReconverted reconverted) => $"reconverted:{reconverted.Record.TitleId}";
 }
 
 internal sealed class FakeTool(string id, bool installed) : IPortableTool
@@ -272,6 +276,12 @@ internal static class TestGameData
             resumes);
     }
 
+    public static GameReconverted Reconverted()
+    {
+        var added = Added(new AuditSummary(361, 3, 0, new Dictionary<string, int>()));
+        return new GameReconverted(added.Record, added.GameDirectory, added.Audit, new AuditRecord(360, 4, 0, AuditVerdict.Orange));
+    }
+
     public static GameAdded Added(AuditSummary? audit = null, IReadOnlyList<ValidationIssue>? warnings = null)
     {
         var summary = audit ?? new AuditSummary(360, 4, 0, new Dictionary<string, int>());
@@ -316,4 +326,36 @@ internal sealed class FakeGameImporter : IGameImporter
         Adds.Add((game, toIntel));
         return Add(game, toIntel, progress, onEvent, cancellationToken);
     }
+}
+
+internal delegate Task<GameReconverted> ReconvertBehavior(string titleId, IProgress<StepProgress>? progress, Action<StepEvent>? onEvent, CancellationToken cancellationToken);
+
+internal sealed class FakeGameReconverter : IGameReconverter
+{
+    public IReadOnlyList<string> StepNames { get; } =
+        ["Set the old conversion aside", "Copy the AnyPS5 libraries", "Unwrap SELF files", "Convert with the relinker", "Audit the imports", "Record the game"];
+
+    public ReconvertBehavior Reconvert { get; set; } = (_, _, _, _) => Task.FromResult(TestGameData.Reconverted());
+
+    public List<string> Reconverted { get; } = [];
+
+    public Task<GameReconverted> ReconvertAsync(string titleId, IProgress<StepProgress>? progress = null, Action<StepEvent>? onEvent = null, CancellationToken cancellationToken = default)
+    {
+        Reconverted.Add(titleId);
+        return Reconvert(titleId, progress, onEvent, cancellationToken);
+    }
+}
+
+/// <summary>Keeps the level and message of each entry.</summary>
+internal sealed class ListLogger : Microsoft.Extensions.Logging.ILogger
+{
+    public List<(Microsoft.Extensions.Logging.LogLevel Level, string Message)> Entries { get; } = [];
+
+    public IDisposable? BeginScope<TState>(TState state)
+        where TState : notnull => null;
+
+    public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+    public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+        Entries.Add((logLevel, formatter(state, exception)));
 }

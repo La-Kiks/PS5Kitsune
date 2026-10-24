@@ -67,6 +67,22 @@ public sealed class AddResultViewModelTests
             Create(TestGameData.Added(warnings: [new ValidationIssue(IssueSeverity.Warning, "Low disk space.")])).Warnings);
 
     [Fact]
+    public void A_reconverted_game_shows_the_counts_before()
+    {
+        var viewModel = new AddResultViewModel(TestGameData.Reconverted(), new TestPlatform(), new Navigator(), new FakePages());
+
+        Assert.Equal("DOOM reconverted", viewModel.Title);
+        Assert.Equal("361 implemented, 3 stubs, 0 absent", viewModel.CountsText);
+        Assert.Equal("Before: 360 implemented, 4 stubs, 0 absent", viewModel.BeforeText);
+    }
+
+    [Fact]
+    public void An_added_game_has_no_before_line()
+    {
+        Assert.Null(new AddResultViewModel(TestGameData.Added(), new TestPlatform(), new Navigator(), new FakePages()).BeforeText);
+    }
+
+    [Fact]
     public void The_buttons_open_the_folder_add_another_or_go_home()
     {
         var viewModel = Create(TestGameData.Added());

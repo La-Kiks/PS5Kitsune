@@ -12,4 +12,7 @@ internal static partial class AppLog
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Reading the chosen game failed.")]
     public static partial void PrepareGameFailed(this ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "A page failed after its steps finished.")]
+    public static partial void StepRunHookFailed(this ILogger logger, Exception exception);
 }

@@ -2,7 +2,9 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.Shell;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Pipeline;
 
@@ -17,13 +19,16 @@ public abstract partial class StepRunViewModel : ObservableObject, INavigationAw
     private readonly string _logFile;
     private readonly IPlatform _platform;
     private readonly Action<bool>? _busyChanged;
+    private readonly ILogger? _logger;
     private CancellationTokenSource? _cancellation;
     private Task _running = Task.CompletedTask;
     private bool _started;
 
     /// <param name="busyChanged">Told true when the run starts and false when it stops, so the data root cannot change meanwhile.</param>
-    protected StepRunViewModel(string logFile, IPlatform platform, IUiDispatcher ui, Action<bool>? busyChanged)
+    /// <param name="logger">Logs a success or cancel hook that throws.</param>
+    protected StepRunViewModel(string logFile, IPlatform platform, IUiDispatcher ui, Action<bool>? busyChanged, ILogger? logger = null)
     {
+        _logger = logger;
         _logFile = logFile;
         _platform = platform;
         Ui = ui;
@@ -155,13 +160,22 @@ public abstract partial class StepRunViewModel : ObservableObject, INavigationAw
             });
         }
 
-        if (succeeded == true)
+        // A hook navigates or releases resources; an exception there must reach the user, not vanish in a discarded task.
+        try
         {
-            await OnSucceededAsync().ConfigureAwait(true);
+            if (succeeded == true)
+            {
+                await OnSucceededAsync().ConfigureAwait(true);
+            }
+            else if (succeeded == false)
+            {
+                await OnCancelledAsync().ConfigureAwait(true);
+            }
         }
-        else if (succeeded == false)
+        catch (Exception exception)
         {
-            await OnCancelledAsync().ConfigureAwait(true);
+            _logger?.StepRunHookFailed(exception);
+            Ui.Post(() => Fail($"Something went wrong after the steps: {exception.Message}", null, canRetry: false));
         }
     }
 

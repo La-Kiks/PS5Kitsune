@@ -27,7 +27,7 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
     public object Tools() => new ToolsViewModel(Session.Get<BuildToolsSummary>(), navigator, this);
 
     public object Install(AnyPS5Mode mode) =>
-        new InstallViewModel(Session.Get<IAnyPS5Installer>(), mode, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
+        new InstallViewModel(Session.Get<IAnyPS5Installer>(), mode, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy, Session.Get<ILogger<StepRunViewModel>>());
 
     public object Done() =>
         new DoneViewModel(Session.Get<IAnyPS5Installer>().ReadRecord(), Session.Get<AnyPS5Paths>(), Session.LogFile, platform, navigator, this);
@@ -37,7 +37,12 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
     public object GameSummary(PreparedGame game) => new GameSummaryViewModel(game, Session.Get<ICpuInfo>().Read().IsIntel, platform, navigator, this);
 
     public object AddGame(PreparedGame game, bool toIntel) =>
-        new AddGameViewModel(Session.Get<IGameImporter>(), game, toIntel, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy);
+        new AddGameViewModel(Session.Get<IGameImporter>(), game, toIntel, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy, Session.Get<ILogger<StepRunViewModel>>());
 
     public object AddResult(GameAdded added) => new AddResultViewModel(added, platform, navigator, this);
+
+    public object Reconvert(string titleId, string name) =>
+        new ReconvertViewModel(Session.Get<IGameReconverter>(), titleId, name, Session.LogFile, platform, ui, navigator, this, busy => sessions.IsBusy = busy, Session.Get<ILogger<StepRunViewModel>>());
+
+    public object ReconvertResult(GameReconverted reconverted) => new AddResultViewModel(reconverted, platform, navigator, this);
 }
