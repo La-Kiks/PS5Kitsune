@@ -7,6 +7,7 @@ using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Profiles;
@@ -382,7 +383,7 @@ internal sealed class TestLibrary : IDisposable
         Library = new GameLibrary(Layout, Platform, TimeProvider.System, NullLogger<GameLibrary>.Instance);
         Running = new RunningGames(Launcher, NullLogger<RunningGames>.Instance);
         Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Release);
-        Player = new GamePlayer(Library, Installer, Launcher, Running);
+        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance), NullLogger<GamePlayer>.Instance);
         Cleaner = new GameCleaner(Library, Running, NullLogger<GameCleaner>.Instance);
     }
 
@@ -391,6 +392,10 @@ internal sealed class TestLibrary : IDisposable
     public TestPlatform Platform { get; } = new();
 
     public FakeGameLauncher Launcher { get; } = new();
+
+    public FakeLavapipe Lavapipe { get; } = new();
+
+    public FakeFontPack Fonts { get; } = new() { Installed = true };
 
     public FakeInstaller Installer { get; } = new();
 

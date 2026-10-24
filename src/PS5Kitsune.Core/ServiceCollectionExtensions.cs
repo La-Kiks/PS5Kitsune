@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.AnyPS5.Build;
@@ -63,6 +64,8 @@ public static class ServiceCollectionExtensions
         // The platform registers its launcher first; elsewhere nothing can run, so nothing is running.
         services.TryAddSingleton<IGameLauncher, UnsupportedGameLauncher>();
         services.AddSingleton<RunningGames>();
+        services.AddSingleton(provider => new LaunchPreparation(
+            provider.GetService<ILavapipe>(), provider.GetService<IFontPack>(), provider.GetRequiredService<ILogger<LaunchPreparation>>()));
         services.AddSingleton<GamePlayer>();
         services.AddSingleton<GameCleaner>();
         services.AddSingleton<GameReconverter>();

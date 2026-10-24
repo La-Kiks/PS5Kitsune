@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="..\PS5Kitsune.Core.Tests\TempDirectory.cs" Link="TempDirectory.cs" />
     <Compile Include="..\PS5Kitsune.Core.Tests\Fakes\FakeGameLauncher.cs" Link="FakeGameLauncher.cs" />
+    <Compile Include="..\PS5Kitsune.Core.Tests\Fakes\FakeLaunchTools.cs" Link="FakeLaunchTools.cs" />
   </ItemGroup>
 
   <ItemGroup>

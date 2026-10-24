@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Tests.AnyPS5;
 using PS5Kitsune.Core.Tests.Fakes;
@@ -15,6 +16,8 @@ public sealed class GamePlayerTests : IDisposable
     private readonly FakeGameLauncher _launcher = new();
     private readonly GameLibrary _library;
     private readonly RunningGames _running;
+    private readonly FakeLavapipe _lavapipe = new();
+    private readonly FakeFontPack _fonts = new() { Installed = true };
     private readonly GamePlayer _player;
 
     public GamePlayerTests()
@@ -22,7 +25,9 @@ public sealed class GamePlayerTests : IDisposable
         _setup = new AnyPS5TestSetup(_temp.Combine("root"));
         _library = new GameLibrary(_setup.Layout, _setup.Platform, _setup.Time, NullLogger<GameLibrary>.Instance);
         _running = new RunningGames(_launcher, NullLogger<RunningGames>.Instance);
-        _player = new GamePlayer(_library, _setup.Installer, _launcher, _running);
+        _player = new GamePlayer(
+            _library, _setup.Installer, _launcher, _running,
+            new LaunchPreparation(_lavapipe, _fonts, NullLogger<LaunchPreparation>.Instance), NullLogger<GamePlayer>.Instance);
     }
 
     private GameLayout Game => new(_setup.Layout.GameDirectory(TestGames.TitleId), TestGames.TitleId, _setup.Platform);
@@ -149,6 +154,119 @@ public sealed class GamePlayerTests : IDisposable
         _player.Forget(playing);
 
         Assert.False(File.Exists(Game.RunningRecord));
+    }
+
+    private Task SetSettingsAsync(GameSettings settings) =>
+        GameRecordStore.WriteAsync(Game.RecordFile, GameRecordStore.Read(Game.RecordFile)! with { Settings = settings }, TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task The_settings_and_the_fonts_become_the_game_environment()
+    {
+        await AddDoomAsync();
+        await SetSettingsAsync(new GameSettings { Language = 2 });
+
+        await LaunchAsync();
+
+        Assert.Equal(
+            new Dictionary<string, string> { ["ANYPS5_LANGUAGE"] = "2", ["ANYPS5_SYSTEM_FONTS"] = _fonts.Folder },
+            Assert.Single(_launcher.Launches).Environment);
+    }
+
+    [Fact]
+    public async Task Lavapipe_is_downloaded_then_passed()
+    {
+        await AddDoomAsync();
+        await SetSettingsAsync(new GameSettings { Lavapipe = true });
+
+        await LaunchAsync();
+
+        Assert.Equal(1, _lavapipe.Installs);
+        var environment = Assert.Single(_launcher.Launches).Environment;
+        Assert.Equal(_lavapipe.Manifest, environment["VK_DRIVER_FILES"]);
+        Assert.Equal("llvmpipe", environment["ANYPS5_GPU"]);
+    }
+
+    [Fact]
+    public async Task Lavapipe_turned_on_after_the_preparation_is_refused_when_mesa_is_missing()
+    {
+        await AddDoomAsync();
+        _fonts.Installed = false;
+        _fonts.Gate = new TaskCompletionSource();
+        var launching = LaunchAsync();
+        await SetSettingsAsync(new GameSettings { Lavapipe = true });
+        _fonts.Gate.SetResult();
+
+        var exception = await Assert.ThrowsAsync<LavapipeUnavailableException>(() => launching);
+
+        Assert.Equal("Lavapipe is not installed. Launch again to download it.", exception.Message);
+        Assert.Empty(_launcher.Launches);
+        Assert.False(GameLock.IsHeld(Game));
+    }
+
+    [Fact]
+    public async Task A_failed_launch_is_not_counted_as_played()
+    {
+        await AddDoomAsync();
+        _launcher.LaunchFailure = new System.ComponentModel.Win32Exception(2);
+
+        await Assert.ThrowsAsync<System.ComponentModel.Win32Exception>(LaunchAsync);
+
+        Assert.Null(_library.Find(TestGames.TitleId).Record.LastPlayedAt);
+        Assert.Null(_running.Check(Game));
+    }
+
+    [Fact]
+    public async Task A_font_warning_reaches_the_caller()
+    {
+        await AddDoomAsync();
+        _fonts.Installed = false;
+        _fonts.Failure = new HttpRequestException("offline");
+
+        var playing = await LaunchAsync();
+
+        Assert.Equal("Fonts could not be downloaded (offline); games that use system fonts may show no text or stop.", playing.FontsWarning);
+        Assert.False(Assert.Single(_launcher.Launches).Environment.ContainsKey("ANYPS5_SYSTEM_FONTS"));
+    }
+
+    [Fact]
+    public async Task A_running_game_is_refused_before_any_download()
+    {
+        await AddDoomAsync();
+        await LaunchAsync();
+        _fonts.Installed = false;
+
+        await Assert.ThrowsAsync<GameRunningException>(LaunchAsync);
+
+        Assert.Equal(0, _fonts.Installs);
+    }
+
+    [Fact]
+    public async Task Saving_settings_keeps_the_rest_of_the_record()
+    {
+        await AddDoomAsync();
+        var played = DateTimeOffset.UnixEpoch;
+        await GameRecordStore.WriteAsync(Game.RecordFile, GameRecordStore.Read(Game.RecordFile)! with { LastPlayedAt = played }, TestContext.Current.CancellationToken);
+
+        var saved = await _player.SaveSettingsAsync(TestGames.TitleId, new GameSettings { Overlay = true, Gpu = " " }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new GameSettings { Overlay = true }, saved.Settings);
+        var record = GameRecordStore.Read(Game.RecordFile)!;
+        Assert.Equal(new GameSettings { Overlay = true }, record.Settings);
+        Assert.Equal(played, record.LastPlayedAt);
+        Assert.Equal("DOOM", record.Name);
+    }
+
+    [Fact]
+    public async Task Saving_settings_is_refused_while_the_game_runs_or_is_busy()
+    {
+        await AddDoomAsync();
+        using (GameLock.TryAcquireNow(Game))
+        {
+            await Assert.ThrowsAsync<GameBusyException>(() => _player.SaveSettingsAsync(TestGames.TitleId, new GameSettings(), TestContext.Current.CancellationToken));
+        }
+
+        await LaunchAsync();
+        await Assert.ThrowsAsync<GameRunningException>(() => _player.SaveSettingsAsync(TestGames.TitleId, new GameSettings(), TestContext.Current.CancellationToken));
     }
 
     public void Dispose() => _temp.Dispose();
