@@ -216,7 +216,7 @@ public sealed class GameReconverterTests : IDisposable
         var run = Assert.IsType<StepFailedException>(failure.InnerException);
         Assert.Equal("Convert with the relinker", run.StepName);
         Assert.NotNull(failure.RestoreFailure);
-        Assert.True(Directory.Exists(Game.Previous) || Directory.Exists(Game.PreviousPartial));
+        Assert.True(Directory.Exists(Game.Previous));
 
         Assert.True(ConversionBackup.Restore(Game));
         Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));

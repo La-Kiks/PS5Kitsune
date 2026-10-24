@@ -109,7 +109,7 @@ public sealed class ConversionBackupTests : IDisposable
     }
 
     [Fact]
-    public void A_restore_stopped_while_moving_back_can_be_retried()
+    public void A_restore_that_fails_to_rename_the_set_aside_folder_succeeds_when_retried()
     {
         var before = ConvertedGames.Snapshot(_game.Root);
         ConversionBackup.SetAside(_game);

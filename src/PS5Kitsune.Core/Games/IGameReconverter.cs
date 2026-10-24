@@ -14,7 +14,7 @@ public interface IGameReconverter
     /// <exception cref="AnyPS5NotInstalledException">AnyPS5 is not installed.</exception>
     /// <exception cref="Library.GameNotFoundException">No game with this title ID.</exception>
     /// <exception cref="Library.InvalidGameRecordException">The game.json is malformed.</exception>
-    /// <exception cref="StepFailedException">A step failed; the previous conversion is back.</exception>
+    /// <exception cref="StepFailedException">A step failed; the previous conversion is back (except a failed game.json write after the discard; see above).</exception>
     /// <exception cref="OperationCanceledException">Cancelled; the previous conversion is back.</exception>
     /// <exception cref="ReconvertInProgressException">Another Reconvert of this game holds its lock; nothing was changed.</exception>
     /// <exception cref="ReconvertRestoreException">A step failed or the run was cancelled, and the restore failed; or restoring an earlier

@@ -38,24 +38,16 @@ internal static class ReconvertCommand
             {
                 result = await services.GetRequiredService<GameReconverter>().ReconvertAsync(titleId, new ConsoleStepProgress(), cancellationToken: cancellationToken);
             }
-            catch (StepFailedException exception)
-            {
-                var message = exception.Message;
-                logger.Failed(exception, message);
-                logger.PreviousRestored();
-                return 1;
-            }
-            catch (OperationCanceledException)
+            // CommandHost then prints the failure and the full log's path (exit 1), or the cancel (exit 130).
+            catch (Exception exception) when (exception is StepFailedException or OperationCanceledException)
             {
                 logger.PreviousRestored();
                 throw;
             }
             catch (ReconvertRestoreException exception)
             {
-                var message = exception.Message;
-                logger.Failed(exception, message);
                 logger.PreviousNotRestored(exception.RestoreFailure);
-                return 1;
+                throw;
             }
 
             var record = result.Record;
