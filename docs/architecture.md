@@ -228,7 +228,7 @@ V2 takes a game folder supplied by the user, in the DOOM for PS5 format, and tur
    - module folders: `sce_module`, `sce_modules` or `prx`. `prx` can coexist with either of the other two, but `sce_module` and `sce_modules` together are a relinker error. None of the three → offer `--module-dir .` for homebrews that keep their libraries beside the executable;
    - total game size compared with free space at the destination.
 3. **Show the summary**: `sce_sys/icon0.png` icon, name, title ID, size, module count, ELF or SELF state of each file.
-4. **Create the game folder** in the library, `<library>\<titleId>\`, and **copy** the game into `app0` as-is. This is the default. "Move" is only offered when the source is on the same drive, after an explicit confirmation reminding that the source will no longer be at its original location. (Move is deferred to milestone 7.)
+4. **Create the game folder** in the library, `<library>\<titleId>\`, and **copy** the game into `app0` as-is. This is the default. "Move" is only offered when the source is on the same drive, after an explicit confirmation reminding that the source will no longer be at its original location. (Move is deferred; it is not part of milestone 7.)
 5. **Copy `libs`** from the V1 AnyPS5 install (`.prx` + 3 DLLs). The folder is fully controlled by the app, so no Sony `.prx` can slip in (error 193).
 6. **Check ELF or SELF** on `eboot.bin` and on every file of the module folders: the first 4 bytes are `7F 45 4C 46` for an ELF. An unwrapped SELF module is **skipped with a warning** by the relinker (not a failure), hence detecting it beforehand.
 7. **Unwrap if needed** with `python tools\unwrap_self.py <input> <output>`, the repository's official script, replacing the video's `unself.py`. It refuses containers whose segments all look encrypted: the app then states that the game must come already unwrapped from the dump tool. Originals are first backed up to `<game>\.ps5kitsune\originals\`, **outside `app0`**: the relinker treats files whose name extends another module's (`libX.prx.bak`…) as backups and may skip them.
@@ -249,14 +249,14 @@ V2 takes a game folder supplied by the user, in the DOOM for PS5 format, and tur
 ### Screens
 
 1. **Choose a game**: "Choose a folder…", "Choose a .zip…", or drop one on the page; the game is read before anything is copied.
-2. **Summary**: icon, name, title ID, size, module folders, SELF files to unwrap, blocking issues in red and warnings in orange, an already added game, the Intel option (pre-ticked from the CPU). Copy only; Move comes with the library (milestone 7).
+2. **Summary**: icon, name, title ID, size, module folders, SELF files to unwrap, blocking issues in red and warnings in orange, an already added game, the Intel option (pre-ticked from the CPU). Copy only; Move is a later follow-up.
 3. **Adding**: the add steps with progress and log, Cancel and Retry; adding again resumes.
 4. **Result**: the verdict in its colour, the counts, missing libraries, and the unresolved functions (stubs and absent) in an expander. The game is registered when `game.json` is written.
 5. **Reconverting**: the Reconvert steps with progress and log, Cancel and Retry; the result page shows the counts before. Home lists the games converted with another install than the one in use.
 
 A **Reconvert** action reruns steps 5 to 9 on an existing game after an AnyPS5 update: new libs, new exe, new audit, without copying `app0` again. It **never touches** data the game created in its folder: `data\` (saves), `download0\`, `_trophy\`, `anyps5-input.ini`. `shader_cache\` is kept (AnyPS5 stores shaders per recompiler version and purges old ones itself).
 
-Before rebuilding, the conversion outputs (the executable, the relinked marker, `audit.json`, the `*.registry.json` and `*.needed.json` files, `libs\` and `app0\**\*.guest.prx`) are moved into `.ps5kitsune\previous\`; they are deleted once the new `game.json` is about to be written, and moved back if the Reconvert fails, is cancelled or the process dies (`.ps5kitsune\previous\` found on the next read of the game). A running game stops it before anything moves. While it runs, the game is locked (`.ps5kitsune\reconvert.lock`): reading the game elsewhere does not restore it, and `run` refuses to start the game until it finishes. If writing `game.json` fails after the deletion, the game keeps the new conversion with its old record and shows as needing a Reconvert. Available as `ps5kitsune reconvert <titleId>`, from Home's "Games to reconvert" and from the summary of an already added game.
+Before rebuilding, the conversion outputs (the executable, the relinked marker, `audit.json`, the `*.registry.json` and `*.needed.json` files, `libs\` and `app0\**\*.guest.prx`) are moved into `.ps5kitsune\previous\`; they are deleted once the new `game.json` is about to be written, and moved back if the Reconvert fails, is cancelled or the process dies (`.ps5kitsune\previous\` found on the next read of the game). A running game stops it before anything moves. While it runs, the game is locked (`.ps5kitsune\game.lock`): reading the game elsewhere does not restore it, and `run` refuses to start the game until it finishes. If writing `game.json` fails after the deletion, the game keeps the new conversion with its old record and shows as needing a Reconvert. Available as `ps5kitsune reconvert <titleId>`, from the Library's menu and from the summary of an already added game.
 
 ## V3 — Launcher
 
@@ -264,17 +264,20 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 
 ### Library
 
-- Tile grid: `icon0.png`, name, title ID, audit verdict badge (green, orange, red).
-- **Needs reconversion** badge when the installed profile is newer than the one that converted the game.
-- Search by name, sort by last played.
-- Per-game menu: Launch, Settings, Open folder, View last log, Reconvert, Clear shader cache (shows its size, which can reach several GB), Remove (from the library only, or also from disk after confirmation, flagging saves present in `data\`).
+- The app opens on the Library once AnyPS5 is installed and a game is added; Home has a "Library" button.
+- Tile grid: `icon0.png`, name, title ID, audit verdict badge (green, orange, red), "Needs reconvert" when the game was converted with another AnyPS5 than the one in use, "Running" while it runs.
+- Search by name, sorted by last played (never played last, by name).
+- A click launches the game, or shows it when it runs. Per-game menu: Launch, Open folder, View last log, Reconvert, Clear shader cache (shows its size, which can reach several GB), Remove (deletes the game folder after a confirmation that flags saves present in `data\`). Settings comes with 7b.
+- The CLI has the same view: `ps5kitsune list` and `ps5kitsune remove <titleId> [--yes]`.
 
 ### Launching
 
 - Working directory = game folder. The game looks up its files relative to it and creates `data\`, `download0\` and `_trophy\` there; this is the easiest mistake to make by hand.
 - Stdout and stderr are **written directly to** `<game>\.ps5kitsune\logs\<date-time>.log`: the launcher opens the file and the game inherits its handle. Nothing goes through pipes: the game is neither slowed by very verbose output nor crashed if the launcher closes. The UI follows the log by reading the file (*tail*). The last 10 logs are kept.
 - No console window (`CreateNoWindow`), Stop button during play, exit code shown at the end.
-- Closing the launcher during a game **does not kill the game** (no kill-on-close Job Object); on reopening, the launcher finds the running process by its recorded PID.
+- Closing the launcher during a game **does not kill the game**: the game is never in a kill-on-close Job Object. A launch records the game in `.ps5kitsune\running.json` (PID, process creation time, executable, log file); on reopening, the launcher opens the process again and checks its start time and executable, so a PID reused by another process is never taken for the game. A record whose process is gone is deleted. One game runs at a time from the app.
+- The tools PS5Kitsune runs (git, CMake, Ninja, Python, the relinker) are in a kill-on-close Job Object: killing PS5Kitsune, even from the Task Manager, ends them.
+- Every action that changes a game folder (Reconvert, a launch until it is recorded, Remove, Clear shader cache, the restore of an interrupted Reconvert) holds `.ps5kitsune\game.lock`, retried for about 250 ms. A running game refuses Reconvert, Remove and Clear shader cache.
 - First-launch message: it may stutter while shaders are prepared; the second run is smooth (shader cache and pipeline journal).
 
 ### Per-game settings
@@ -387,9 +390,10 @@ C:\PS5Kitsune\
 │       ├── data\  download0\  _trophy\   created by the game, never touched by the app
 │       └── .ps5kitsune\
 │           ├── game.json        game record + settings
+│           ├── running.json     the game launched by PS5Kitsune, while it may run
+│           ├── game.lock        held while an action changes the folder
 │           ├── originals\       files before unwrapping
 │           └── logs\            last 10 launches
-├── library.json                 library index
 └── logs\                        installer logs
 ```
 
@@ -518,9 +522,14 @@ The order follows "end to end first, screens second": each milestone ends with a
      - Criterion: DOOM added from the UI with the same verdict and counts as the CLI; an already added game and a folder that is not a game are recognized.
    - **6b — Reconvert** (Core, CLI, app). Spec: [milestone 6b](superpowers/specs/2026-10-23-milestone-6b-reconvert-design.md).
      - Criterion: Reconvert keeps `data\` and `_trophy\`.
-7. **V3 — Launcher.** Library, detached launch with log, per-game settings, Lavapipe (Mesa 7z), fonts, error diagnosis.
-   - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe; the launcher closed and reopened finds the running game; a deliberately provoked error 126 is recognized and repaired.
-   - **7b — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
+7. **V3 — Launcher**, in four parts.
+   - **7a — Library and launch.** Library page (the start page once a game is added), launch in one click with the log followed live, Stop and the exit code, the running game found again after reopening (`running.json`), Open folder, View last log, Reconvert, Clear shader cache, Remove; CLI `list` and `remove`; the game lock and the tools' Job Object. Spec: [milestone 7a](superpowers/specs/2026-10-24-milestone-7a-library-launch-design.md).
+     - Criterion: DOOM launched in one click from the Library; the launcher closed and reopened finds the running game and stops it.
+   - **7b — Per-game settings**, Lavapipe (Mesa 7z) and fonts.
+     - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe.
+   - **7c — Crash diagnosis.**
+     - Criterion: a deliberately provoked error 126 is recognized and repaired.
+   - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
 8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
    - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.
