@@ -71,4 +71,22 @@ public sealed class UpdateGameRecordStepTests : IDisposable
     }
 
     public void Dispose() => _temp.Dispose();
+
+    [Fact]
+    public async Task Keeps_the_last_played_time_and_settings_written_during_the_reconvert()
+    {
+        ConvertedGames.Create(_game);
+        ConversionBackup.SetAside(_game);
+        var previous = TestRecords.Sample();
+        var playedDuringTheRun = new DateTimeOffset(2026, 10, 23, 17, 30, 0, TimeSpan.Zero);
+        await GameRecordStore.WriteAsync(
+            _game.RecordFile, previous with { LastPlayedAt = playedDuringTheRun, Settings = new GameSettings { Language = 3 } }, TestContext.Current.CancellationToken);
+
+        await new UpdateGameRecordStep(_context, previous, Build, _time).ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        var record = GameRecordStore.Read(_game.RecordFile)!;
+        Assert.Equal(playedDuringTheRun, record.LastPlayedAt);
+        Assert.Equal(3, record.Settings.Language);
+        Assert.Equal(_time.GetLocalNow(), record.ReconvertedAt);
+    }
 }

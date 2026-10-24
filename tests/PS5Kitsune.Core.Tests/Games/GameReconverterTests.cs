@@ -285,13 +285,13 @@ public sealed class GameReconverterTests : IDisposable
         await AddDoomConvertedWithTheBuildAsync();
         var before = ConvertedGames.Snapshot(Game.Root);
 
-        ReconvertInProgressException refused;
-        using (ReconvertLock.TryAcquire(Game))
+        GameBusyException refused;
+        using (GameLock.TryAcquireNow(Game))
         {
-            refused = await Assert.ThrowsAsync<ReconvertInProgressException>(ReconvertAsync);
+            refused = await Assert.ThrowsAsync<GameBusyException>(ReconvertAsync);
         }
 
-        Assert.Equal("A Reconvert of PPSA99666 is already in progress.", refused.Message);
+        Assert.Equal("Another PS5Kitsune action is using PPSA99666. Try again when it finishes.", refused.Message);
         Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
     }
 
@@ -304,9 +304,9 @@ public sealed class GameReconverterTests : IDisposable
         var before = ConvertedGames.Snapshot(Game.Root);
 
         // The reader's hold on the lock while it restores, simulated.
-        using (ReconvertLock.TryAcquire(Game))
+        using (GameLock.TryAcquireNow(Game))
         {
-            await Assert.ThrowsAsync<ReconvertInProgressException>(ReconvertAsync);
+            await Assert.ThrowsAsync<GameBusyException>(ReconvertAsync);
         }
 
         Assert.Equal(before, ConvertedGames.Snapshot(Game.Root));
@@ -335,7 +335,7 @@ public sealed class GameReconverterTests : IDisposable
         Assert.Same(failure.RestoreFailure, failure.InnerException);
         Assert.Equal(callsBefore, _setup.Runner.Calls.Count);
         Assert.True(Directory.Exists(Game.Previous));
-        Assert.False(ReconvertLock.IsHeld(Game));
+        Assert.False(GameLock.IsHeld(Game));
     }
 
     [Fact]

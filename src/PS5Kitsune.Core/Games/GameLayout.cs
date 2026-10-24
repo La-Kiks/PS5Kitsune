@@ -48,6 +48,15 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
     /// <summary>A set-aside conversion being deleted after a successful Reconvert; never restored.</summary>
     public string PreviousDiscarded => Path.Combine(Meta, "previous.discarded");
 
-    /// <summary>Held while a Reconvert runs; not a conversion output. See <see cref="Games.ReconvertLock"/>.</summary>
-    public string ReconvertLock => Path.Combine(Meta, "reconvert.lock");
+    /// <summary>Held by any action that changes the game folder; not a conversion output. See <see cref="GameLock"/>.</summary>
+    public string Lock => Path.Combine(Meta, "game.lock");
+
+    /// <summary>The game launched by PS5Kitsune that may still run (see RunningGames).</summary>
+    public string RunningRecord => Path.Combine(Meta, "running.json");
+
+    /// <summary>Created by the game; can reach several GB.</summary>
+    public string ShaderCache => Path.Combine(Root, "shader_cache");
+
+    /// <summary>The game's saves, created by the game.</summary>
+    public string Data => Path.Combine(Root, "data");
 }

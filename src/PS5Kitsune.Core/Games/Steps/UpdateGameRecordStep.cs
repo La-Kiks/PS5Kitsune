@@ -20,12 +20,17 @@ public sealed class UpdateGameRecordStep(GameImportContext context, GameRecord p
     {
         var audit = context.Audit ?? throw new InvalidOperationException("The audit must run before the game is recorded.");
         cancellationToken.ThrowIfCancellationRequested();
+        // Read before the discard, so a malformed record fails while the old conversion can still be restored.
+        // A launch during the run may have written lastPlayedAt, and the settings may have changed.
+        var current = GameRecordStore.Read(context.Game.RecordFile) ?? previous;
         ConversionBackup.Discard(context.Game);
         var record = previous with
         {
             ConvertedWith = new ConversionInfo(install.Profile, InstallModes.Name(install.Mode), install.Version, install.Commit, previous.ConvertedWith.ToIntel),
             Audit = new AuditRecord(audit.Implemented, audit.Stub, audit.Absent, audit.Verdict),
             ReconvertedAt = time.GetLocalNow(),
+            LastPlayedAt = current.LastPlayedAt,
+            Settings = current.Settings,
         };
         // Not cancellable: once the old conversion is discarded, a cancel could no longer restore it.
         await GameRecordStore.WriteAsync(context.Game.RecordFile, record, CancellationToken.None).ConfigureAwait(false);

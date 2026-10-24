@@ -24,7 +24,7 @@ internal static class RunCommand
 
             var library = services.GetRequiredService<GameLibrary>();
             var (game, record) = library.Find(parseResult.GetRequiredValue(titleIdArgument));
-            if (ReconvertLock.IsHeld(game))
+            if (GameLock.IsHeld(game))
             {
                 var reconvertedTitleId = record.TitleId;
                 logger.ReconvertInProgress(reconvertedTitleId);
@@ -45,7 +45,7 @@ internal static class RunCommand
                 return 1;
             }
 
-            await library.MarkPlayedAsync(game, record, cancellationToken);
+            await library.MarkPlayedAsync(game, cancellationToken);
             using var launched = services.GetRequiredService<IGameLauncher>().Launch(new GameLaunchRequest(executable, game.Root, game.Logs));
             logger.GameStarted(record.Name, launched.ProcessId, launched.LogFile);
 

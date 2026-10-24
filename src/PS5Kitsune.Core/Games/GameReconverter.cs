@@ -40,7 +40,7 @@ public sealed partial class GameReconverter(
 
         var install = installer.ReadRecord() ?? throw new AnyPS5NotInstalledException();
         var layout = library.Layout(titleId);
-        using var held = ReconvertLock.TryAcquire(layout) ?? throw new ReconvertInProgressException(titleId);
+        using var held = GameLock.TryAcquire(layout) ?? throw new GameBusyException(titleId);
         // Find skips the restore while the lock is held, ours included: restore a Reconvert that did not finish here, so this run
         // starts from the last complete conversion.
         try
@@ -53,7 +53,8 @@ public sealed partial class GameReconverter(
             throw new ReconvertRestoreException(restoreFailure, restoreFailure);
         }
 
-        var (game, record) = library.Find(titleId);
+        var game = layout;
+        var record = library.ReadHeld(game);
         List<string> modules = [.. GameValidator.ModuleDirectoryNames.Where(name => Directory.Exists(Path.Combine(game.App0, name)))];
         var context = new GameImportContext(
             new GameSource(game.App0, null), new GameMetadata(record.TitleId, record.Name), modules, game, record.ConvertedWith.ToIntel);
