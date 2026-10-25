@@ -384,14 +384,18 @@ internal sealed class TestLibrary : IDisposable
     public TestLibrary()
     {
         Layout = new DataLayout(_temp.Combine("root"));
+        Lock = new PreparationLock(Layout) { RetryDelay = TimeSpan.FromMilliseconds(20) };
         Library = new GameLibrary(Layout, Platform, TimeProvider.System, NullLogger<GameLibrary>.Instance);
         Running = new RunningGames(Launcher, NullLogger<RunningGames>.Instance);
         Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Release);
-        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance), NullLogger<GamePlayer>.Instance);
+        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance, Lock), NullLogger<GamePlayer>.Instance);
         Cleaner = new GameCleaner(Library, Running, NullLogger<GameCleaner>.Instance);
     }
 
     public DataLayout Layout { get; }
+
+    /// <summary>The preparation lock on the test root, retried every 20 ms.</summary>
+    public PreparationLock Lock { get; }
 
     public TestPlatform Platform { get; } = new();
 

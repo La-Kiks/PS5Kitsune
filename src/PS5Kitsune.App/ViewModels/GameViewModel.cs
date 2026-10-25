@@ -193,6 +193,12 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
             return;
         }
 
+        if (value.Download == LaunchDownload.Waiting)
+        {
+            StatusText = "Waiting for another launch to finish its downloads…";
+            return;
+        }
+
         var what = value.Download == LaunchDownload.Lavapipe ? "Lavapipe" : "fonts";
         var received = value.Progress.ReceivedBytes >> 20;
         StatusText = value.Progress.TotalBytes is { } total

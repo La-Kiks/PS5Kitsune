@@ -141,4 +141,36 @@ public sealed class LaunchPreparationTests
     {
         public void Report(LaunchProgress value) => report(value);
     }
+
+    [Fact]
+    public async Task A_download_waits_for_another_preparation_and_says_so()
+    {
+        using var temp = new TempDirectory();
+        var preparationLock = new PreparationLock(new DataLayout(temp.Path)) { RetryDelay = TimeSpan.FromMilliseconds(20) };
+        var other = await preparationLock.AcquireAsync(null, TestContext.Current.CancellationToken);
+        var reports = new List<LaunchProgress>();
+
+        var preparing = new LaunchPreparation(null, _fonts, NullLogger<LaunchPreparation>.Instance, preparationLock)
+            .PrepareAsync(new GameSettings(), new SyncProgress(reports.Add), TestContext.Current.CancellationToken);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+
+        Assert.False(preparing.IsCompleted);
+        Assert.Equal([new LaunchProgress(LaunchDownload.Waiting, default)], reports);
+        other.Dispose();
+        await preparing.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        Assert.True(_fonts.Installed);
+    }
+
+    [Fact]
+    public async Task Nothing_to_download_takes_no_lock()
+    {
+        using var temp = new TempDirectory();
+        var preparationLock = new PreparationLock(new DataLayout(temp.Path));
+        using var other = await preparationLock.AcquireAsync(null, TestContext.Current.CancellationToken);
+        _fonts.Installed = true;
+
+        await new LaunchPreparation(null, _fonts, NullLogger<LaunchPreparation>.Instance, preparationLock)
+            .PrepareAsync(new GameSettings(), null, TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+    }
 }

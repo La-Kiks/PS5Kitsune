@@ -397,4 +397,20 @@ public sealed class GameViewModelTests : IDisposable
     }
 
     public void Dispose() => _library.Dispose();
+
+    [Fact]
+    public async Task A_launch_waiting_for_another_download_says_so()
+    {
+        _library.Fonts.Installed = false;
+        var other = await _library.Lock.AcquireAsync(null, TestContext.Current.CancellationToken);
+        var page = await OpenLaunchPageAsync();
+
+        page.OnNavigatedTo();
+        await WaitUntilAsync(() => page.StatusText.StartsWith("Waiting", StringComparison.Ordinal));
+
+        Assert.Equal("Waiting for another launch to finish its downloads…", page.StatusText);
+        other.Dispose();
+        await page.Launching;
+        Assert.Equal("Running (PID 4812)", page.StatusText);
+    }
 }

@@ -6,6 +6,9 @@ public enum LaunchDownload
 {
     Lavapipe,
     Fonts,
+
+    /// <summary>Another launch holds the preparation lock; the report's progress is empty.</summary>
+    Waiting,
 }
 
 /// <summary>A download a launch waits for.</summary>
