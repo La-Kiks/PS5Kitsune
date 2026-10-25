@@ -54,10 +54,11 @@ public sealed class CrashReporter(GameLibrary library, AnyPS5Profile profile, IC
             GC.GetGCMemoryInfo().TotalAvailableMemoryBytes,
             platform.GetCommitLimitBytes());
         var lastLines = await LastLinesAsync(logPath, cancellationToken).ConfigureAwait(false);
-        return Format(facts, profile.Id, record, diagnosis, logPath, lastLines);
+        var loggedCode = diagnosis is null ? await LoggedExitCodeAsync(logPath, cancellationToken).ConfigureAwait(false) : null;
+        return Format(facts, profile.Id, record, diagnosis, logPath, lastLines, loggedCode);
     }
 
-    internal static string Format(CrashReportFacts facts, string profileId, GameRecord record, Diagnosis? diagnosis, string logPath, IReadOnlyList<string> lastLines)
+    internal static string Format(CrashReportFacts facts, string profileId, GameRecord record, Diagnosis? diagnosis, string logPath, IReadOnlyList<string> lastLines, uint? loggedExitCode = null)
     {
         var text = new StringBuilder();
         text.AppendLine(CultureInfo.InvariantCulture, $"PS5Kitsune {facts.AppVersion} on {facts.Os}");
@@ -80,7 +81,8 @@ public sealed class CrashReporter(GameLibrary library, AnyPS5Profile profile, IC
             .Select(variable => $"{variable.Key}={variable.Value}")
             .ToList();
         text.AppendLine(CultureInfo.InvariantCulture, $"Settings: {(variables.Count == 0 ? "defaults" : string.Join(", ", variables))}");
-        text.AppendLine(CultureInfo.InvariantCulture, $"Exit code: {(diagnosis?.ExitCode is { } code ? string.Create(CultureInfo.InvariantCulture, $"0x{code:X8}") : "unknown")}");
+        var exitCode = diagnosis?.ExitCode ?? loggedExitCode;
+        text.AppendLine(CultureInfo.InvariantCulture, $"Exit code: {(exitCode is { } code ? string.Create(CultureInfo.InvariantCulture, $"0x{code:X8}") : "unknown")}");
         text.AppendLine(CultureInfo.InvariantCulture, $"Diagnosis: {diagnosis?.Id ?? "none"}");
         if (diagnosis?.Line is { } line)
         {
@@ -98,6 +100,30 @@ public sealed class CrashReporter(GameLibrary library, AnyPS5Profile profile, IC
 
         text.AppendLine("```");
         return text.ToString();
+    }
+
+    /// <summary>The code of the last exit line anywhere in the log; null when it has none or cannot be read.</summary>
+    internal static async Task<uint?> LoggedExitCodeAsync(string logPath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            uint? code = null;
+            using var stream = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+            {
+                if (ExitLines.Parse(line) is { } exit)
+                {
+                    code = exit.Code;
+                }
+            }
+
+            return code;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     /// <summary>The last <see cref="LogLines"/> lines; one line saying why when the log cannot be read.</summary>

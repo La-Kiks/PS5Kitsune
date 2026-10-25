@@ -75,6 +75,34 @@ public sealed class CrashReporterTests : IDisposable
     }
 
     [Fact]
+    public void Without_a_diagnosis_the_report_shows_the_exit_code_read_from_the_log()
+    {
+        var report = CrashReporter.Format(Facts, "doom-validated-2026-10", TestRecords.Sample(), null, LogPath, ["line a"], 3);
+
+        Assert.Contains("Exit code: 0x00000003", report, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task The_exit_code_comes_from_the_last_exit_line_of_the_whole_log()
+    {
+        var log = _temp.Combine("game.log");
+        var lines = new[] { ExitLines.Exited(1) }.Concat(Enumerable.Range(1, 40).Select(index => $"line {index}")).Append(ExitLines.Exited(3));
+        await File.WriteAllLinesAsync(log, lines.Prepend("start"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(3u, await CrashReporter.LoggedExitCodeAsync(log, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task A_log_without_an_exit_line_or_a_missing_log_gives_no_exit_code()
+    {
+        var log = _temp.Combine("game.log");
+        await File.WriteAllTextAsync(log, "line a\n", TestContext.Current.CancellationToken);
+
+        Assert.Null(await CrashReporter.LoggedExitCodeAsync(log, TestContext.Current.CancellationToken));
+        Assert.Null(await CrashReporter.LoggedExitCodeAsync(_temp.Combine("none.log"), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task The_last_30_lines_of_the_log_are_quoted()
     {
         var log = _temp.Combine("game.log");

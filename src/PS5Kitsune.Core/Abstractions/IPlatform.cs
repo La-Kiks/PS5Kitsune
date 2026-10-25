@@ -28,6 +28,6 @@ public interface IPlatform
     /// <summary>Opens what the user needs to apply a check's fix, for example a settings dialog.</summary>
     void OpenFix(CheckFix fix);
 
-    /// <summary>Opens a folder in the file manager, or a file with its default app.</summary>
+    /// <summary>Opens a folder in the file manager, a file with its default app, or a web page (an https URL) in the default browser.</summary>
     void OpenPath(string path);
 }
