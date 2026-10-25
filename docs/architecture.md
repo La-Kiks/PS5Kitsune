@@ -302,23 +302,30 @@ These variables only apply to the game process, never to the system. A value equ
 
 The Settings page (Library menu, then Settings) edits these fields and saves them to `game.json`. A running game cannot be changed until it stops. "Reset to defaults" restores every field except a hidden Disable Dozen, which keeps its saved value (it is hidden unless Dozen and another driver are found; when shown, Reset clears it).
 
-**Fonts (global option):** AnyPS5 looks for `anyps5-fonts\` beside each game's exe, or in the folder named by `ANYPS5_SYSTEM_FONTS`. The profile pins 24 Noto files (87 MB, open license) by commit and SHA-256: Noto Sans (regular and italic weights), Mono, Thai, Arabic, and CJK as `.ttc`. They are downloaded on the first launch into `<root>\fonts`, with a `.complete` marker written last, and `ANYPS5_SYSTEM_FONTS` is passed at every launch: no per-game copy. A failed download warns and the game still starts.
+**Fonts (global option):** AnyPS5 looks for `anyps5-fonts\` beside each game's exe, or in the folder named by `ANYPS5_SYSTEM_FONTS`. The profile pins 24 Noto files (87 MB, open license) by commit and SHA-256: Noto Sans (regular and italic weights), Mono, Thai, Arabic, and CJK as `.ttc`. They are downloaded on the first launch into `<root>\fonts`, with a `.complete` marker written last, and `ANYPS5_SYSTEM_FONTS` is passed at every launch: no per-game copy. A failed download warns and the game still starts. Once the fonts are installed, the `*.part` files of interrupted font downloads are deleted; after a successful Mesa extraction, the Mesa 7z is deleted from `downloads`. `<root>\tools\.prepare.lock` serializes the downloads, so a second launch waits for the first one to finish.
 
 ### Crash diagnosis
 
 The launcher searches the log and error output for known patterns, then shows an explanation and an action. Patterns come from the profile.
 
-| Pattern in the log | Explanation | Suggested action |
-| --- | --- | --- |
-| Error 193 | A file that is not a Windows DLL is in `libs` | Repair `libs` (copy again from the install) |
-| Error 126 | One of the 3 DLLs is missing | Repair `libs` |
-| `replace guest placeholder with resident direct memory`, `commit direct memory pages`, `keep unmapped direct memory`, `create direct memory backing` | Insufficient commit limit | Open page file settings, suggest closing the browser |
-| `buffer device address and shaderInt64 are required` | Incompatible graphics driver | Enable Lavapipe for this game (downloads Mesa if missing) |
-| `0xc0000005` with `nvgpucomp64.dll` | Known NVIDIA shader compiler bug (driver 610.47) | Update the NVIDIA driver |
-| Missing CPU extensions at startup | CPU too old | None; clear message |
-| `param.json` error | Missing or invalid metadata | Revalidate the folder (V2 step 2) |
-| `ANYPS5_*` variable named in the error | Invalid setting | Reset that setting |
-| Unimplemented function name | AnyPS5 does not handle this function yet | **Report** button: prepares a text with the PC config, game ID, profile and log path, then opens the repository's [Game bring-up](https://github.com/boykopovar/AnyPS5/discussions/categories/game-bring-up) Discussions category (one thread per game, as the README asks); nothing is sent automatically |
+| Rule id | Pattern in the log (or exit code) | Explanation | Action |
+| --- | --- | --- | --- |
+| `libs-missing-dll` | `Failed to load module: <module>` and `GetLastError: 126 ` | **A library could not load.** {module} needs a DLL that is missing from the game's libs folder. | Repair libs |
+| `libs-not-dll` | `Failed to load module: <module>` and `GetLastError: 193 ` | **A file in libs is not a Windows DLL.** {module} is not a Windows library. Repair libs copies the folder again from the AnyPS5 install. | Repair libs |
+| `commit-limit` | Any of `replace guest placeholder with resident direct memory`, `commit direct memory pages`, `keep unmapped direct memory`, `create direct memory backing` | **Windows ran out of memory to commit.** The page file plus RAM is too small for this game. Enlarge the page file, or close other programs such as the browser. | Open page file settings |
+| `gpu-features` | `buffer device address and shaderInt64 are required` | **No GPU here supports AnyPS5.** The graphics driver lacks buffer device address or shaderInt64. CPU rendering works on any PC, more slowly. | Turn on CPU rendering |
+| `nvidia-shader-compiler` | `unhandled exception 0xc0000005` and `rip 0x… nvgpucomp64.dll+` | **Known NVIDIA driver crash.** NVIDIA's shader compiler (nvgpucomp64.dll) crashed. Driver 610.47 is known to do this. | Open NVIDIA drivers page |
+| `cpu-too-old` | `unhandled exception 0xc000001d` in the log, or exit code `0xC000001D` | **This CPU is not supported.** The CPU lacks instructions AnyPS5 needs. | None |
+| `param-json` | Any of `param.json not found`, `failed to open param.json`, `unexpected end of param.json`, `malformed param.json`, `… in param.json` | **The game's metadata is missing.** `sce_sys\param.json` is missing or damaged. Remove the game and add it again from its original folder. | Open folder |
+| `invalid-setting` | `A(NY)?PS5_…` followed by ` must `; `ANYPS5_SYSTEM_FONTS is not a directory`; `whose name contains ANYPS5_GPU=`; `the surface does not support the requested present mode` (names `ANYPS5_PRESENT_MODE`) | **A setting has a value AnyPS5 refuses.** {variable} has a value AnyPS5 refuses. | Reset {setting} for GPU, language, vertical sync, overlay or PlayGo; none for `ANYPS5_SYSTEM_FONTS` |
+| `not-implemented` | `is not implemented` or `are not implemented` | **AnyPS5 does not handle this game yet.** The game uses a feature AnyPS5 has not implemented. | Report |
+| `unexplained` | None: no rule matches and the exit code is non-zero (set by the app, never by a profile rule) | **The game stopped with an error.** AnyPS5 stopped with an error it does not explain yet (exit code 0x…). | Report |
+
+Rules live in the profile's `diagnostics` section (`reportUrl`, `rules`: `id`, `log` regexes, `exitCodes`, `match` `all`/`any`, `captures`); the first rule met, in profile order, wins. An id the app does not know is skipped with a warning; an invalid rule makes the profile invalid.
+
+After the exit it watched, the Game page or `run` appends `[ps5kitsune] exited with code N (0x…)` to the launch's log (`stopped by the user` after Stop, which is never diagnosed). With no match, a non-zero exit is `unexplained` and offers Report.
+
+Report copies a text (PC, AnyPS5, game, settings, exit, matched line, last 30 log lines, log path) and opens the Game bring-up Discussions; nothing is sent. `ps5kitsune diagnose <titleId> [--report]` does the same from the game's newest log.
 
 ## Linux compatibility
 
@@ -532,8 +539,8 @@ The order follows "end to end first, screens second": each milestone ends with a
    - **7a — Library and launch.** Library page (the start page once a game is added), launch in one click with the log followed live, Stop and the exit code, the running game found again after reopening (`running.json`), Open folder, View last log, Reconvert, Clear shader cache, Remove; CLI `list` and `remove`; the game lock and the tools' Job Object. Spec: [milestone 7a](superpowers/specs/2026-10-24-milestone-7a-library-launch-design.md).
      - Criterion: DOOM launched in one click from the Library; the launcher closed and reopened finds the running game and stops it.
    - **7b — Per-game settings**, Lavapipe (Mesa 7z) and fonts. The Settings page and the `settings` command; the launch from the Game page with the Lavapipe and font downloads; settings passed as environment variables; breakaway from the parent job and exit detected by handle. Spec: [milestone 7b](superpowers/specs/2026-10-24-milestone-7b-settings-lavapipe-fonts-design.md).
-     - Criterion: DOOM launched in one click with Lavapipe on the Iris Xe.
-   - **7c — Crash diagnosis.**
+     - Criterion: DOOM launched in one click with Lavapipe forced on (neither test laptop lacks a supported GPU).
+   - **7c — Crash diagnosis.** Rules in the profile, the exit line, the Game page panel with its fixes (Repair libs, CPU rendering, Reset a setting, page file settings, NVIDIA drivers, Report), `diagnose`; one launch preparation at a time. Spec: [milestone 7c](superpowers/specs/2026-10-25-milestone-7c-crash-diagnosis-design.md).
      - Criterion: a deliberately provoked error 126 is recognized and repaired.
    - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
