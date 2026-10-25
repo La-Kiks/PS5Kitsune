@@ -17,7 +17,7 @@ public sealed record SettingChoice(string? Value, string Label);
 /// <summary>A game's settings, saved to game.json and applied at its next launch. See the 7b spec, "Settings page".</summary>
 public sealed partial class GameSettingsViewModel(
     string titleId, GamePlayer player, GameLibrary library, RunningGames running, IVulkanProbeRunner probe, IDialogService dialogs, Navigator navigator)
-    : ObservableObject, INavigationAware
+    : ObservableObject, INavigationAware, ILeavable, IBusyPage
 {
     private static readonly GpuChoice Automatic = new(null, "Automatic");
 
@@ -50,6 +50,10 @@ public sealed partial class GameSettingsViewModel(
     [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanChooseGpu), nameof(CanChooseOverlayPosition))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(ResetCommand))]
     public partial bool IsRunning { get; private set; }
+
+    /// <summary>Back is waiting (for the discard question, or the watch to stop); the sidebar stays locked meanwhile.</summary>
+    [ObservableProperty]
+    public partial bool IsLeaving { get; private set; }
 
     public bool CanEdit => !IsLoading && !IsRunning && !_readFailed;
 
@@ -320,13 +324,13 @@ public sealed partial class GameSettingsViewModel(
         Apply(new GameSettings { DisableDozen = !ShowDisableDozen && DisableDozen });
     }
 
-    [RelayCommand]
-    private async Task BackAsync()
+    /// <summary>Asks before discarding unsaved changes, then stops watching the game.</summary>
+    public async Task<bool> LeaveAsync()
     {
         if (CanEdit && Current() != _saved
             && !await dialogs.ConfirmAsync("Discard changes?", $"Your changes to the settings of {_name} are not saved.", "Discard").ConfigureAwait(true))
         {
-            return;
+            return false;
         }
 
         if (_watch is { } watch)
@@ -334,6 +338,23 @@ public sealed partial class GameSettingsViewModel(
             await watch.CancelAsync().ConfigureAwait(true);
         }
 
-        navigator.GoBack();
+        return true;
+    }
+
+    [RelayCommand]
+    private async Task BackAsync()
+    {
+        IsLeaving = true;
+        try
+        {
+            if (await LeaveAsync().ConfigureAwait(true))
+            {
+                navigator.GoBack();
+            }
+        }
+        finally
+        {
+            IsLeaving = false;
+        }
     }
 }

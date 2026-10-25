@@ -1,3 +1,4 @@
+using PS5Kitsune.App.Controls;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Games;
@@ -34,6 +35,18 @@ public sealed class AddResultViewModelTests
         Assert.True(viewModel.HasUnresolved);
         Assert.Equal("Show the unresolved functions (4)", viewModel.UnresolvedHeader);
         Assert.Equal("sceSystemServiceLoadExec — libSceSystemService.prx (stub)", viewModel.UnresolvedLines[2]);
+    }
+
+    [Fact]
+    public void The_verdict_has_a_chip_kind_and_label()
+    {
+        var orange = Create(TestGameData.Added(Doom()));
+        var green = Create(TestGameData.Added(new AuditSummary(262, 0, 0, new Dictionary<string, int>())));
+
+        Assert.Equal(StatusKind.Green, green.VerdictKind);
+        Assert.Equal("Green", green.VerdictLabel);
+        Assert.Equal(StatusKind.Orange, orange.VerdictKind);
+        Assert.Equal("Orange", orange.VerdictLabel);
     }
 
     [Fact]

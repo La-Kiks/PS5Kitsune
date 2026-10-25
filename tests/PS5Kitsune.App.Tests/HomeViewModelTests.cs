@@ -29,13 +29,22 @@ public sealed class HomeViewModelTests : IDisposable
         _settings = new AppSettingsStore(_temp.Combine("settings"));
     }
 
-    private HomeViewModel Create() => new(_sessions, _settings, _dialogs, _navigator, new FakePages());
+    private HomeViewModel Create() => new(_sessions, _settings, _dialogs, _navigator, new FakePages(), new TestPlatform());
 
     private async Task<HomeViewModel> CreateAsync()
     {
         var viewModel = Create();
         await viewModel.RefreshAsync();
         return viewModel;
+    }
+
+    [Fact]
+    public async Task Shows_the_platform()
+    {
+        var viewModel = await CreateAsync();
+
+        Assert.Equal("Test", viewModel.Platform);
+        Assert.Equal("test-profile (validated)", viewModel.ProfileText);
     }
 
     [Fact]
@@ -291,6 +300,18 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Changing_the_root_keeps_the_theme()
+    {
+        await _settings.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, null, AppTheme.Dark), TestContext.Current.CancellationToken);
+        var viewModel = await CreateAsync();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.Equal(new AppSettings(AppSettings.CurrentSchemaVersion, _temp.Combine("other"), AppTheme.Dark), _settings.Load().Settings);
+    }
+
+    [Fact]
     public async Task Cancelling_the_picker_changes_nothing()
     {
         var viewModel = await CreateAsync();
@@ -315,6 +336,37 @@ public sealed class HomeViewModelTests : IDisposable
         Assert.Equal(_temp.Combine("root"), viewModel.DataRoot);
         Assert.StartsWith("Cannot use ", viewModel.RootError, StringComparison.Ordinal);
         Assert.False(File.Exists(_settings.FilePath));
+    }
+
+    [Fact]
+    public async Task A_settings_file_that_was_ignored_is_left_alone_and_the_root_says_why()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_settings.FilePath, """{ "schemaVersion": 2 }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(_settings.FilePath, TestContext.Current.CancellationToken);
+        var viewModel = await CreateAsync();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Cannot save the setting: ", viewModel.RootError, StringComparison.Ordinal);
+        Assert.Contains("schema version 2", viewModel.RootError, StringComparison.Ordinal);
+        Assert.Equal(before, await File.ReadAllBytesAsync(_settings.FilePath, TestContext.Current.CancellationToken));
+        Assert.Equal(_temp.Combine("other"), viewModel.DataRoot);
+    }
+
+    [Fact]
+    public async Task Choosing_a_root_repairs_a_settings_file_with_an_invalid_root()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_settings.FilePath, """{ "schemaVersion": 1, "dataRoot": "relative" }""", TestContext.Current.CancellationToken);
+        var viewModel = await CreateAsync();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.RootError);
+        Assert.Equal(new AppSettingsLoad(new AppSettings(AppSettings.CurrentSchemaVersion, _temp.Combine("other")), null), _settings.Load());
     }
 
     [Fact]

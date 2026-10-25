@@ -1,3 +1,4 @@
+using PS5Kitsune.App.Controls;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Profiles;
@@ -40,6 +41,14 @@ public sealed class ToolsViewModelTests
         Assert.Equal(["3.14.8", "2.56.0.2", "15.2.0-r7"], viewModel.Tools.Select(tool => tool.Version));
         Assert.Equal(["Installed", "Missing", "Missing"], viewModel.Tools.Select(tool => tool.StatusText));
         Assert.Equal(["", "38.0 MB", "255.2 MB"], viewModel.Tools.Select(tool => tool.SizeText));
+    }
+
+    [Fact]
+    public void An_installed_tool_is_green_and_a_missing_one_neutral()
+    {
+        var viewModel = Create();
+
+        Assert.Equal([StatusKind.Green, StatusKind.Neutral, StatusKind.Neutral], viewModel.Tools.Select(tool => tool.Kind));
     }
 
     [Fact]

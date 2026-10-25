@@ -3,21 +3,6 @@
              x:Class="PS5Kitsune.App.App"
              RequestedThemeVariant="Default">
   <Application.Styles>
-    <FluentTheme>
-      <FluentTheme.Palettes>
-        <!-- Palenight-like dark palette with the logo's vermillion accent. -->
-        <ColorPaletteResources x:Key="Dark"
-                               Accent="#D9452A"
-                               RegionColor="#292D3E"
-                               AltHigh="#292D3E"
-                               ChromeAltLow="#34324A"
-                               ChromeLow="#34324A"
-                               ChromeMediumLow="#34324A"
-                               ChromeMedium="#3B3F58"
-                               ListLow="#3B3F58" />
-        <!-- Light variant keeps Fluent's defaults, only the accent changes. -->
-        <ColorPaletteResources x:Key="Light" Accent="#D9452A" />
-      </FluentTheme.Palettes>
-    </FluentTheme>
+    <StyleInclude Source="/Styles/AppTheme.axaml" />
   </Application.Styles>
 </Application>

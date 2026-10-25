@@ -70,5 +70,104 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.Contains("invalid dataRoot", load.Problem, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_file_without_a_theme_reads_system()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), """{ "schemaVersion": 1, "dataRoot": null }""", TestContext.Current.CancellationToken);
+
+        var load = Store.Load();
+
+        Assert.Null(load.Problem);
+        Assert.Equal(AppTheme.System, load.Settings.Theme);
+    }
+
+    [Fact]
+    public async Task The_theme_round_trips_as_a_camel_case_string()
+    {
+        await Store.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, null, AppTheme.Dark), TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"theme\": \"dark\"", await File.ReadAllTextAsync(_temp.Combine("settings", "settings.json"), TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(AppTheme.Dark, Store.Load().Settings.Theme);
+    }
+
+    [Fact]
+    public async Task An_unknown_theme_gives_the_defaults_and_a_problem()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), """{ "schemaVersion": 1, "theme": "purple" }""", TestContext.Current.CancellationToken);
+
+        var load = Store.Load();
+
+        Assert.Equal(AppSettings.Default, load.Settings);
+        Assert.NotNull(load.Problem);
+    }
+
+    [Fact]
+    public async Task Updates_started_back_to_back_both_reach_the_file()
+    {
+        var store = Store;
+        var root = _temp.Combine("data");
+
+        var theme = store.UpdateAsync(settings => settings with { Theme = AppTheme.Dark }, TestContext.Current.CancellationToken);
+        var dataRoot = store.UpdateAsync(settings => settings with { DataRoot = root }, TestContext.Current.CancellationToken);
+        await Task.WhenAll(theme, dataRoot);
+
+        Assert.Equal(new AppSettings(AppSettings.CurrentSchemaVersion, root, AppTheme.Dark), store.Load().Settings);
+    }
+
+    [Fact]
+    public async Task An_update_leaves_a_file_from_another_schema_untouched()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        var path = _temp.Combine("settings", "settings.json");
+        await File.WriteAllTextAsync(path, """{ "schemaVersion": 2, "theme": "dark", "extra": true }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+
+        var saved = await Store.UpdateAsync(settings => settings with { Theme = AppTheme.Light }, TestContext.Current.CancellationToken);
+
+        Assert.False(saved);
+        Assert.Equal(before, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("{ nope", AppTheme.System)]
+    [InlineData("""{ "schemaVersion": 1, "dataRoot": "relative", "theme": "dark" }""", AppTheme.Dark)]
+    [InlineData("""{ "dataRoot": "relative" }""", AppTheme.System)]
+    public async Task A_chosen_root_repairs_a_corrupt_file_or_an_invalid_root(string json, AppTheme theme)
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), json, TestContext.Current.CancellationToken);
+        var root = _temp.Combine("data");
+
+        var saved = await Store.UpdateAsync(settings => settings with { DataRoot = root }, replaceUnusable: true, TestContext.Current.CancellationToken);
+
+        Assert.True(saved);
+        Assert.Equal(new AppSettingsLoad(new AppSettings(AppSettings.CurrentSchemaVersion, root, theme), null), Store.Load());
+    }
+
+    [Fact]
+    public async Task A_chosen_root_still_leaves_a_file_from_another_schema_untouched()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        var path = _temp.Combine("settings", "settings.json");
+        await File.WriteAllTextAsync(path, """{ "schemaVersion": 2 }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+
+        var saved = await Store.UpdateAsync(settings => settings with { DataRoot = _temp.Combine("data") }, replaceUnusable: true, TestContext.Current.CancellationToken);
+
+        Assert.False(saved);
+        Assert.Equal(before, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task An_update_creates_a_missing_file()
+    {
+        var saved = await Store.UpdateAsync(settings => settings with { Theme = AppTheme.Light }, TestContext.Current.CancellationToken);
+
+        Assert.True(saved);
+        Assert.Equal(AppTheme.Light, Store.Load().Settings.Theme);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

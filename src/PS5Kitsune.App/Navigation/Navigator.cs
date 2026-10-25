@@ -10,6 +10,9 @@ public sealed partial class Navigator : ObservableObject
     [ObservableProperty]
     public partial object? CurrentPage { get; private set; }
 
+    /// <summary>The current page, then the pages Back returns to, newest first.</summary>
+    public IEnumerable<object> Pages => CurrentPage is null ? _history : _history.Prepend(CurrentPage);
+
     public void GoTo(object page)
     {
         if (CurrentPage is not null)

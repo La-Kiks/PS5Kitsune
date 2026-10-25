@@ -492,4 +492,95 @@ public sealed class GameViewModelTests : IDisposable
         await page.Launching;
         Assert.Equal("Running (PID 4812)", page.StatusText);
     }
+
+    [Fact]
+    public async Task A_download_with_a_known_size_fills_the_bar_and_the_bar_resets_once_the_game_runs()
+    {
+        var page = await OpenLaunchPageAsync();
+        await SetSettingsAsync(new GameSettings { Lavapipe = true });
+        _library.Lavapipe.Reports = [35L << 20];
+        _library.Lavapipe.Gate = new TaskCompletionSource();
+        Assert.True(page.IsDownloadIndeterminate);
+
+        page.OnNavigatedTo();
+        await WaitUntilAsync(() => page.StatusText.StartsWith("Downloading", StringComparison.Ordinal));
+
+        Assert.False(page.IsDownloadIndeterminate);
+        Assert.Equal(0.5, page.DownloadValue);
+        _library.Lavapipe.Gate.SetResult();
+        await page.Launching;
+
+        Assert.True(page.IsRunning);
+        Assert.True(page.IsDownloadIndeterminate);
+        Assert.Equal(0, page.DownloadValue);
+    }
+
+    [Fact]
+    public async Task A_download_of_unknown_size_keeps_the_bar_indeterminate()
+    {
+        _library.Fonts.Installed = false;
+        _library.Fonts.ReportedTotal = null;
+        _library.Fonts.Reports = [34L << 20];
+        _library.Fonts.Gate = new TaskCompletionSource();
+        var page = await OpenLaunchPageAsync();
+
+        page.OnNavigatedTo();
+        await WaitUntilAsync(() => page.StatusText.StartsWith("Downloading", StringComparison.Ordinal));
+
+        Assert.True(page.IsDownloadIndeterminate);
+        Assert.Equal(0, page.DownloadValue);
+        page.CancelLaunchCommand.Execute(null);
+        await page.Launching;
+    }
+
+    [Fact]
+    public async Task Waiting_for_another_download_keeps_the_bar_indeterminate()
+    {
+        _library.Fonts.Installed = false;
+        var other = await _library.Lock.AcquireAsync(null, TestContext.Current.CancellationToken);
+        var page = await OpenLaunchPageAsync();
+
+        page.OnNavigatedTo();
+        await WaitUntilAsync(() => page.StatusText.StartsWith("Waiting", StringComparison.Ordinal));
+
+        Assert.True(page.IsDownloadIndeterminate);
+        Assert.Equal(0, page.DownloadValue);
+        other.Dispose();
+        await page.Launching;
+    }
+
+    [Fact]
+    public async Task HasLog_follows_the_log_lines()
+    {
+        var (page, process) = await LaunchAsync();
+        var raised = new List<string?>();
+        page.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+        Assert.False(page.HasLog);
+        await File.AppendAllTextAsync(process.LogFile, "line 1\n", TestContext.Current.CancellationToken);
+        process.Exit(0);
+
+        page.OnNavigatedTo();
+        await FinishedAsync(page);
+
+        Assert.True(page.HasLog);
+        Assert.Contains(nameof(GameViewModel.HasLog), raised);
+    }
+
+    [Fact]
+    public async Task HasLog_is_announced_only_when_it_changes()
+    {
+        var (page, _) = await LaunchAsync();
+        var raised = 0;
+        page.PropertyChanged += (_, e) => raised += e.PropertyName == nameof(GameViewModel.HasLog) ? 1 : 0;
+
+        page.Log.Add("line 1");
+        Assert.Equal(1, raised);
+        page.Log.Add("line 2");
+        page.Log.Add("line 3");
+        Assert.Equal(1, raised);
+
+        page.Log.Clear();
+        Assert.Equal(2, raised);
+        Assert.False(page.HasLog);
+    }
 }

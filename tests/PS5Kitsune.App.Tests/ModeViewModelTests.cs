@@ -88,6 +88,21 @@ public sealed class ModeViewModelTests
         Assert.True(viewModel.IsReleaseSelected);
     }
 
+    [Fact]
+    public void Checking_a_card_selects_its_mode()
+    {
+        var viewModel = Create();
+
+        viewModel.IsBuildSelected = true;
+        Assert.Equal(AnyPS5Mode.Build, viewModel.SelectedMode);
+
+        viewModel.IsReleaseSelected = true;
+        Assert.Equal(AnyPS5Mode.Release, viewModel.SelectedMode);
+
+        viewModel.IsReleaseSelected = false;   // unchecking never selects nothing
+        Assert.Equal(AnyPS5Mode.Release, viewModel.SelectedMode);
+    }
+
     [Theory]
     [InlineData(false, "check:Release")]
     [InlineData(true, "check:Build")]

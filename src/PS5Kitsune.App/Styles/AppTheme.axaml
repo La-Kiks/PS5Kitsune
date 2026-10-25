@@ -1,0 +1,304 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:PS5Kitsune.App.Controls">
+  <!-- Every color of the app lives here; views use these keys. Values: docs/superpowers/specs/2026-10-25-milestone-7d-visual-design-design.md. -->
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="Surface.Page" Color="#1E1A18" />
+          <SolidColorBrush x:Key="Surface.Sidebar" Color="#191614" />
+          <SolidColorBrush x:Key="Surface.Raised" Color="#2A2421" />
+          <SolidColorBrush x:Key="Border.Subtle" Color="#3A322D" />
+          <SolidColorBrush x:Key="Border.Strong" Color="#5A4E46" />
+          <SolidColorBrush x:Key="Text.Primary" Color="#F2E9E1" />
+          <SolidColorBrush x:Key="Text.Muted" Color="#B3A69C" />
+          <SolidColorBrush x:Key="Text.Title" Color="#F07A5A" />
+          <SolidColorBrush x:Key="Accent" Color="#C73E24" />
+          <SolidColorBrush x:Key="Accent.Hover" Color="#B23520" />
+          <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="Error" Color="#F0806A" />
+          <SolidColorBrush x:Key="Warning" Color="#E2A24A" />
+          <SolidColorBrush x:Key="Status.Green" Color="#3E6B3A" />
+          <SolidColorBrush x:Key="Status.Orange" Color="#A0661A" />
+          <SolidColorBrush x:Key="Status.Red" Color="#B03A22" />
+          <SolidColorBrush x:Key="Status.Reconvert" Color="#8A5A10" />
+          <SolidColorBrush x:Key="Status.Running" Color="#3B6EA8" />
+          <!-- Fluent's accent buttons: our accent with white text (Fluent's dark accent button uses black text). Repeated in each variant
+               because a StaticResource alias must sit in the same theme dictionary as its target. -->
+          <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
+          <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
+          <!-- Fluent's inputs and expanders. The palette's Alt* colors are translucent black (white in light), so these controls would
+               render near-black (white) over our surfaces: use the tokens. Repeated per variant like the accent aliases above. -->
+          <StaticResource x:Key="ComboBoxBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderContentBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderContentBorderBrush" ResourceKey="Border.Subtle" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="Surface.Page" Color="#FAF5EE" />
+          <SolidColorBrush x:Key="Surface.Sidebar" Color="#F3ECE2" />
+          <SolidColorBrush x:Key="Surface.Raised" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="Border.Subtle" Color="#EADFD2" />
+          <SolidColorBrush x:Key="Border.Strong" Color="#CDBFAF" />
+          <SolidColorBrush x:Key="Text.Primary" Color="#2A211C" />
+          <SolidColorBrush x:Key="Text.Muted" Color="#6E6058" />
+          <SolidColorBrush x:Key="Text.Title" Color="#B8381F" />
+          <SolidColorBrush x:Key="Accent" Color="#C73E24" />
+          <SolidColorBrush x:Key="Accent.Hover" Color="#B23520" />
+          <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="Error" Color="#B3261E" />
+          <SolidColorBrush x:Key="Warning" Color="#8A5300" />
+          <SolidColorBrush x:Key="Status.Green" Color="#2F6B2A" />
+          <SolidColorBrush x:Key="Status.Orange" Color="#94590E" />
+          <SolidColorBrush x:Key="Status.Red" Color="#B3261E" />
+          <SolidColorBrush x:Key="Status.Reconvert" Color="#8A5300" />
+          <SolidColorBrush x:Key="Status.Running" Color="#2D5F96" />
+          <!-- Fluent's accent buttons: our accent with white text (Fluent's dark accent button uses black text). Repeated in each variant
+               because a StaticResource alias must sit in the same theme dictionary as its target. -->
+          <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
+          <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
+          <!-- Fluent's inputs and expanders. The palette's Alt* colors are translucent black (white in light), so these controls would
+               render near-black (white) over our surfaces: use the tokens. Repeated per variant like the accent aliases above. -->
+          <StaticResource x:Key="ComboBoxBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderContentBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderContentBorderBrush" ResourceKey="Border.Subtle" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+
+      <CornerRadius x:Key="Radius.Small">4</CornerRadius>
+      <CornerRadius x:Key="Radius.Medium">6</CornerRadius>
+      <CornerRadius x:Key="Radius.Large">8</CornerRadius>
+      <x:Double x:Key="Space.1">4</x:Double>
+      <x:Double x:Key="Space.2">8</x:Double>
+      <x:Double x:Key="Space.3">12</x:Double>
+      <x:Double x:Key="Space.4">16</x:Double>
+      <x:Double x:Key="Space.5">24</x:Double>
+      <x:Double x:Key="Space.6">32</x:Double>
+
+      <!-- A selectable card: Mode's install choices. A RadioButton, so screen readers hear "selected" and arrow keys work (ArrowSelection). -->
+      <ControlTheme x:Key="OptionCard" TargetType="RadioButton">
+        <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+        <Setter Property="BorderThickness" Value="2" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Top" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Panel>
+              <Border Name="PART_Border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                      BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+                <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+              </Border>
+              <Border Name="PART_Check" Width="22" Height="22" CornerRadius="11" Background="{DynamicResource Accent}"
+                      HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0" IsVisible="False">
+                <TextBlock Text="✓" Foreground="{DynamicResource OnAccent}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+            </Panel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover">
+          <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+        </Style>
+        <Style Selector="^:checked">
+          <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+        </Style>
+        <Style Selector="^:checked /template/ Border#PART_Check">
+          <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.5" />
+        </Style>
+      </ControlTheme>
+      <ControlTheme x:Key="{x:Type c:StatusChip}" TargetType="c:StatusChip">
+        <Setter Property="Background" Value="{DynamicResource Border.Strong}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="6,1" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+              <TextBlock Text="{TemplateBinding Text}" Foreground="{TemplateBinding Foreground}"
+                         FontSize="{TemplateBinding FontSize}" FontWeight="{TemplateBinding FontWeight}" />
+            </Border>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:green">
+          <Setter Property="Background" Value="{DynamicResource Status.Green}" />
+          <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+        </Style>
+        <Style Selector="^:orange">
+          <Setter Property="Background" Value="{DynamicResource Status.Orange}" />
+          <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+        </Style>
+        <Style Selector="^:red">
+          <Setter Property="Background" Value="{DynamicResource Status.Red}" />
+          <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+        </Style>
+        <Style Selector="^:reconvert">
+          <Setter Property="Background" Value="{DynamicResource Status.Reconvert}" />
+          <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+        </Style>
+        <Style Selector="^:running">
+          <Setter Property="Background" Value="{DynamicResource Status.Running}" />
+          <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+        </Style>
+      </ControlTheme>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <FluentTheme>
+    <FluentTheme.Palettes>
+      <ColorPaletteResources x:Key="Dark" Accent="#C73E24" RegionColor="#1E1A18" AltHigh="#1E1A18" BaseHigh="#F2E9E1"
+                             ChromeAltLow="#2A2421" ChromeLow="#2A2421" ChromeMediumLow="#2A2421" ChromeMedium="#3A322D" ListLow="#3A322D" />
+      <ColorPaletteResources x:Key="Light" Accent="#C73E24" RegionColor="#FAF5EE" AltHigh="#FAF5EE" BaseHigh="#2A211C"
+                             ChromeAltLow="#FFFFFF" ChromeLow="#FFFFFF" ChromeMediumLow="#FFFFFF" ChromeMedium="#EADFD2" ListLow="#EADFD2" />
+    </FluentTheme.Palettes>
+  </FluentTheme>
+
+  <!-- Type -->
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource Text.Title}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector=":is(TextBlock).mono">
+    <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,monospace" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource Error}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{DynamicResource Warning}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- Surfaces -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+  <Style Selector="Border.card.error">
+    <Setter Property="BorderBrush" Value="{DynamicResource Error}" />
+  </Style>
+  <Style Selector="Border.log">
+    <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8" />
+  </Style>
+  <Style Selector="Border.footer">
+    <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="0,12,0,0" />
+    <Setter Property="Margin" Value="0,16,0,0" />
+  </Style>
+  <Style Selector="Border.divider">
+    <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+
+  <!-- Sidebar -->
+  <Style Selector="Button.nav">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+  </Style>
+  <!-- A disabled item keeps its look at half opacity: no Fluent grey fill, so the template's presenter is cleared too. -->
+  <Style Selector="Button.nav:disabled">
+    <Setter Property="Opacity" Value="0.5" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.nav:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
+  </Style>
+  <Style Selector="Button.nav.current">
+    <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <!-- Keyboard focus: a 2 px accent ring outside the control, shown only after keyboard focus. -->
+  <Style Selector=":is(Control)">
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border BorderThickness="2" BorderBrush="{DynamicResource Accent}" CornerRadius="8" Margin="-4" />
+      </FocusAdornerTemplate>
+    </Setter>
+  </Style>
+</Styles>

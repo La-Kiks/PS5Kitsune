@@ -1,8 +1,6 @@
-using Avalonia.Controls;
-
 namespace PS5Kitsune.App.Views;
 
-public sealed partial class ToolsView : UserControl
+public sealed partial class ToolsView : PageView
 {
     public ToolsView() => InitializeComponent();
 }

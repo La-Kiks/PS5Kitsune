@@ -63,6 +63,17 @@ public sealed class NavigatorTests
         Assert.Contains(nameof(Navigator.CurrentPage), changed);
     }
 
+    [Fact]
+    public void Pages_lists_the_current_page_then_the_history_newest_first()
+    {
+        var navigator = new Navigator();
+        navigator.GoTo("a");
+        navigator.GoTo("b");
+        navigator.GoTo("c");
+
+        Assert.Equal(["c", "b", "a"], navigator.Pages);
+    }
+
     private sealed class AwarePage : INavigationAware
     {
         public int Visits { get; private set; }

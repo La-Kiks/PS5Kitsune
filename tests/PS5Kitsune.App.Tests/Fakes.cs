@@ -85,7 +85,22 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public AnyPS5Mode? InstalledMode { get; private set; }
 
-    public AnyPS5InstallRecord? ReadRecord() => State.Record;
+    /// <summary>When set, ReadRecord() blocks on it (at most 5 s, so a broken test cannot hang): the library read stays pending.</summary>
+    public ManualResetEventSlim? ReadRecordGate { get; set; }
+
+    /// <summary>Thrown by ReadRecord() when set: the library read fails.</summary>
+    public Exception? ReadRecordFailure { get; set; }
+
+    public AnyPS5InstallRecord? ReadRecord()
+    {
+        ReadRecordGate?.Wait(TimeSpan.FromSeconds(5));
+        if (ReadRecordFailure is not null)
+        {
+            throw ReadRecordFailure;
+        }
+
+        return State.Record;
+    }
 
     public AnyPS5Mode? ActiveMode { get; set; }
 
@@ -231,10 +246,13 @@ internal sealed class FakeDialogs : IDialogService
 
     public Task<string?> PickFolderAsync(string title, string? startFolder) => Task.FromResult(Folder);
 
+    /// <summary>When set, ConfirmAsync waits for it instead of answering <see cref="Confirm"/>.</summary>
+    public TaskCompletionSource<bool>? ConfirmGate { get; set; }
+
     public Task<bool> ConfirmAsync(string title, string message, string confirmText)
     {
         Confirmations.Add(message);
-        return Task.FromResult(Confirm);
+        return ConfirmGate?.Task ?? Task.FromResult(Confirm);
     }
 
     public List<string> Copied { get; } = [];

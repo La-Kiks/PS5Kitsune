@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
+using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
@@ -11,7 +12,7 @@ using PS5Kitsune.Core.Settings;
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>The first page: where AnyPS5 stands on the current data root, and the choice of that root.</summary>
-public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore settings, IDialogService dialogs, Navigator navigator, IPages pages)
+public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore settings, IDialogService dialogs, Navigator navigator, IPages pages, IPlatform platform)
     : ObservableObject, INavigationAware
 {
     private int _generation;
@@ -55,6 +56,8 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     [NotifyCanExecuteChangedFor(nameof(LibraryCommand))]
     public partial bool HasGames { get; private set; }
 
+    public string Platform => platform.Name;
+
     public bool CanOpenLibrary => !IsChecking && HasGames;
 
     public bool CanStart => !IsChecking;
@@ -64,7 +67,10 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     /// <summary>Why "Add a game" is disabled; null when it is enabled.</summary>
     public string? AddGameHint => CanAddGame ? null : "Install AnyPS5 first to add games.";
 
-    public void OnNavigatedTo() => _ = RefreshAsync();
+    /// <summary>The refresh <see cref="OnNavigatedTo"/> started; completes when it is done.</summary>
+    public Task Refreshing { get; private set; } = Task.CompletedTask;
+
+    public void OnNavigatedTo() => Refreshing = RefreshAsync();
 
     /// <summary>Reads the install state of the current root on a worker thread; a result that arrives after a newer refresh started is dropped.</summary>
     public async Task RefreshAsync()
@@ -223,7 +229,12 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         RootError = null;
         try
         {
-            await settings.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, root)).ConfigureAwait(true);
+            // Change only the root: the file also holds the theme, and the store queues the update behind any theme save.
+            // An explicit choice may repair a corrupt file or an invalid root; a file of another schema version stays untouched.
+            if (!await settings.UpdateAsync(current => current with { DataRoot = root }, true).ConfigureAwait(true))
+            {
+                RootError = $"Cannot save the setting: {settings.Load().Problem ?? "the settings file could not be used."}";
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

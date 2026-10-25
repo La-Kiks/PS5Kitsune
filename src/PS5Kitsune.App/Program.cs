@@ -1,4 +1,5 @@
 using Avalonia;
+using PS5Kitsune.App.Shell;
 using PS5Kitsune.Core.Checks.Vulkan;
 
 namespace PS5Kitsune.App;
@@ -22,5 +23,6 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .UseAppFonts()
             .LogToTrace();
 }

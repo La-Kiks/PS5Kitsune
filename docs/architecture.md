@@ -99,6 +99,8 @@ Vulkan enumeration can crash the process (Dozen driver, some D3D12 drivers, see 
 
 The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and will be the first Linux deliverable.
 
+The theme lives in `Styles/AppTheme.axaml`, as token brushes for Light and Dark over Fluent, and views use only token keys (a test enforces it). Fluent's ComboBox, TextBox, Expander and accent-button resources are re-pointed at the tokens per variant, because Fluent derives them from translucent palette colors. The sidebar is locked while a page runs work, and otherwise leaves every page in the stack through `ILeavable` before `GoHome`. The theme choice is `settings.json`'s `theme`.
+
 ## AnyPS5 profiles
 
 A profile is a JSON file describing an AnyPS5 version **validated with DOOM** and everything that depends on it. It replaces constants scattered through the code.
@@ -107,7 +109,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 {
   "schemaVersion": 1,
   "id": "doom-validated-2026-10",
-  "source": { "kind": "release", "tag": "v0.1.2" },
+  "source": { "kind": "release", "tag": "v0.1.3" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
     "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
@@ -127,6 +129,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 ```
 
 - **`build` section:** `repository` uses HTTPS and `commit` is 40 lowercase hex characters. Build mode installs that commit.
+- **Source archive hash:** The source archive's hash is computed from the downloaded `archive/refs/tags/<tag>.zip`, since GitHub publishes no digest for it and does not guarantee these archives stay byte-identical; if GitHub regenerates it, the install fails its hash check and the profile needs a new hash.
 - **Resolution order:** the profile embedded in the app, or a valid local override `<root>\profiles\override.json`, which replaces it for both the CLI and the app. An override that cannot be read or is invalid is ignored, with a warning in the log. The profile downloaded from the PS5Kitsune repository (checked on demand) is still to come; the most recent valid one will then win, and the user will see which one is active.
 - **"Latest" mode:** a synthetic profile that follows the latest release or `main`, with no pinned hash, flagged as untested in the UI and in game records.
 - **Updating the default profile:** the maintainer validates a new tag or commit with DOOM and publishes the profile; users see "new validated version available" and affected games are marked "needs reconversion".
@@ -480,7 +483,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 
 | Point | Finding |
 | --- | --- |
-| Latest release | `v0.1.2` of 2026-10-14; Windows libs weigh ~82 MB |
+| Latest release | `v0.1.3` of 2026-10-20 (tag commit `3fd1cc3`, the build mode's commit); Windows libs weigh ~92 MB |
 | Release asset names | `relinker-<tag>.exe`, `prx-windows-<tag>.zip` (content under `libs/`), plus `USAGE.md` and `INPUT_MAPPING.md` |
 | Release asset hashes | `digest` field (`sha256:…`) present in the GitHub API |
 | Relinker path after a full build | `build\core\relinker\relinker.exe` (`tools/package_release.py`) |
@@ -506,7 +509,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] License: **GPL v2 only**, public GitHub repository
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
-- [x] Default mode of the first profile: **release `v0.1.2`**, which runs DOOM for PS5 (validated 2026-10-20 with milestone 2's CLI; audit orange: 361 implemented, 3 stubs, 0 absent)
+- [x] Default mode of the first profile: **release `v0.1.3`**, which runs DOOM for PS5 (validated 2026-10-25 from the app: install, Reconvert, launch; audit orange: 360 implemented, 4 stubs, 0 absent). Release `v0.1.2` was validated first, on 2026-10-20 with milestone 2's CLI (361, 3, 0).
 - [x] Build mode disk space threshold: **`buildMinFreeDiskGiB` = 10 GiB**, from the build measured on 2026-10-21 (root of 3.2 GB)
 - [ ] Check for new profiles at startup, or only on demand
 
@@ -542,7 +545,7 @@ The order follows "end to end first, screens second": each milestone ends with a
      - Criterion: DOOM launched in one click with Lavapipe forced on (neither test laptop lacks a supported GPU).
    - **7c — Crash diagnosis.** Rules in the profile, the exit line, the Game page panel with its fixes (Repair libs, CPU rendering, Reset a setting, page file settings, NVIDIA drivers, Report), `diagnose`; one launch preparation at a time. Spec: [milestone 7c](superpowers/specs/2026-10-25-milestone-7c-crash-diagnosis-design.md).
      - Criterion: a deliberately provoked error 126 is recognized and repaired.
-   - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
+   - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation). Spec: [milestone 7d](superpowers/specs/2026-10-25-milestone-7d-visual-design-design.md).
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
 8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
    - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.

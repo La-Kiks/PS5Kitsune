@@ -12,9 +12,13 @@ namespace PS5Kitsune.App.ViewModels;
 /// <summary>What was read from the game, before anything is copied, and the Intel option. Owns the prepared game until the add starts.</summary>
 /// <param name="conversionText">For an added game, whether it was converted with the AnyPS5 in use (<see cref="ConversionLine"/>).</param>
 public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIntel, IPlatform platform, Navigator navigator, IPages pages, string? conversionText = null)
-    : ObservableObject, IPreparedGameOwner
+    : ObservableObject, IPreparedGameOwner, IBusyPage
 {
     private bool _handedOver;
+
+    /// <summary>Back or Reconvert is releasing the prepared game; the sidebar stays locked meanwhile.</summary>
+    [ObservableProperty]
+    public partial bool IsLeaving { get; private set; }
 
     public string Name => game.Metadata?.Name ?? "Unknown game";
 
@@ -102,24 +106,40 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
     private async Task BackAsync()
     {
         // Disposal starts as soon as DisposeAsync is called, so both commands are blocked for the whole (possibly slow) cleanup.
-        var disposing = game.DisposeAsync();
-        AddCommand.NotifyCanExecuteChanged();
-        BackCommand.NotifyCanExecuteChanged();
-        ReconvertCommand.NotifyCanExecuteChanged();
-        await disposing.ConfigureAwait(true);
-        navigator.GoBack();
+        IsLeaving = true;
+        try
+        {
+            var disposing = game.DisposeAsync();
+            AddCommand.NotifyCanExecuteChanged();
+            BackCommand.NotifyCanExecuteChanged();
+            ReconvertCommand.NotifyCanExecuteChanged();
+            await disposing.ConfigureAwait(true);
+            navigator.GoBack();
+        }
+        finally
+        {
+            IsLeaving = false;
+        }
     }
 
     /// <summary>The prepared game (and a zip's staging folder) is released first: Reconvert works on the added game's folder.</summary>
     [RelayCommand(CanExecute = nameof(CanReconvert))]
     private async Task ReconvertAsync()
     {
-        var disposing = game.DisposeAsync();
-        AddCommand.NotifyCanExecuteChanged();
-        BackCommand.NotifyCanExecuteChanged();
-        ReconvertCommand.NotifyCanExecuteChanged();
-        await disposing.ConfigureAwait(true);
-        navigator.GoTo(pages.Reconvert(TitleId, Name));
+        IsLeaving = true;
+        try
+        {
+            var disposing = game.DisposeAsync();
+            AddCommand.NotifyCanExecuteChanged();
+            BackCommand.NotifyCanExecuteChanged();
+            ReconvertCommand.NotifyCanExecuteChanged();
+            await disposing.ConfigureAwait(true);
+            navigator.GoTo(pages.Reconvert(TitleId, Name));
+        }
+        finally
+        {
+            IsLeaving = false;
+        }
     }
 
     [RelayCommand]

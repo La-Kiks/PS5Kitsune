@@ -1,4 +1,5 @@
 using System.Globalization;
+using PS5Kitsune.App.Controls;
 using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.App.ViewModels;
@@ -13,6 +14,8 @@ public sealed class ToolRowViewModel(PortableToolInfo info)
     public string Version => info.Version;
 
     public bool IsInstalled => info.IsInstalled;
+
+    public StatusKind Kind => info.IsInstalled ? StatusKind.Green : StatusKind.Neutral;
 
     public string StatusText => info.IsInstalled ? "Installed" : "Missing";
 

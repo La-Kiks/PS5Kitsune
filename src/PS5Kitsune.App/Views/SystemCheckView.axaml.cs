@@ -1,8 +1,6 @@
-using Avalonia.Controls;
-
 namespace PS5Kitsune.App.Views;
 
-public sealed partial class SystemCheckView : UserControl
+public sealed partial class SystemCheckView : PageView
 {
     public SystemCheckView() => InitializeComponent();
 }

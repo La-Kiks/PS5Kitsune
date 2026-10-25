@@ -1,3 +1,4 @@
+using PS5Kitsune.App.Controls;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
@@ -23,6 +24,34 @@ public sealed class LibraryViewModelTests : IDisposable
     private static GameTileViewModel Tile(LibraryViewModel page, string name) => page.Games.Single(tile => tile.Name == name);
 
     private Task<PlayingGame> StartAsync(string titleId) => _library.Player.LaunchAsync(titleId, TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task A_library_that_cannot_be_read_still_lets_the_user_add_a_game()
+    {
+        _library.Installer.ReadRecordFailure = new IOException("disk gone");
+
+        var page = await CreateAsync();
+
+        Assert.StartsWith("Cannot read the library", page.Message, StringComparison.Ordinal);
+        Assert.True(page.CanAddGame);
+        Assert.True(page.AddGameCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_tile_shows_one_status_running_first_then_reconvert_then_compatibility()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        await _library.AddAsync("PPSA00004", "Delta", new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false));
+        await StartAsync("PPSA00001");
+
+        var page = await CreateAsync();
+
+        Assert.Equal(StatusKind.Running, Tile(page, "Alpha").Status);
+        Assert.Equal("Alpha, PPSA00001, Running", Tile(page, "Alpha").AutomationName);
+        Assert.Equal(StatusKind.Reconvert, Tile(page, "Delta").Status);
+        Assert.Equal("Needs reconvert", Tile(page, "Delta").StatusText);
+        Assert.Equal("Actions for Delta", Tile(page, "Delta").ActionsName);
+    }
 
     [Fact]
     public async Task Lists_the_games_last_played_first_with_their_badges()
@@ -261,15 +290,24 @@ public sealed class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Home_and_add_a_game_navigate()
+    public async Task Add_a_game_navigates()
     {
         var page = await CreateAsync();
 
         page.AddGameCommand.Execute(null);
         Assert.Equal("choose", _navigator.CurrentPage);
+    }
 
-        page.HomeCommand.Execute(null);
-        Assert.Equal("home", _navigator.CurrentPage);
+    [Fact]
+    public async Task Adding_a_game_needs_an_install()
+    {
+        _library.Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.NotInstalled, null);
+
+        var page = await CreateAsync();
+
+        Assert.False(page.CanAddGame);
+        Assert.False(page.AddGameCommand.CanExecute(null));
+        Assert.Equal("Install AnyPS5 from Home first, then add games.", page.EmptyText);
     }
 
     [Fact]

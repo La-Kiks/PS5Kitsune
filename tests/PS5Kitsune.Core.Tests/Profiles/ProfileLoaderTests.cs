@@ -63,15 +63,15 @@ public sealed class ProfileLoaderTests
         var profile = ProfileLoader.LoadEmbedded();
 
         Assert.Equal(
-            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.2/relinker-v0.1.2.exe"),
+            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.3/relinker-v0.1.3.exe"),
             profile.AssetUrl(ProfileAssetKeys.Relinker));
         Assert.Equal(
-            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.2/prx-windows-v0.1.2.zip"),
+            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.3/prx-windows-v0.1.3.zip"),
             profile.AssetUrl(ProfileAssetKeys.Libs));
-        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.2.zip"), profile.AssetUrl(ProfileAssetKeys.Scripts));
+        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.3.zip"), profile.AssetUrl(ProfileAssetKeys.Scripts));
         Assert.Equal(["tools/", "core/libs/prx/"], profile.Asset(ProfileAssetKeys.Scripts).Include!);
-        Assert.Contains("360e8bd685d32b0e9d37e6ee2fae44417c0f808c", profile.AssetUrl(ProfileAssetKeys.UnwrapScript).AbsolutePath, StringComparison.Ordinal);
-        Assert.Equal("v0.1.2", profile.Source.Version);
+        Assert.Contains("3fd1cc393b8512c2e989860053f30dee5a8cd1aa", profile.AssetUrl(ProfileAssetKeys.UnwrapScript).AbsolutePath, StringComparison.Ordinal);
+        Assert.Equal("v0.1.3", profile.Source.Version);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class ProfileLoaderTests
     {
         var profile = ProfileLoader.LoadEmbedded();
 
-        Assert.Equal(new DateTimeOffset(2026, 10, 14, 8, 56, 52, TimeSpan.Zero), profile.Source.PublishedAt);
+        Assert.Equal(new DateTimeOffset(2026, 10, 20, 9, 31, 13, TimeSpan.Zero), profile.Source.PublishedAt);
     }
 
     [Fact]

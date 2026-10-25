@@ -16,7 +16,7 @@ namespace PS5Kitsune.App.ViewModels;
 /// A game's page: launches it (downloading Lavapipe and the fonts first when needed), follows its log live, Stop, then its exit code and, after an error AnyPS5 is known to print, its diagnosis.
 /// Leaving the page never stops the game; leaving during a download cancels the launch.
 /// </summary>
-public sealed partial class GameViewModel : ObservableObject, INavigationAware
+public sealed partial class GameViewModel : ObservableObject, INavigationAware, ILeavable, IBusyPage
 {
     /// <summary>Log lines kept on screen; the file keeps them all.</summary>
     public const int KeptLines = 500;
@@ -35,6 +35,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     private readonly DiagnosisServices? _diagnosis;
     private bool _stopped;
     private int _launches;
+    private bool _hasLogAnnounced;
 
     /// <summary>A game found running: the page follows it.</summary>
     public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null, DiagnosisServices? diagnosis = null)
@@ -59,6 +60,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         Title = name;
         FirstLaunchHint = firstLaunch ? "The first launch may stutter while shaders are prepared." : null;
         IsPreparing = true;
+        Log.CollectionChanged += (_, _) => AnnounceHasLog();
     }
 
     public string Title { get; }
@@ -75,6 +77,33 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     [NotifyPropertyChangedFor(nameof(CanLaunchAgain))]
     [NotifyCanExecuteChangedFor(nameof(CancelLaunchCommand), nameof(LaunchAgainCommand))]
     public partial bool IsPreparing { get; private set; }
+
+    /// <summary>The download's progress from 0 to 1; 0 when unknown.</summary>
+    [ObservableProperty]
+    public partial double DownloadValue { get; private set; }
+
+    /// <summary>True unless a download with a known size is running.</summary>
+    [ObservableProperty]
+    public partial bool IsDownloadIndeterminate { get; private set; } = true;
+
+    /// <summary>The log has at least one line; until then the page says where the game's output will appear.</summary>
+    public bool HasLog => Log.Count > 0;
+
+    // Announced only when it flips, so a log line does not make the view re-evaluate the whole page.
+    private void AnnounceHasLog()
+    {
+        if (HasLog == _hasLogAnnounced)
+        {
+            return;
+        }
+
+        _hasLogAnnounced = HasLog;
+        OnPropertyChanged(nameof(HasLog));
+    }
+
+    /// <summary>The page's own Back is waiting for the launch and the log to stop; the sidebar stays locked meanwhile.</summary>
+    [ObservableProperty]
+    public partial bool IsLeaving { get; private set; }
 
     public bool CanLaunchAgain => !IsRunning && !IsPreparing;
 
@@ -186,6 +215,8 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
             // Only now, so Launch again cannot start while an attach is still running.
             _launching = null;
             IsPreparing = false;
+            DownloadValue = 0;
+            IsDownloadIndeterminate = true;
         }
 
         _playing?.Process.Dispose();
@@ -207,11 +238,15 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         if (value.Download == LaunchDownload.Waiting)
         {
             StatusText = "Waiting for another launch to finish its downloads…";
+            DownloadValue = 0;
+            IsDownloadIndeterminate = true;
             return;
         }
 
         var what = value.Download == LaunchDownload.Lavapipe ? "Lavapipe" : "fonts";
         var received = value.Progress.ReceivedBytes >> 20;
+        IsDownloadIndeterminate = value.Progress.TotalBytes is not > 0;
+        DownloadValue = value.Progress.TotalBytes is > 0 and var known ? (double)value.Progress.ReceivedBytes / known : 0;
         StatusText = value.Progress.TotalBytes is { } total
             ? string.Create(CultureInfo.InvariantCulture, $"Downloading {what}… {received} MB / {total >> 20} MB")
             : string.Create(CultureInfo.InvariantCulture, $"Downloading {what}… {received} MB");
@@ -319,8 +354,8 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         return Launching;
     }
 
-    [RelayCommand]
-    private async Task BackToLibraryAsync()
+    /// <summary>Stops any launch and stops following the game; the game itself keeps running.</summary>
+    public async Task<bool> LeaveAsync()
     {
         if (_launching is { } launching)
         {
@@ -336,7 +371,22 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
 
         await Following.ConfigureAwait(true);
         _playing?.Process.Dispose();
-        _navigator.GoHome(_pages.Library());
+        return true;
+    }
+
+    [RelayCommand]
+    private async Task BackToLibraryAsync()
+    {
+        IsLeaving = true;
+        try
+        {
+            await LeaveAsync().ConfigureAwait(true);
+            _navigator.GoHome(_pages.Library());
+        }
+        finally
+        {
+            IsLeaving = false;
+        }
     }
 
     [RelayCommand]

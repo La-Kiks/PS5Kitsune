@@ -1,9 +1,8 @@
-using Avalonia.Controls;
 using PS5Kitsune.App.ViewModels;
 
 namespace PS5Kitsune.App.Views;
 
-public sealed partial class AddGameView : UserControl
+public sealed partial class AddGameView : PageView
 {
     public AddGameView() => InitializeComponent();
 

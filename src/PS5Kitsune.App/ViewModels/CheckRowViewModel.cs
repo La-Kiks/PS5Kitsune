@@ -18,7 +18,10 @@ public sealed partial class CheckRowViewModel(CheckResult result, IPlatform plat
 
     public CheckStatus Status => result.Status;
 
-    public string StatusText => result.Status switch
+    public string StatusText => Label(result.Status);
+
+    /// <summary>The word on a status chip.</summary>
+    public static string Label(CheckStatus status) => status switch
     {
         CheckStatus.Ok => "OK",
         CheckStatus.Info => "Info",

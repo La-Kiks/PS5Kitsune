@@ -27,6 +27,8 @@ public sealed partial class App : Application
         var sessions = new SessionHost(
             root => RootSession.Create(root, platform, ProfileLoader.LoadActive(new DataLayout(root)).Profile),
             DataRoots.Resolve(null, loaded.Settings, platform.DefaultDataRoot));
+        var theme = new ThemeService(settings, choice => RequestedThemeVariant = ThemeService.VariantOf(choice), () => sessions.Current.Get<ILogger<App>>());
+        theme.Apply(loaded.Settings.Theme);
         if (loaded.Problem is { } problem)
         {
             sessions.Current.Get<ILogger<App>>().SettingsIgnored(problem);
@@ -38,7 +40,7 @@ public sealed partial class App : Application
             var navigator = new Navigator();
             var dialogs = new AvaloniaDialogService(() => window);
             var pages = new PageFactory(sessions, navigator, dialogs, settings, new AvaloniaUiDispatcher(), platform);
-            window.DataContext = new MainWindowViewModel(sessions, navigator, platform, dialogs);
+            window.DataContext = new MainWindowViewModel(navigator, dialogs, pages, theme, () => sessions.Current.Get<ILogger<MainWindowViewModel>>());
             navigator.GoHome(pages.Start());
             desktop.MainWindow = window;
             desktop.Exit += (_, _) => sessions.Dispose();

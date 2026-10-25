@@ -1,27 +1,35 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:PS5Kitsune.App.ViewModels"
-             x:Class="PS5Kitsune.App.Views.DoneView"
-             x:DataType="vm:DoneViewModel">
-  <DockPanel>
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
-      <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
-      <Button Content="Open log" Command="{Binding OpenLogCommand}" />
-      <Button Content="Back to home" Classes="accent" Command="{Binding BackHomeCommand}" />
-    </StackPanel>
-
-    <StackPanel Spacing="12">
-      <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding BuildText}" IsVisible="{Binding BuildText, Converter={x:Static ObjectConverters.IsNotNull}}" Opacity="0.85" />
-      <TextBlock Text="Adding games from the app comes in a later version; until then, use 'ps5kitsune add'." TextWrapping="Wrap" Opacity="0.85" />
+<views:PageView xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:PS5Kitsune.App.ViewModels"
+                xmlns:views="using:PS5Kitsune.App.Views"
+                xmlns:c="using:PS5Kitsune.App.Controls"
+                x:Class="PS5Kitsune.App.Views.DoneView"
+                x:DataType="vm:DoneViewModel">
+  <Grid RowDefinitions="*,Auto">
+    <StackPanel Grid.Row="0" Spacing="12">
+      <TextBlock Text="{Binding Title}" Classes="h1" />
+      <TextBlock Text="{Binding BuildText}" IsVisible="{Binding BuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Text="Adding games from the app comes in a later version; until then, use 'ps5kitsune add'." Classes="caption" />
       <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
-        <TextBlock Text="Relinker" FontWeight="SemiBold" />
+        <TextBlock Text="Relinker" Classes="caption" VerticalAlignment="Center" />
         <SelectableTextBlock Grid.Column="1" Text="{Binding Relinker}" TextWrapping="Wrap" />
-        <TextBlock Grid.Row="1" Text="Libraries" FontWeight="SemiBold" />
+        <TextBlock Grid.Row="1" Text="Libraries" Classes="caption" VerticalAlignment="Center" />
         <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Libs}" TextWrapping="Wrap" />
       </Grid>
-      <TextBlock Text="{Binding OpenError}" IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 Foreground="#C42B1C" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding OpenError}" Classes="error" AutomationProperties.LiveSetting="Assertive"
+                 IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
-  </DockPanel>
-</UserControl>
+
+    <Border Grid.Row="1" Classes="footer">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
+          <Button Content="Open log" Command="{Binding OpenLogCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+          <Button Content="Back to home" Classes="accent" Command="{Binding BackHomeCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
+</views:PageView>

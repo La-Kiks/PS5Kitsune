@@ -2,11 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PS5Kitsune.App.ViewModels"
         xmlns:views="using:PS5Kitsune.App.Views"
+        xmlns:c="using:PS5Kitsune.App.Controls"
         x:Class="PS5Kitsune.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="PS5Kitsune"
         Icon="/Assets/kitsune.ico"
-        Width="860" Height="680" MinWidth="600" MinHeight="480">
+        Background="{DynamicResource Surface.Page}"
+        FontSize="13"
+        Width="860" Height="680" MinWidth="720" MinHeight="480">
   <Window.DataTemplates>
     <DataTemplate DataType="vm:HomeViewModel">
       <views:HomeView />
@@ -52,18 +55,33 @@
     </DataTemplate>
   </Window.DataTemplates>
 
-  <DockPanel Margin="24">
-    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,16">
-      <TextBlock Text="PS5Kitsune" FontSize="28" FontWeight="SemiBold" />
-      <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" ColumnSpacing="8" Opacity="0.7">
-        <TextBlock Grid.Column="0" Text="Platform" FontWeight="SemiBold" />
-        <TextBlock Grid.Column="1" Text="{Binding Platform}" />
-        <TextBlock Grid.Column="2" Text="Data root" FontWeight="SemiBold" />
-        <TextBlock Grid.Column="3" Text="{Binding DataRoot}" TextTrimming="CharacterEllipsis" />
-        <TextBlock Grid.Column="4" Text="Profile" FontWeight="SemiBold" />
-        <TextBlock Grid.Column="5" Text="{Binding Profile}" TextTrimming="CharacterEllipsis" />
+  <Grid ColumnDefinitions="168,*">
+    <Border Background="{DynamicResource Surface.Sidebar}" BorderBrush="{DynamicResource Border.Subtle}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="12,16">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="4,0,0,20">
+          <Image Source="/Assets/kitsune.ico" Width="24" Height="24" AutomationProperties.Name="PS5Kitsune" />
+          <TextBlock Text="PS5Kitsune" Classes="h2" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Spacing="4">
+          <Button Classes="nav" Classes.current="{Binding IsHomeCurrent}" Content="Home" Command="{Binding GoHomeCommand}"
+                  ToolTip.Tip="{Binding NavTip}" AutomationProperties.ItemStatus="{Binding HomeItemStatus}" />
+          <Button Classes="nav" Classes.current="{Binding IsLibraryCurrent}" Content="Library" Command="{Binding GoLibraryCommand}"
+                  ToolTip.Tip="{Binding NavTip}" AutomationProperties.ItemStatus="{Binding LibraryItemStatus}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
+                    c:ArrowSelection.IsEnabled="True">
+          <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="◐" Padding="10,4"
+                       IsChecked="{Binding IsSystemTheme}" ToolTip.Tip="System theme" AutomationProperties.Name="System theme" />
+          <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="☀" Padding="10,4"
+                       IsChecked="{Binding IsLightTheme}" ToolTip.Tip="Light theme" AutomationProperties.Name="Light theme" />
+          <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="☾" Padding="10,4"
+                       IsChecked="{Binding IsDarkTheme}" ToolTip.Tip="Dark theme" AutomationProperties.Name="Dark theme" />
+        </StackPanel>
       </Grid>
-    </StackPanel>
-    <ContentControl Content="{Binding Navigator.CurrentPage}" />
-  </DockPanel>
+    </Border>
+
+    <ContentControl Grid.Column="1" Margin="24" Content="{Binding Navigator.CurrentPage}" />
+  </Grid>
 </Window>

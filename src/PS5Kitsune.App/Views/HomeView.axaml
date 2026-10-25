@@ -1,36 +1,46 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:PS5Kitsune.App.ViewModels"
-             x:Class="PS5Kitsune.App.Views.HomeView"
-             x:DataType="vm:HomeViewModel">
+<views:PageView xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:PS5Kitsune.App.ViewModels"
+                xmlns:views="using:PS5Kitsune.App.Views"
+                xmlns:c="using:PS5Kitsune.App.Controls"
+                x:Class="PS5Kitsune.App.Views.HomeView"
+                x:DataType="vm:HomeViewModel">
   <StackPanel Spacing="24" MaxWidth="680" HorizontalAlignment="Left">
-    <Border Padding="20" CornerRadius="6" BorderThickness="1" BorderBrush="#40808080">
+    <TextBlock Text="Home" Classes="h1" />
+    <Border Classes="card">
       <StackPanel Spacing="8">
-        <TextBlock Text="{Binding StateTitle}" FontSize="20" FontWeight="SemiBold" />
-        <ProgressBar IsIndeterminate="True" Width="80" HorizontalAlignment="Left" IsVisible="{Binding IsChecking}" />
-        <TextBlock Text="{Binding StateDetail}" TextWrapping="Wrap" Opacity="0.85" />
-        <TextBlock Text="{Binding OtherInstallText}" Opacity="0.85" IsVisible="{Binding OtherInstallText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <Button Content="{Binding ActionText}" Command="{Binding StartCommand}" Classes="accent" Margin="0,8,0,0" />
-        <Button Content="Add a game" Command="{Binding AddGameCommand}" />
-        <Button Content="Library" Command="{Binding LibraryCommand}" />
-        <TextBlock Text="{Binding AddGameHint}" Opacity="0.85" IsVisible="{Binding AddGameHint, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Text="{Binding StateTitle}" Classes="h2" />
+        <ProgressBar IsIndeterminate="True" Width="80" HorizontalAlignment="Left" IsVisible="{Binding IsChecking}"
+                     AutomationProperties.Name="Checking" />
+        <TextBlock Text="{Binding StateDetail}" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding OtherInstallText}" TextWrapping="Wrap"
+                   IsVisible="{Binding OtherInstallText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <WrapPanel Margin="0,8,0,0" ItemSpacing="12" LineSpacing="12">
+          <Button Content="{Binding ActionText}" Command="{Binding StartCommand}" Classes="accent" IsDefault="True" c:InitialFocus.Rank="1" />
+          <Button Content="Add a game" Command="{Binding AddGameCommand}" />
+          <Button Content="Library" Command="{Binding LibraryCommand}" />
+        </WrapPanel>
+        <TextBlock Text="{Binding AddGameHint}" Classes="caption"
+                   IsVisible="{Binding AddGameHint, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
     </Border>
 
-    <StackPanel Spacing="6">
-      <TextBlock Text="Data folder" FontWeight="SemiBold" />
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-        <TextBlock Text="{Binding DataRoot}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-        <Button Grid.Column="1" Content="Change…" Command="{Binding ChangeRootCommand}" />
-      </Grid>
-      <TextBlock Text="{Binding RootError}" IsVisible="{Binding RootError, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 Foreground="#C42B1C" TextWrapping="Wrap" />
-      <TextBlock Text="Tools, AnyPS5 and games go here. The path must be ASCII with no spaces." Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
-    </StackPanel>
+    <StackPanel Spacing="8">
+      <TextBlock Text="This PC" Classes="h2" />
+      <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+        <TextBlock Text="Platform" Classes="caption" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding Platform}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
 
-    <StackPanel Spacing="6">
-      <TextBlock Text="AnyPS5 profile" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding ProfileText}" />
+        <TextBlock Grid.Row="1" Text="Data folder" Classes="caption" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DataRoot}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        <Button Grid.Row="1" Grid.Column="2" Content="Change…" Command="{Binding ChangeRootCommand}" />
+
+        <TextBlock Grid.Row="2" Text="AnyPS5 profile" Classes="caption" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ProfileText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      </Grid>
+      <TextBlock Text="{Binding RootError}" Classes="error" AutomationProperties.LiveSetting="Assertive"
+                 IsVisible="{Binding RootError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Text="Tools, AnyPS5 and games go here. The path must be ASCII with no spaces." Classes="caption" />
     </StackPanel>
   </StackPanel>
-</UserControl>
+</views:PageView>
