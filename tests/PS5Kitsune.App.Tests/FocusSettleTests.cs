@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Shell;
@@ -53,6 +55,38 @@ public sealed class FocusSettleTests(HeadlessSession session) : IDisposable
 
         Assert.NotEqual("Continue", before.Text);
         Assert.Equal("Continue", after.Text);
+    }
+
+    [Fact]
+    public async Task Focus_the_user_moved_to_the_sidebar_while_loading_is_left_alone()
+    {
+        var pending = new TaskCompletionSource<SystemCheckReport>();
+        var (home, after) = await session.RunUiAsync(async () =>
+        {
+            var navigator = new Navigator();
+            var window = NewWindow(navigator);
+            var viewModel = new SystemCheckViewModel(new PendingChecker(pending.Task), AnyPS5Mode.Release, new TestPlatform(), navigator, new FakePages());
+            try
+            {
+                window.Show();
+                navigator.GoTo(viewModel);
+                Flush();
+                var button = window.GetVisualDescendants().OfType<Button>().Single(candidate => Equals(candidate.Content, "Home"));
+                button.Focus(NavigationMethod.Tab);
+                Flush();
+
+                pending.SetResult(AllOk());
+                await viewModel.CheckCommand.ExecutionTask!;
+                Flush();
+                return (button, window.FocusManager!.GetFocusedElement());
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Same(home, after);
     }
 
     [Fact]

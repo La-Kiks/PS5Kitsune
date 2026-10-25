@@ -21,12 +21,14 @@ public class PageView : UserControl
     private bool _placed;
     private bool _causing;
     private bool _queued;
+    private object? _focusAtLoad;
 
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
         _watching = true;
         _placed = false;
+        _focusAtLoad = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
         AddHandler(GotFocusEvent, OnGotFocus);
         Watch(DataContext as INotifyPropertyChanged);
         Queue();
@@ -97,6 +99,14 @@ public class PageView : UserControl
 
         // Once placed, focus that moved out of the page is the user's: leave it there.
         if (_placed && TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is Visual focused && !this.IsVisualAncestorOf(focused))
+        {
+            _watching = false;
+            return;
+        }
+
+        // Before we placed any focus, the user may already have moved it outside the page while it loaded: leave it there.
+        if (!_placed && TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is { } moved
+            && moved is Visual movedVisual && !this.IsVisualAncestorOf(movedVisual) && !ReferenceEquals(moved, _focusAtLoad))
         {
             _watching = false;
             return;
