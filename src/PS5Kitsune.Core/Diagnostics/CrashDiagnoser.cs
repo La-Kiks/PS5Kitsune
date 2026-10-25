@@ -52,18 +52,22 @@ public sealed partial class CrashDiagnoser
         var line = stopped ? ExitLines.Stopped(exitCode) : ExitLines.Exited(exitCode);
         try
         {
-            var stream = new FileStream(logPath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
+            var separator = "";
+            var stream = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             await using (stream.ConfigureAwait(false))
             {
-                var separator = "";
                 if (stream.Length > 0)
                 {
                     stream.Seek(-1, SeekOrigin.End);
                     separator = stream.ReadByte() == '\n' ? "" : Environment.NewLine;
                 }
+            }
 
-                stream.Seek(0, SeekOrigin.End);
-                await stream.WriteAsync(Encoding.UTF8.GetBytes(separator + line + Environment.NewLine)).ConfigureAwait(false);
+            // One write through an append handle: the system places it at the end atomically, so a second watcher's line cannot overwrite it.
+            var appender = new FileStream(logPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
+            await using (appender.ConfigureAwait(false))
+            {
+                await appender.WriteAsync(Encoding.UTF8.GetBytes(separator + line + Environment.NewLine)).ConfigureAwait(false);
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

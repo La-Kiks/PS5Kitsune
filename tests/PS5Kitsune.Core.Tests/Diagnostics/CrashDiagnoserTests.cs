@@ -144,6 +144,19 @@ public sealed class CrashDiagnoserTests : IDisposable
     }
 
     [Fact]
+    public async Task Two_watchers_appending_the_exit_line_both_leave_it_in_the_log()
+    {
+        var log = Log("last line without newline");
+
+        await _diagnoser.AppendExitLineAsync(log, 3, stopped: false);
+        await _diagnoser.AppendExitLineAsync(log, 3, stopped: false);
+
+        Assert.Equal(
+            ["last line without newline", "[ps5kitsune] exited with code 3 (0x00000003)", "[ps5kitsune] exited with code 3 (0x00000003)"],
+            await File.ReadAllLinesAsync(log, Token));
+    }
+
+    [Fact]
     public async Task Finishing_a_stopped_game_writes_the_stopped_line_and_diagnoses_nothing()
     {
         var log = Log("Vulkan: buffer device address and shaderInt64 are required\n");
