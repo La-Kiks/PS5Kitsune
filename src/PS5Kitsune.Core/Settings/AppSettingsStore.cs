@@ -24,7 +24,7 @@ public sealed class AppSettingsStore(string settingsDirectory)
 
             if (settings.SchemaVersion != AppSettings.CurrentSchemaVersion)
             {
-                return new AppSettingsLoad(AppSettings.Default, $"{FilePath} has schema version {settings.SchemaVersion}; using the default settings.");
+                return new AppSettingsLoad(AppSettings.Default, $"{FilePath} has schema version {settings.SchemaVersion}; using the default settings.", OtherSchema: true);
             }
 
             // A relative root would resolve against each process's own current directory.
@@ -42,34 +42,59 @@ public sealed class AppSettingsStore(string settingsDirectory)
     public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default) =>
         JsonFiles.WriteAsync(FilePath, settings, cancellationToken);
 
+    /// <inheritdoc cref="UpdateAsync(Func{AppSettings, AppSettings}, bool, CancellationToken)"/>
+    public Task<bool> UpdateAsync(Func<AppSettings, AppSettings> change, CancellationToken cancellationToken = default) =>
+        UpdateAsync(change, false, cancellationToken);
+
     /// <summary>
     /// Loads the current settings, applies <paramref name="change"/> and saves. Updates on this store run one at a time in the order they were
     /// started, so two writers (the theme and the data root) cannot fight over the temporary file or save a stale copy of each other's field.
     /// A file that <see cref="Load"/> could not use (corrupt, another schema version, an invalid root) is not overwritten: the change then only
     /// applies to this run, and the result is false. A missing file is not a problem, so the first save creates it.
     /// </summary>
+    /// <param name="replaceUnusable">An explicit choice that may repair the file: a corrupt file or an invalid root is replaced by the defaults
+    /// plus the change (keeping the theme when it is readable). A file of another schema version is still left alone.</param>
     /// <returns>True when the settings were saved.</returns>
-    public Task<bool> UpdateAsync(Func<AppSettings, AppSettings> change, CancellationToken cancellationToken = default)
+    public Task<bool> UpdateAsync(Func<AppSettings, AppSettings> change, bool replaceUnusable, CancellationToken cancellationToken = default)
     {
         lock (_gate)
         {
-            var update = UpdateAfterAsync(_lastUpdate, change, cancellationToken);
+            var update = UpdateAfterAsync(_lastUpdate, change, replaceUnusable, cancellationToken);
             _lastUpdate = update;
             return update;
         }
     }
 
-    private async Task<bool> UpdateAfterAsync(Task previous, Func<AppSettings, AppSettings> change, CancellationToken cancellationToken)
+    private async Task<bool> UpdateAfterAsync(Task previous, Func<AppSettings, AppSettings> change, bool replaceUnusable, CancellationToken cancellationToken)
     {
         // WhenAny never throws, so one failed update cannot block the next.
         await Task.WhenAny(previous).ConfigureAwait(false);
         var load = Load();
+        var current = load.Settings;
         if (load.Problem is not null)
         {
-            return false;
+            if (!replaceUnusable || load.OtherSchema)
+            {
+                return false;
+            }
+
+            current = AppSettings.Default with { Theme = ReadableTheme() };
         }
 
-        await SaveAsync(change(load.Settings), cancellationToken).ConfigureAwait(false);
+        await SaveAsync(change(current), cancellationToken).ConfigureAwait(false);
         return true;
+    }
+
+    // An invalid root leaves a readable file; its theme is kept. A corrupt file has none.
+    private AppTheme ReadableTheme()
+    {
+        try
+        {
+            return JsonFiles.Read<AppSettings>(FilePath)?.Theme ?? AppTheme.System;
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return AppTheme.System;
+        }
     }
 }

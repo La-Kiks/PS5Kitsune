@@ -356,6 +356,20 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Choosing_a_root_repairs_a_settings_file_with_an_invalid_root()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_settings.FilePath, """{ "schemaVersion": 1, "dataRoot": "relative" }""", TestContext.Current.CancellationToken);
+        var viewModel = await CreateAsync();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.RootError);
+        Assert.Equal(new AppSettingsLoad(new AppSettings(AppSettings.CurrentSchemaVersion, _temp.Combine("other")), null), _settings.Load());
+    }
+
+    [Fact]
     public async Task A_failed_save_says_why_and_keeps_the_new_root()
     {
         await File.WriteAllTextAsync(_temp.Combine("settings"), "x", TestContext.Current.CancellationToken);

@@ -230,9 +230,10 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         try
         {
             // Change only the root: the file also holds the theme, and the store queues the update behind any theme save.
-            if (!await settings.UpdateAsync(current => current with { DataRoot = root }).ConfigureAwait(true))
+            // An explicit choice may repair a corrupt file or an invalid root; a file of another schema version stays untouched.
+            if (!await settings.UpdateAsync(current => current with { DataRoot = root }, true).ConfigureAwait(true))
             {
-                RootError = $"Cannot save the setting: {settings.Load().Problem}";
+                RootError = $"Cannot save the setting: {settings.Load().Problem ?? "the settings file could not be used."}";
             }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

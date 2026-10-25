@@ -21,4 +21,5 @@ public enum AppTheme
 
 /// <param name="Settings">The settings to use.</param>
 /// <param name="Problem">Why the file was ignored, to log once logging exists; null when it was read or absent.</param>
-public sealed record AppSettingsLoad(AppSettings Settings, string? Problem);
+/// <param name="OtherSchema">The problem is a file written with another schema version: it may be a newer build's, so it is never replaced.</param>
+public sealed record AppSettingsLoad(AppSettings Settings, string? Problem, bool OtherSchema = false);

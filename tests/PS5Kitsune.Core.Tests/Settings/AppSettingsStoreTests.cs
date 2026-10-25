@@ -130,6 +130,35 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.Equal(before, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData("{ nope", AppTheme.System)]
+    [InlineData("""{ "schemaVersion": 1, "dataRoot": "relative", "theme": "dark" }""", AppTheme.Dark)]
+    public async Task A_chosen_root_repairs_a_corrupt_file_or_an_invalid_root(string json, AppTheme theme)
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), json, TestContext.Current.CancellationToken);
+        var root = _temp.Combine("data");
+
+        var saved = await Store.UpdateAsync(settings => settings with { DataRoot = root }, replaceUnusable: true, TestContext.Current.CancellationToken);
+
+        Assert.True(saved);
+        Assert.Equal(new AppSettingsLoad(new AppSettings(AppSettings.CurrentSchemaVersion, root, theme), null), Store.Load());
+    }
+
+    [Fact]
+    public async Task A_chosen_root_still_leaves_a_file_from_another_schema_untouched()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        var path = _temp.Combine("settings", "settings.json");
+        await File.WriteAllTextAsync(path, """{ "schemaVersion": 2 }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+
+        var saved = await Store.UpdateAsync(settings => settings with { DataRoot = _temp.Combine("data") }, replaceUnusable: true, TestContext.Current.CancellationToken);
+
+        Assert.False(saved);
+        Assert.Equal(before, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task An_update_creates_a_missing_file()
     {
