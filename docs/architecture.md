@@ -99,6 +99,8 @@ Vulkan enumeration can crash the process (Dozen driver, some D3D12 drivers, see 
 
 The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and will be the first Linux deliverable.
 
+The theme lives in `Styles/AppTheme.axaml`, as token brushes for Light and Dark over Fluent, and views use only token keys (a test enforces it). Fluent's ComboBox, TextBox, Expander and accent-button resources are re-pointed at the tokens per variant, because Fluent derives them from translucent palette colors. The sidebar is locked while a page runs work, and otherwise leaves every page in the stack through `ILeavable` before `GoHome`. The theme choice is `settings.json`'s `theme`.
+
 ## AnyPS5 profiles
 
 A profile is a JSON file describing an AnyPS5 version **validated with DOOM** and everything that depends on it. It replaces constants scattered through the code.
@@ -542,7 +544,7 @@ The order follows "end to end first, screens second": each milestone ends with a
      - Criterion: DOOM launched in one click with Lavapipe forced on (neither test laptop lacks a supported GPU).
    - **7c — Crash diagnosis.** Rules in the profile, the exit line, the Game page panel with its fixes (Repair libs, CPU rendering, Reset a setting, page file settings, NVIDIA drivers, Report), `diagnose`; one launch preparation at a time. Spec: [milestone 7c](superpowers/specs/2026-10-25-milestone-7c-crash-diagnosis-design.md).
      - Criterion: a deliberately provoked error 126 is recognized and repaired.
-   - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation).
+   - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation). Spec: [milestone 7d](superpowers/specs/2026-10-25-milestone-7d-visual-design-design.md).
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
 8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
    - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.

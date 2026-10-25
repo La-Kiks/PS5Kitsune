@@ -32,9 +32,8 @@ These were made during brainstorming, with mockups in `.superpowers/brainstorm/`
 ## Facts checked on 2026-10-25
 
 - `Avalonia.Fonts.Inter` 12.1.4 exists on NuGet. Its license is MIT; the font inside is OFL 1.1. It depends only on `Avalonia` 12.1.4 and is turned on with `AppBuilder.WithInterFont()`. The CI license check (MIT, BSD, LGPL) accepts it.
-- `Avalonia.Headless.XUnit` 12.1.4 depends on `xunit.v3.extensibility.core` 3.2.2, while the tests use `xunit.v3` 4.0.2.
-  - The plan first checks that the two work together (one `[AvaloniaFact]` test runs).
-  - If they don't, the tests use `Avalonia.Headless` 12.1.4 directly, through `HeadlessUnitTestSession.StartNew(typeof(App))` in a shared fixture, with `session.Dispatch(…)` per test.
+- `fonts:Inter#Inter` is the default family, set through `FontManagerOptions.DefaultFamilyName`.
+- `Avalonia.Headless.XUnit` 12.1.4 fails test discovery under xunit.v3 4.0.2 (`MissingMethodException`); the tests use `Avalonia.Headless` directly, with a session that is never disposed (its `Dispose` hangs).
 - `Avalonia.Skia` 12.1.4 renders headless frames to bitmaps (`UseHeadlessDrawing = false` plus `.UseSkia()`). The screenshots need it.
 - Today:
   - `App.axaml` sets Fluent palettes: Palenight dark, Fluent light, accent `#D9452A`.
@@ -60,8 +59,8 @@ These were made during brainstorming, with mockups in `.superpowers/brainstorm/`
 | `Text.Primary` | `#F2E9E1` | `#2A211C` | body text |
 | `Text.Muted` | `#B3A69C` | `#6E6058` | captions, title IDs |
 | `Text.Title` | `#F07A5A` | `#B8381F` | `h1` |
-| `Accent` | `#D9452A` | `#C73E24` | primary buttons, selection, focus |
-| `Accent.Hover` | `#E25B3C` | `#B23520` | primary button on hover |
+| `Accent` | `#C73E24` | `#C73E24` | primary buttons, selection, focus |
+| `Accent.Hover` | `#B23520` | `#B23520` | primary button on hover |
 | `OnAccent` | `#FFFFFF` | `#FFFFFF` | text on accent and on status chips |
 | `Error` | `#F0806A` | `#B3261E` | error text and the diagnosis border |
 | `Warning` | `#E2A24A` | `#8A5300` | warning text (fonts warning) |
@@ -70,6 +69,8 @@ These were made during brainstorming, with mockups in `.superpowers/brainstorm/`
 | `Status.Red` | `#B03A22` | `#B3261E` | chip background |
 | `Status.Reconvert` | `#8A5A10` | `#8A5300` | chip background |
 | `Status.Running` | `#3B6EA8` | `#2D5F96` | chip background |
+
+The dark accent `#D9452A` gave 4.34:1 with white text; both variants use `#C73E24` (5.07:1).
 
 `Status.*` serves Green, Orange, Red, Reconvert and Running. The tool and check chips reuse these keys:
 
