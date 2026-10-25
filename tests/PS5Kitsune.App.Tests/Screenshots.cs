@@ -1,0 +1,67 @@
+using Avalonia;
+using Avalonia.Headless;
+using Avalonia.Media.Imaging;
+using Avalonia.Styling;
+using Avalonia.Threading;
+using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.Shell;
+using PS5Kitsune.App.Views;
+using PS5Kitsune.App.Tests.Headless;
+using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.Settings;
+
+namespace PS5Kitsune.App.Tests;
+
+[Collection("Headless")]
+public sealed class Screenshots(HeadlessSession session)
+{
+    [Fact]
+    public async Task Render_every_page()
+    {
+        var folder = Environment.GetEnvironmentVariable("PS5K_SCREENSHOTS");
+        if (string.IsNullOrEmpty(folder))
+        {
+            Assert.Skip("Set PS5K_SCREENSHOTS to a folder to render every page.");
+        }
+
+        Directory.CreateDirectory(folder);
+        using var gallery = new PageGallery();
+        try
+        {
+            foreach (var (name, page) in await gallery.BuildAsync())
+            {
+                foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+                {
+                    await session.RunAsync(() =>
+                    {
+                        Application.Current!.RequestedThemeVariant = variant;
+                        var navigator = new Navigator();
+                        var window = new MainWindow
+                        {
+                            DataContext = new MainWindowViewModel(navigator, new FakeDialogs(), new FakePages(), new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { })),
+                            Width = 860,
+                            Height = 680,
+                        };
+                        try
+                        {
+                            window.Show();
+                            navigator.GoTo(page);
+                            Dispatcher.UIThread.RunJobs();
+                            Dispatcher.UIThread.RunJobs();
+                            window.CaptureRenderedFrame()!.Save(Path.Combine(folder, $"{name}-{variant.Key}.png"), new PngBitmapEncoderOptions());
+                        }
+                        finally
+                        {
+                            navigator.GoTo("end");
+                            window.Close();
+                        }
+                    });
+                }
+            }
+        }
+        finally
+        {
+            await session.RunAsync(() => Application.Current!.RequestedThemeVariant = ThemeVariant.Default);
+        }
+    }
+}

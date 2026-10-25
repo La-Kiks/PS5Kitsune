@@ -24,7 +24,7 @@
                        AutomationProperties.Name="Checking" />
           <TextBlock Text="{Binding Verdict}" Classes="h2" VerticalAlignment="Center" />
         </StackPanel>
-        <Button Grid.Column="2" Content="Check again" Command="{Binding CheckCommand}" VerticalAlignment="Center" />
+        <Button Grid.Column="2" Content="Check again" Command="{Binding CheckCommand}" VerticalAlignment="Center" c:InitialFocus.Rank="2" />
       </Grid>
     </Border>
 
