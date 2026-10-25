@@ -72,6 +72,32 @@ public sealed partial class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task The_sidebar_is_locked_while_a_game_page_goes_back_on_its_own()
+    {
+        using var library = new TestLibrary();
+        await library.AddAsync("PPSA99666", "DOOM");
+        await library.Player.SaveSettingsAsync("PPSA99666", new GameSettings { Lavapipe = true }, TestContext.Current.CancellationToken);
+        library.Lavapipe.Reports = [34L << 20];
+        library.Lavapipe.Gate = new TaskCompletionSource();
+        var page = new GameViewModel(library.Game("PPSA99666"), "DOOM", true, library.Player, library.Platform, new InlineDispatcher(), _navigator, new FakePages());
+        _navigator.GoTo(page);
+
+        // Back waits for the launch to end; meanwhile the page itself says it is leaving.
+        var back = page.BackToLibraryCommand.ExecuteAsync(null);
+
+        Assert.True(((IBusyPage)page).IsLeaving);
+        Assert.True(_viewModel.IsBusy);
+        Assert.False(_viewModel.GoHomeCommand.CanExecute(null));
+
+        library.Lavapipe.Gate.SetResult();
+        await back;
+
+        Assert.False(((IBusyPage)page).IsLeaving);
+        Assert.False(_viewModel.IsBusy);
+        Assert.True(_viewModel.GoHomeCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task Going_to_the_library_leaves_every_page_then_clears_the_history()
     {
         var game = new FakeLeavable();

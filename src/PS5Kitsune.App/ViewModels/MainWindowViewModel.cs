@@ -43,8 +43,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public Navigator Navigator { get; }
 
-    /// <summary>The page runs work the sidebar must not interrupt: an install, an add, a reconvert, reading a game, or a launch's downloads.</summary>
-    public bool IsBusy => Navigator.CurrentPage is IRunningWork { IsRunning: true } or GameViewModel { IsPreparing: true };
+    /// <summary>The page runs work the sidebar must not interrupt: an install, an add, a reconvert, reading a game, a launch's downloads, or a page going back on its own.</summary>
+    public bool IsBusy => Navigator.CurrentPage is IRunningWork { IsRunning: true } or GameViewModel { IsPreparing: true } or IBusyPage { IsLeaving: true };
 
     public bool CanNavigate => !IsBusy;
 
@@ -194,7 +194,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void OnPagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(IRunningWork.IsRunning) or nameof(GameViewModel.IsPreparing))
+        if (e.PropertyName is nameof(IRunningWork.IsRunning) or nameof(GameViewModel.IsPreparing) or nameof(IBusyPage.IsLeaving))
         {
             OnBusyChanged();
         }
