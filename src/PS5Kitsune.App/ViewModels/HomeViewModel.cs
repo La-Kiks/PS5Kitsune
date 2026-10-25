@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
+using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
@@ -11,7 +12,7 @@ using PS5Kitsune.Core.Settings;
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>The first page: where AnyPS5 stands on the current data root, and the choice of that root.</summary>
-public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore settings, IDialogService dialogs, Navigator navigator, IPages pages)
+public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore settings, IDialogService dialogs, Navigator navigator, IPages pages, IPlatform platform)
     : ObservableObject, INavigationAware
 {
     private int _generation;
@@ -54,6 +55,8 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(LibraryCommand))]
     public partial bool HasGames { get; private set; }
+
+    public string Platform => platform.Name;
 
     public bool CanOpenLibrary => !IsChecking && HasGames;
 

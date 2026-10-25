@@ -32,6 +32,14 @@ public sealed partial class LibraryViewModel(
     /// <summary>No game is added (not: none matches the search).</summary>
     public bool IsEmpty => !IsLoading && _all.Count == 0;
 
+    /// <summary>AnyPS5 is installed: games can be added. The sidebar reaches the Library before that.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddGameCommand))]
+    [NotifyPropertyChangedFor(nameof(EmptyText))]
+    public partial bool CanAddGame { get; private set; }
+
+    public string EmptyText => CanAddGame ? "No games yet. Add one to start." : "Install AnyPS5 from Home first, then add games.";
+
     /// <summary>Why the last action failed; null otherwise.</summary>
     [ObservableProperty]
     public partial string? Message { get; private set; }
@@ -52,9 +60,10 @@ public sealed partial class LibraryViewModel(
         var generation = ++_generation;
         IsLoading = true;
         IReadOnlyList<GameTileViewModel> tiles;
+        bool installed;
         try
         {
-            tiles = await Task.Run(Read).ConfigureAwait(true);
+            (tiles, installed) = await Task.Run(Read).ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -73,6 +82,7 @@ public sealed partial class LibraryViewModel(
         }
 
         _all = tiles;
+        CanAddGame = installed;
         ApplySearch();
         IsLoading = false;
         OnPropertyChanged(nameof(IsEmpty));
@@ -80,10 +90,10 @@ public sealed partial class LibraryViewModel(
 
     partial void OnSearchChanged(string value) => ApplySearch();
 
-    private IReadOnlyList<GameTileViewModel> Read()
+    private (IReadOnlyList<GameTileViewModel> Tiles, bool Installed) Read()
     {
         var install = installer.ReadRecord();
-        return
+        IReadOnlyList<GameTileViewModel> tiles =
         [
             .. player.List()
                 .Select(game => new GameTileViewModel(game, install is not null && GameLibrary.NeedsReconversion(game.Record, install), this))
@@ -91,6 +101,7 @@ public sealed partial class LibraryViewModel(
                 .ThenByDescending(tile => tile.LastPlayedAt)
                 .ThenBy(tile => tile.Name, StringComparer.CurrentCultureIgnoreCase),
         ];
+        return (tiles, install is not null);
     }
 
     private void ApplySearch() =>
@@ -266,11 +277,8 @@ public sealed partial class LibraryViewModel(
         await RefreshAsync().ConfigureAwait(true);
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanAddGame))]
     private void AddGame() => navigator.GoTo(pages.ChooseGame());
-
-    [RelayCommand]
-    private void Home() => navigator.GoHome(pages.Home());
 
     private static string FormatSize(long bytes) => bytes >= 1L << 30
         ? string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)(1L << 30):0.0} GB")

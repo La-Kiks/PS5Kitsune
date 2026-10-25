@@ -261,15 +261,24 @@ public sealed class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Home_and_add_a_game_navigate()
+    public async Task Add_a_game_navigates()
     {
         var page = await CreateAsync();
 
         page.AddGameCommand.Execute(null);
         Assert.Equal("choose", _navigator.CurrentPage);
+    }
 
-        page.HomeCommand.Execute(null);
-        Assert.Equal("home", _navigator.CurrentPage);
+    [Fact]
+    public async Task Adding_a_game_needs_an_install()
+    {
+        _library.Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.NotInstalled, null);
+
+        var page = await CreateAsync();
+
+        Assert.False(page.CanAddGame);
+        Assert.False(page.AddGameCommand.CanExecute(null));
+        Assert.Equal("Install AnyPS5 from Home first, then add games.", page.EmptyText);
     }
 
     [Fact]

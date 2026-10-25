@@ -16,7 +16,7 @@ namespace PS5Kitsune.App.ViewModels;
 /// A game's page: launches it (downloading Lavapipe and the fonts first when needed), follows its log live, Stop, then its exit code and, after an error AnyPS5 is known to print, its diagnosis.
 /// Leaving the page never stops the game; leaving during a download cancels the launch.
 /// </summary>
-public sealed partial class GameViewModel : ObservableObject, INavigationAware
+public sealed partial class GameViewModel : ObservableObject, INavigationAware, ILeavable
 {
     /// <summary>Log lines kept on screen; the file keeps them all.</summary>
     public const int KeptLines = 500;
@@ -319,8 +319,8 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         return Launching;
     }
 
-    [RelayCommand]
-    private async Task BackToLibraryAsync()
+    /// <summary>Stops any launch and stops following the game; the game itself keeps running.</summary>
+    public async Task<bool> LeaveAsync()
     {
         if (_launching is { } launching)
         {
@@ -336,6 +336,13 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
 
         await Following.ConfigureAwait(true);
         _playing?.Process.Dispose();
+        return true;
+    }
+
+    [RelayCommand]
+    private async Task BackToLibraryAsync()
+    {
+        await LeaveAsync().ConfigureAwait(true);
         _navigator.GoHome(_pages.Library());
     }
 

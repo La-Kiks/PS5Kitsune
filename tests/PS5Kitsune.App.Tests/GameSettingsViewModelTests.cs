@@ -174,6 +174,20 @@ public sealed class GameSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Leaving_with_unsaved_changes_asks_first_and_can_be_declined()
+    {
+        var page = await OpenAsync();
+        page.Overlay = true;
+        var before = _navigator.CurrentPage;
+
+        _dialogs.Confirm = false;
+        Assert.False(await page.LeaveAsync());
+
+        Assert.Same(before, _navigator.CurrentPage);
+        Assert.Equal(["Your changes to the settings of DOOM are not saved."], _dialogs.Confirmations);
+    }
+
+    [Fact]
     public async Task Back_without_changes_goes_back_directly()
     {
         var page = await OpenAsync();

@@ -29,13 +29,22 @@ public sealed class HomeViewModelTests : IDisposable
         _settings = new AppSettingsStore(_temp.Combine("settings"));
     }
 
-    private HomeViewModel Create() => new(_sessions, _settings, _dialogs, _navigator, new FakePages());
+    private HomeViewModel Create() => new(_sessions, _settings, _dialogs, _navigator, new FakePages(), new TestPlatform());
 
     private async Task<HomeViewModel> CreateAsync()
     {
         var viewModel = Create();
         await viewModel.RefreshAsync();
         return viewModel;
+    }
+
+    [Fact]
+    public async Task Shows_the_platform()
+    {
+        var viewModel = await CreateAsync();
+
+        Assert.Equal("Test", viewModel.Platform);
+        Assert.Equal("test-profile (validated)", viewModel.ProfileText);
     }
 
     [Fact]
