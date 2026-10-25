@@ -129,6 +129,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 ```
 
 - **`build` section:** `repository` uses HTTPS and `commit` is 40 lowercase hex characters. Build mode installs that commit.
+- **Source archive hash:** The source archive's hash is computed from the downloaded `archive/refs/tags/<tag>.zip`, since GitHub publishes no digest for it and does not guarantee these archives stay byte-identical; if GitHub regenerates it, the install fails its hash check and the profile needs a new hash.
 - **Resolution order:** the profile embedded in the app, or a valid local override `<root>\profiles\override.json`, which replaces it for both the CLI and the app. An override that cannot be read or is invalid is ignored, with a warning in the log. The profile downloaded from the PS5Kitsune repository (checked on demand) is still to come; the most recent valid one will then win, and the user will see which one is active.
 - **"Latest" mode:** a synthetic profile that follows the latest release or `main`, with no pinned hash, flagged as untested in the UI and in game records.
 - **Updating the default profile:** the maintainer validates a new tag or commit with DOOM and publishes the profile; users see "new validated version available" and affected games are marked "needs reconversion".
