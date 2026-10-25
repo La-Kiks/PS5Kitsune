@@ -52,7 +52,10 @@ public sealed partial class LibraryViewModel(
         return installer.ReadRecord() is not null && library.HasGames();
     }
 
-    public void OnNavigatedTo() => _ = RefreshAsync();
+    /// <summary>The refresh <see cref="OnNavigatedTo"/> started; completes when it is done.</summary>
+    public Task Refreshing { get; private set; } = Task.CompletedTask;
+
+    public void OnNavigatedTo() => Refreshing = RefreshAsync();
 
     /// <summary>Reads the games on a worker thread; a result that arrives after a newer refresh started is dropped.</summary>
     public async Task RefreshAsync()

@@ -67,7 +67,10 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
     /// <summary>Why "Add a game" is disabled; null when it is enabled.</summary>
     public string? AddGameHint => CanAddGame ? null : "Install AnyPS5 first to add games.";
 
-    public void OnNavigatedTo() => _ = RefreshAsync();
+    /// <summary>The refresh <see cref="OnNavigatedTo"/> started; completes when it is done.</summary>
+    public Task Refreshing { get; private set; } = Task.CompletedTask;
+
+    public void OnNavigatedTo() => Refreshing = RefreshAsync();
 
     /// <summary>Reads the install state of the current root on a worker thread; a result that arrives after a newer refresh started is dropped.</summary>
     public async Task RefreshAsync()

@@ -64,7 +64,7 @@ public sealed class FocusTests(HeadlessSession session, GalleryFixture gallery) 
     [MemberData(nameof(Expected))]
     public async Task The_first_focus_is_the_primary_control(string page, string expected)
     {
-        var actual = await session.RunAsync(() =>
+        var actual = await session.RunUiAsync(async () =>
         {
             var navigator = new Navigator();
             var theme = new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { });
@@ -73,6 +73,14 @@ public sealed class FocusTests(HeadlessSession session, GalleryFixture gallery) 
             {
                 window.Show();
                 navigator.GoTo(gallery.Pages[page]);
+
+                // Showing a page refreshes it again; its focus is settled once that is done.
+                await (gallery.Pages[page] switch
+                {
+                    HomeViewModel home => home.Refreshing,
+                    LibraryViewModel library => library.Refreshing,
+                    _ => Task.CompletedTask,
+                });
                 Dispatcher.UIThread.RunJobs();
                 Dispatcher.UIThread.RunJobs();
                 return Describe(window.FocusManager!.GetFocusedElement());
