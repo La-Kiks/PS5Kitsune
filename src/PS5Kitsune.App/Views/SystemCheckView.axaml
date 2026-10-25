@@ -7,17 +7,10 @@
                 xmlns:sys="using:System"
                 x:Class="PS5Kitsune.App.Views.SystemCheckView"
                 x:DataType="vm:SystemCheckViewModel">
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
-        <Button Content="Continue" Classes="accent" Command="{Binding ContinueCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
-      </StackPanel>
-    </Border>
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+    <TextBlock Grid.Row="0" Text="System check" Classes="h1" />
 
-    <TextBlock DockPanel.Dock="Top" Text="System check" Classes="h1" />
-
-    <Border DockPanel.Dock="Top" Classes="card" Margin="0,16,0,0">
+    <Border Grid.Row="1" Classes="card" Margin="0,16,0,0">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <c:StatusChip Kind="{Binding BannerStatus, Converter={x:Static conv:CheckStatusKindConverter.Instance}}"
                       Text="{Binding BannerLabel}" VerticalAlignment="Center" />
@@ -30,17 +23,7 @@
       </Grid>
     </Border>
 
-    <Expander DockPanel.Dock="Bottom" Header="Detected GPUs" Margin="0,16,0,0" HorizontalAlignment="Stretch">
-      <ItemsControl ItemsSource="{Binding Gpus}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="sys:String">
-            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </Expander>
-
-    <ScrollViewer Margin="0,16,0,0">
+    <ScrollViewer Grid.Row="2" Margin="0,16,0,0">
       <Border Classes="card" VerticalAlignment="Top" IsVisible="{Binding !IsChecking}">
         <ItemsControl ItemsSource="{Binding Checks}">
           <ItemsControl.ItemsPanel>
@@ -67,5 +50,22 @@
         </ItemsControl>
       </Border>
     </ScrollViewer>
-  </DockPanel>
+
+    <Expander Grid.Row="3" Header="Detected GPUs" Margin="0,16,0,0" HorizontalAlignment="Stretch">
+      <ItemsControl ItemsSource="{Binding Gpus}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="sys:String">
+            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Expander>
+
+    <Border Grid.Row="4" Classes="footer">
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
+        <Button Content="Continue" Classes="accent" Command="{Binding ContinueCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
+      </StackPanel>
+    </Border>
+  </Grid>
 </views:PageView>

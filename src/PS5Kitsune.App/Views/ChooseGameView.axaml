@@ -6,14 +6,8 @@
                 x:Class="PS5Kitsune.App.Views.ChooseGameView"
                 x:DataType="vm:ChooseGameViewModel"
                 DragDrop.AllowDrop="True">
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
-        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
-      </StackPanel>
-    </Border>
-
-    <StackPanel Spacing="16">
+  <Grid RowDefinitions="*,Auto">
+    <StackPanel Grid.Row="0" Spacing="16">
       <TextBlock Text="{Binding Title}" Classes="h1" />
       <TextBlock Text="{Binding Instructions}" TextWrapping="Wrap" />
       <Border BorderThickness="2" BorderBrush="{DynamicResource Border.Strong}" CornerRadius="8" Padding="24" MinHeight="120">
@@ -30,5 +24,11 @@
       <TextBlock Text="{Binding Error}" Classes="error" AutomationProperties.LiveSetting="Assertive"
                  IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
-  </DockPanel>
+
+    <Border Grid.Row="1" Classes="footer">
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
+        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
+      </StackPanel>
+    </Border>
+  </Grid>
 </views:PageView>

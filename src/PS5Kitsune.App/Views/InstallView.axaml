@@ -6,21 +6,8 @@
                 xmlns:sys="using:System"
                 x:Class="PS5Kitsune.App.Views.InstallView"
                 x:DataType="vm:InstallViewModel">
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <DockPanel>
-        <StackPanel Orientation="Horizontal" Spacing="12">
-          <Button Content="Open log" Command="{Binding OpenLogCommand}" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-          <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" IsCancel="True" c:InitialFocus.Rank="2" />
-          <Button Content="Back to home" Command="{Binding BackHomeCommand}" IsVisible="{Binding HasFailed}" />
-          <Button Content="Retry" Classes="accent" Command="{Binding RetryCommand}" IsVisible="{Binding HasFailed}" IsDefault="True" c:InitialFocus.Rank="1" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <StackPanel DockPanel.Dock="Top" Spacing="12">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <StackPanel Grid.Row="0" Spacing="12">
       <TextBlock Text="Installing AnyPS5" Classes="h1" />
       <Border Classes="card">
         <ItemsControl ItemsSource="{Binding Steps}">
@@ -51,7 +38,7 @@
                  IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
 
-    <Border Classes="log" Margin="0,16,0,0">
+    <Border Grid.Row="1" Classes="log" Margin="0,16,0,0">
       <ScrollViewer x:Name="LogScroller">
         <ItemsControl ItemsSource="{Binding Log}">
           <ItemsControl.ItemTemplate>
@@ -62,5 +49,18 @@
         </ItemsControl>
       </ScrollViewer>
     </Border>
-  </DockPanel>
+
+    <Border Grid.Row="2" Classes="footer">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Open log" Command="{Binding OpenLogCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+          <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsRunning}" IsCancel="True" c:InitialFocus.Rank="2" />
+          <Button Content="Back to home" Command="{Binding BackHomeCommand}" IsVisible="{Binding HasFailed}" />
+          <Button Content="Retry" Classes="accent" Command="{Binding RetryCommand}" IsVisible="{Binding HasFailed}" IsDefault="True" c:InitialFocus.Rank="1" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
 </views:PageView>

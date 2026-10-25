@@ -6,20 +6,8 @@
                 xmlns:sys="using:System"
                 x:Class="PS5Kitsune.App.Views.AddResultView"
                 x:DataType="vm:AddResultViewModel">
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <DockPanel>
-        <StackPanel Orientation="Horizontal" Spacing="12">
-          <Button Content="Open the game folder" Command="{Binding OpenFolderCommand}" />
-          <Button Content="Add another game" Command="{Binding AddAnotherCommand}" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-          <Button Content="Go to library" Classes="accent" Command="{Binding BackToLibraryCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <ScrollViewer>
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="8">
         <TextBlock Text="{Binding Title}" Classes="h1" />
         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
@@ -52,5 +40,17 @@
                    IsVisible="{Binding OpenError, Converter={x:Static ObjectConverters.IsNotNull}}" />
       </StackPanel>
     </ScrollViewer>
-  </DockPanel>
+
+    <Border Grid.Row="1" Classes="footer">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Open the game folder" Command="{Binding OpenFolderCommand}" />
+          <Button Content="Add another game" Command="{Binding AddAnotherCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+          <Button Content="Go to library" Classes="accent" Command="{Binding BackToLibraryCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
 </views:PageView>

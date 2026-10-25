@@ -6,8 +6,8 @@
                 xmlns:c="using:PS5Kitsune.App.Controls"
                 x:Class="PS5Kitsune.App.Views.GameSettingsView"
                 x:DataType="vm:GameSettingsViewModel">
-  <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Spacing="6">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <StackPanel Grid.Row="0" Spacing="6">
       <TextBlock Text="{Binding Title}" Classes="h1" />
       <Border Classes="card" IsVisible="{Binding IsRunning}">
         <TextBlock Text="{Binding RunningNotice}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
@@ -18,17 +18,7 @@
                  IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
 
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <DockPanel>
-        <Button Content="Reset to defaults" Command="{Binding ResetCommand}" />
-        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-          <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" c:InitialFocus.Rank="3" />
-          <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}" IsDefault="True" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <ScrollViewer Margin="0,12,0,0">
+    <ScrollViewer Grid.Row="1" Margin="0,12,0,0">
       <StackPanel Spacing="16" MaxWidth="560" HorizontalAlignment="Left">
         <StackPanel Spacing="4">
           <TextBlock x:Name="GpuLabel" Text="GPU" FontWeight="SemiBold" />
@@ -108,5 +98,15 @@
         </Expander>
       </StackPanel>
     </ScrollViewer>
-  </DockPanel>
+
+    <Border Grid.Row="2" Classes="footer">
+      <DockPanel>
+        <Button Content="Reset to defaults" Command="{Binding ResetCommand}" />
+        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+          <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" c:InitialFocus.Rank="3" />
+          <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}" IsDefault="True" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
 </views:PageView>

@@ -6,8 +6,8 @@
                 xmlns:sys="using:System"
                 x:Class="PS5Kitsune.App.Views.GameView"
                 x:DataType="vm:GameViewModel">
-  <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Spacing="6">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <StackPanel Grid.Row="0" Spacing="6">
       <TextBlock Text="{Binding Title}" Classes="h1" />
       <TextBlock Text="{Binding StatusText}" IsVisible="{Binding !IsPreparing}" AutomationProperties.LiveSetting="Polite" />
       <TextBlock Text="{Binding FirstLaunchHint}" Classes="caption"
@@ -32,23 +32,7 @@
       </Border>
     </StackPanel>
 
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <DockPanel>
-        <StackPanel Orientation="Horizontal" Spacing="12">
-          <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
-          <Button Content="Settings" Command="{Binding OpenSettingsCommand}" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-          <Button Content="← Library" Command="{Binding BackToLibraryCommand}" IsCancel="True" c:InitialFocus.Rank="3" />
-          <Button Content="Cancel" Command="{Binding CancelLaunchCommand}" IsVisible="{Binding IsPreparing}" />
-          <Button Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding IsRunning}" c:InitialFocus.Rank="2" />
-          <Button Content="Launch again" Classes="accent" Command="{Binding LaunchAgainCommand}" IsDefault="True"
-                  IsVisible="{Binding CanLaunchAgain}" c:InitialFocus.Rank="1" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
-
-    <Panel Margin="0,16,0,0">
+    <Panel Grid.Row="1" Margin="0,16,0,0">
       <Border Classes="card" VerticalAlignment="Top" IsVisible="{Binding IsPreparing}">
         <StackPanel Spacing="8">
           <TextBlock Text="{Binding StatusText}" AutomationProperties.LiveSetting="Polite" />
@@ -72,5 +56,21 @@
         </Panel>
       </Border>
     </Panel>
-  </DockPanel>
+
+    <Border Grid.Row="2" Classes="footer">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Button Content="Open folder" Command="{Binding OpenFolderCommand}" />
+          <Button Content="Settings" Command="{Binding OpenSettingsCommand}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+          <Button Content="← Library" Command="{Binding BackToLibraryCommand}" IsCancel="True" c:InitialFocus.Rank="3" />
+          <Button Content="Cancel" Command="{Binding CancelLaunchCommand}" IsVisible="{Binding IsPreparing}" />
+          <Button Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding IsRunning}" c:InitialFocus.Rank="2" />
+          <Button Content="Launch again" Classes="accent" Command="{Binding LaunchAgainCommand}" IsDefault="True"
+                  IsVisible="{Binding CanLaunchAgain}" c:InitialFocus.Rank="1" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
 </views:PageView>

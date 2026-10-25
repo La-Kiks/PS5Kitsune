@@ -5,15 +5,8 @@
                 xmlns:c="using:PS5Kitsune.App.Controls"
                 x:Class="PS5Kitsune.App.Views.GameSummaryView"
                 x:DataType="vm:GameSummaryViewModel">
-  <DockPanel>
-    <Border DockPanel.Dock="Bottom" Classes="footer">
-      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
-        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
-        <Button Content="Add the game" Classes="accent" Command="{Binding AddCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
-      </StackPanel>
-    </Border>
-
-    <ScrollViewer>
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="12" MaxWidth="680" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="16">
           <Panel Width="64" Height="64">
@@ -64,5 +57,12 @@
         <CheckBox Content="Convert for an Intel CPU" IsChecked="{Binding ToIntel}" />
       </StackPanel>
     </ScrollViewer>
-  </DockPanel>
+
+    <Border Grid.Row="1" Classes="footer">
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
+        <Button Content="Add the game" Classes="accent" Command="{Binding AddCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
+      </StackPanel>
+    </Border>
+  </Grid>
 </views:PageView>
