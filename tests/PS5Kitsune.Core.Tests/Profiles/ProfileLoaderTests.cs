@@ -290,5 +290,54 @@ public sealed class ProfileLoaderTests
             """));
     }
 
+    [Fact]
+    public void The_embedded_profile_has_the_diagnostics_rules_in_order()
+    {
+        var diagnostics = ProfileLoader.LoadEmbedded().Diagnostics;
+
+        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/discussions/categories/game-bring-up"), diagnostics.ReportUrl);
+        Assert.Equal(
+            ["nvidia-shader-compiler", "libs-not-dll", "libs-missing-dll", "commit-limit", "gpu-features", "cpu-too-old", "param-json",
+             "invalid-setting", "invalid-setting", "invalid-setting", "invalid-setting", "not-implemented"],
+            diagnostics.Rules.Select(rule => rule.Id));
+        Assert.Equal("ANYPS5_PRESENT_MODE", diagnostics.Rules[10].Captures["variable"]);
+    }
+
+    [Fact]
+    public void A_profile_without_diagnostics_has_no_rules()
+    {
+        var profile = Load("""{ "schemaVersion": 1, "id": "plain", "source": { "kind": "release", "tag": "v1" } }""");
+
+        Assert.Empty(profile.Diagnostics.Rules);
+        Assert.Null(profile.Diagnostics.ReportUrl);
+    }
+
+    [Theory]
+    [InlineData("""{ "id": "gpu-features" }""")]
+    [InlineData("""{ "id": "", "log": [ "x" ] }""")]
+    [InlineData("""{ "id": "gpu-features", "log": [ "(unclosed" ] }""")]
+    [InlineData("""{ "id": "cpu-too-old", "exitCodes": [ "3221225501" ] }""")]
+    [InlineData("""{ "id": "gpu-features", "log": [ "x" ], "match": "most" }""")]
+    public void Rejects_an_invalid_diagnostics_rule(string rule)
+    {
+        Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "diagnostics": { "rules": [ {{rule}} ] }
+            }
+            """));
+    }
+
+    [Fact]
+    public void Rejects_a_report_url_over_plain_http()
+    {
+        Assert.Throws<InvalidProfileException>(() => Load("""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "diagnostics": { "reportUrl": "http://example.test/report", "rules": [] }
+            }
+            """));
+    }
+
     private static AnyPS5Profile Load(string json) => ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes(json)));
 }
