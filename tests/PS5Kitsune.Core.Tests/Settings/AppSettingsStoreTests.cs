@@ -116,5 +116,28 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.Equal(new AppSettings(AppSettings.CurrentSchemaVersion, root, AppTheme.Dark), store.Load().Settings);
     }
 
+    [Fact]
+    public async Task An_update_leaves_a_file_from_another_schema_untouched()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        var path = _temp.Combine("settings", "settings.json");
+        await File.WriteAllTextAsync(path, """{ "schemaVersion": 2, "theme": "dark", "extra": true }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+
+        var saved = await Store.UpdateAsync(settings => settings with { Theme = AppTheme.Light }, TestContext.Current.CancellationToken);
+
+        Assert.False(saved);
+        Assert.Equal(before, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task An_update_creates_a_missing_file()
+    {
+        var saved = await Store.UpdateAsync(settings => settings with { Theme = AppTheme.Light }, TestContext.Current.CancellationToken);
+
+        Assert.True(saved);
+        Assert.Equal(AppTheme.Light, Store.Load().Settings.Theme);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

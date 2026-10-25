@@ -57,6 +57,26 @@ public sealed class ThemeServiceTests : IDisposable
         Assert.Equal(AppTheme.Dark, store.Load().Settings.Theme);
     }
 
+    [Fact]
+    public async Task A_settings_file_that_was_ignored_is_not_overwritten_and_the_theme_still_applies()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        var path = _temp.Combine("settings", "settings.json");
+        await File.WriteAllTextAsync(path, """{ "schemaVersion": 2, "theme": "dark" }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken);
+        var logger = new ListLogger();
+        var service = new ThemeService(new AppSettingsStore(_temp.Combine("settings")), _applied.Add, () => logger);
+
+        await service.ChangeAsync(AppTheme.Light);
+
+        Assert.Equal([AppTheme.Light], _applied);
+        Assert.Equal(before, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken));
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, entry.Level);
+        Assert.StartsWith("Did not save the theme: ", entry.Message, StringComparison.Ordinal);
+        Assert.Contains("schema version 2", entry.Message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData(AppTheme.System, "Default")]
     [InlineData(AppTheme.Light, "Light")]

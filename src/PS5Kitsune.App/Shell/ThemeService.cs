@@ -25,7 +25,11 @@ public sealed class ThemeService(AppSettingsStore store, Action<AppTheme> apply,
         Apply(theme);
         try
         {
-            await store.UpdateAsync(settings => settings with { Theme = theme }).ConfigureAwait(true);
+            if (!await store.UpdateAsync(settings => settings with { Theme = theme }).ConfigureAwait(true))
+            {
+                // The file was ignored at load: saving would replace it with defaults, so the theme only holds for this run.
+                loggerSource?.Invoke().ThemeNotSaved(store.Load().Problem ?? "the settings file could not be used.");
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

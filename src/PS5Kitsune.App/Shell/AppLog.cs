@@ -13,6 +13,9 @@ internal static partial class AppLog
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not save the theme.")]
     public static partial void ThemeSaveFailed(this ILogger logger, Exception exception);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Did not save the theme: {Problem}")]
+    public static partial void ThemeNotSaved(this ILogger logger, string problem);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not leave {Page}.")]
     public static partial void LeaveFailed(this ILogger logger, Exception exception, string page);
 

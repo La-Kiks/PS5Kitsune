@@ -230,7 +230,10 @@ public sealed partial class HomeViewModel(SessionHost sessions, AppSettingsStore
         try
         {
             // Change only the root: the file also holds the theme, and the store queues the update behind any theme save.
-            await settings.UpdateAsync(current => current with { DataRoot = root }).ConfigureAwait(true);
+            if (!await settings.UpdateAsync(current => current with { DataRoot = root }).ConfigureAwait(true))
+            {
+                RootError = $"Cannot save the setting: {settings.Load().Problem}";
+            }
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

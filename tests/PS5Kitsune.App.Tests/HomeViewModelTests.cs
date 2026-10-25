@@ -339,6 +339,23 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task A_settings_file_that_was_ignored_is_left_alone_and_the_root_says_why()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_settings.FilePath, """{ "schemaVersion": 2 }""", TestContext.Current.CancellationToken);
+        var before = await File.ReadAllBytesAsync(_settings.FilePath, TestContext.Current.CancellationToken);
+        var viewModel = await CreateAsync();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Cannot save the setting: ", viewModel.RootError, StringComparison.Ordinal);
+        Assert.Contains("schema version 2", viewModel.RootError, StringComparison.Ordinal);
+        Assert.Equal(before, await File.ReadAllBytesAsync(_settings.FilePath, TestContext.Current.CancellationToken));
+        Assert.Equal(_temp.Combine("other"), viewModel.DataRoot);
+    }
+
+    [Fact]
     public async Task A_failed_save_says_why_and_keeps_the_new_root()
     {
         await File.WriteAllTextAsync(_temp.Combine("settings"), "x", TestContext.Current.CancellationToken);

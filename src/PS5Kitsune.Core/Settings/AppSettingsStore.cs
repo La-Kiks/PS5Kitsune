@@ -45,19 +45,31 @@ public sealed class AppSettingsStore(string settingsDirectory)
     /// <summary>
     /// Loads the current settings, applies <paramref name="change"/> and saves. Updates on this store run one at a time in the order they were
     /// started, so two writers (the theme and the data root) cannot fight over the temporary file or save a stale copy of each other's field.
+    /// A file that <see cref="Load"/> could not use (corrupt, another schema version, an invalid root) is not overwritten: the change then only
+    /// applies to this run, and the result is false. A missing file is not a problem, so the first save creates it.
     /// </summary>
-    public Task UpdateAsync(Func<AppSettings, AppSettings> change, CancellationToken cancellationToken = default)
+    /// <returns>True when the settings were saved.</returns>
+    public Task<bool> UpdateAsync(Func<AppSettings, AppSettings> change, CancellationToken cancellationToken = default)
     {
         lock (_gate)
         {
-            return _lastUpdate = UpdateAfterAsync(_lastUpdate, change, cancellationToken);
+            var update = UpdateAfterAsync(_lastUpdate, change, cancellationToken);
+            _lastUpdate = update;
+            return update;
         }
     }
 
-    private async Task UpdateAfterAsync(Task previous, Func<AppSettings, AppSettings> change, CancellationToken cancellationToken)
+    private async Task<bool> UpdateAfterAsync(Task previous, Func<AppSettings, AppSettings> change, CancellationToken cancellationToken)
     {
         // WhenAny never throws, so one failed update cannot block the next.
         await Task.WhenAny(previous).ConfigureAwait(false);
-        await SaveAsync(change(Load().Settings), cancellationToken).ConfigureAwait(false);
+        var load = Load();
+        if (load.Problem is not null)
+        {
+            return false;
+        }
+
+        await SaveAsync(change(load.Settings), cancellationToken).ConfigureAwait(false);
+        return true;
     }
 }
