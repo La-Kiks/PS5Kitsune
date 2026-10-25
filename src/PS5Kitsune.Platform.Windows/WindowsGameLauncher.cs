@@ -54,10 +54,11 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
         }
         catch (Win32Exception exception) when (exception.NativeErrorCode == ErrorAccessDenied)
         {
-            // The job PS5Kitsune runs in (a terminal, another launcher) forbids breakaway: the game then stays in that job.
+            // Access denied comes from a job that forbids breakaway (a terminal, another launcher), and also from a program that cannot run
+            // at all: only a retry without breakaway tells them apart, and when it fails too, its error is the one reported.
+            process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle(), environment, breakaway: false);
             var executable = request.Executable;
             LogBreakawayRefused(executable);
-            process = Start(request.Executable, commandLine, request.WorkingDirectory, log.DangerousGetHandle(), environment, breakaway: false);
         }
 
         CloseHandle(process.Thread);
@@ -218,7 +219,7 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
     [LoggerMessage(Level = LogLevel.Information, Message = "Found {Executable} still running (PID {ProcessId})")]
     private partial void LogAttached(string executable, int processId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Started {Executable} inside PS5Kitsune's parent job: that job does not allow breakaway, so closing it also ends the game.")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Started {Executable} inside the launcher's job (breakaway refused): closing that job also ends the game.")]
     private partial void LogBreakawayRefused(string executable);
 
     [LibraryImport("kernel32.dll", SetLastError = true)]

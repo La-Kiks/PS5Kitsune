@@ -1,7 +1,9 @@
+using System.ComponentModel;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Microsoft.Win32.SafeHandles;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Tests;
@@ -233,6 +235,33 @@ public sealed partial class WindowsGameLauncherTests : IDisposable
 
         Assert.Equal(259, exitCode);
         Assert.Null(_launcher.Attach(RecordOf(game, cmd)));
+    }
+
+    [Fact]
+    public void A_program_that_cannot_start_reports_the_retry_error_and_logs_no_breakaway_line()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+        var logger = new CapturingLogger();
+        var launcher = new WindowsGameLauncher(logger);
+
+        // CreateProcess refuses a folder with access denied, with or without breakaway: the retry fails too.
+        var exception = Assert.Throws<Win32Exception>(() => launcher.Launch(new GameLaunchRequest(_temp.Path, _temp.Path, Logs)));
+
+        Assert.Equal(5, exception.NativeErrorCode);
+        Assert.DoesNotContain(logger.Messages, message => message.Contains("breakaway", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class CapturingLogger : ILogger<WindowsGameLauncher>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
     }
 
     [Fact]
