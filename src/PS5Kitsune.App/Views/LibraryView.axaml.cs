@@ -27,7 +27,7 @@ public sealed partial class LibraryView : PageView
 
         if (e.Key == Key.Enter)
         {
-            page.OpenCommand.Execute(tile);
+            Open(page, tile);
             e.Handled = true;
         }
         else if (e.Key == Key.Apps || (e.Key == Key.F10 && e.KeyModifiers == KeyModifiers.Shift))
@@ -43,6 +43,15 @@ public sealed partial class LibraryView : PageView
         if (DataContext is LibraryViewModel page && e.Source is Visual source
             && source.FindAncestorOfType<Button>(includeSelf: true) is null
             && source.FindAncestorOfType<ListBoxItem>(includeSelf: true) is { DataContext: GameTileViewModel tile })
+        {
+            Open(page, tile);
+        }
+    }
+
+    // A second Enter on a tile that is already opening must not push a second page.
+    private static void Open(LibraryViewModel page, GameTileViewModel tile)
+    {
+        if (page.OpenCommand.CanExecute(tile))
         {
             page.OpenCommand.Execute(tile);
         }
