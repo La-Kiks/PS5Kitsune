@@ -55,7 +55,7 @@
       <Button Content="Add a game" Classes="accent" Command="{Binding AddGameCommand}" c:InitialFocus.Rank="2" />
     </StackPanel>
 
-    <ListBox x:Name="Games" Classes="tiles" Focusable="True" ItemsSource="{Binding Games}" SelectionMode="Single" Background="Transparent"
+    <ListBox x:Name="Games" Classes="tiles" Focusable="True" IsTabStop="False" ItemsSource="{Binding Games}" SelectionMode="Single" Background="Transparent"
              ItemContainerTheme="{StaticResource TileItem}" AutomationProperties.Name="Games"
              KeyboardNavigation.TabNavigation="Once" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
       <ListBox.ItemsPanel>

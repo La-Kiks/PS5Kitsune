@@ -24,6 +24,8 @@
           <SolidColorBrush x:Key="Status.Red" Color="#B03A22" />
           <SolidColorBrush x:Key="Status.Reconvert" Color="#8A5A10" />
           <SolidColorBrush x:Key="Status.Running" Color="#3B6EA8" />
+          <!-- Fluent's accent buttons: our accent with white text (Fluent's dark accent button uses black text). Repeated in each variant
+               because a StaticResource alias must sit in the same theme dictionary as its target. -->
           <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
           <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
           <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
@@ -50,6 +52,8 @@
           <SolidColorBrush x:Key="Status.Red" Color="#B3261E" />
           <SolidColorBrush x:Key="Status.Reconvert" Color="#8A5300" />
           <SolidColorBrush x:Key="Status.Running" Color="#2D5F96" />
+          <!-- Fluent's accent buttons: our accent with white text (Fluent's dark accent button uses black text). Repeated in each variant
+               because a StaticResource alias must sit in the same theme dictionary as its target. -->
           <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
           <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
           <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
@@ -58,8 +62,6 @@
           <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
-
-      <!-- Fluent's accent buttons: our accent with white text in both variants (Fluent's dark accent button uses black text). -->
 
       <CornerRadius x:Key="Radius.Small">4</CornerRadius>
       <CornerRadius x:Key="Radius.Medium">6</CornerRadius>

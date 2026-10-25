@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -77,6 +78,129 @@ public sealed class LibraryViewTests(HeadlessSession session) : IDisposable
         });
 
         Assert.True(opened);
+    }
+
+    [Fact]
+    public async Task The_grid_is_a_single_tab_stop_and_Shift_Tab_leaves_it()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        await _library.AddAsync("PPSA00002", "Bravo");
+        var page = await CreateAsync();
+
+        var steps = await session.RunAsync(() =>
+        {
+            var (window, list, after) = ShowWithButton(page);
+            try
+            {
+                var search = window.GetVisualDescendants().OfType<TextBox>().Single();
+                search.Focus(NavigationMethod.Tab);
+                Dispatcher.UIThread.RunJobs();
+
+                // The header's "Add a game" button sits between the search box and the grid.
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                var intoGrid = InGrid(window, list);
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                var afterGrid = InGrid(window, list);
+                var onAfter = ReferenceEquals(window.FocusManager!.GetFocusedElement(), after);
+
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Shift);
+                var backInGrid = InGrid(window, list);
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Shift);
+                var outOfGrid = !InGrid(window, list) && window.FocusManager!.GetFocusedElement() is Button;
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Shift);
+                var onSearch = ReferenceEquals(window.FocusManager!.GetFocusedElement(), search);
+                return (intoGrid, afterGrid, onAfter, backInGrid, outOfGrid, onSearch);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.True(steps.intoGrid, "Tab from the search box reaches a tile");
+        Assert.False(steps.afterGrid, "the next Tab leaves the grid");
+        Assert.True(steps.onAfter, "the next Tab reaches the button after the grid");
+        Assert.True(steps.backInGrid, "Shift+Tab comes back to a tile");
+        Assert.True(steps.outOfGrid, "Shift+Tab from the tile goes to the header button, not back into the grid");
+        Assert.True(steps.onSearch, "and one more Shift+Tab reaches the search box");
+    }
+
+    [Fact]
+    public async Task With_no_games_Tab_from_the_empty_state_button_does_not_land_on_the_list()
+    {
+        var page = await CreateAsync();
+
+        var result = await session.RunAsync(() =>
+        {
+            var (window, list, _) = ShowWithButton(page);
+            try
+            {
+                var add = window.GetVisualDescendants().OfType<Button>().First(button => button.IsVisible && Equals(button.Content, "Add a game")
+                    && button.GetVisualAncestors().OfType<StackPanel>().Any());
+                add.Focus(NavigationMethod.Tab);
+                Dispatcher.UIThread.RunJobs();
+
+                window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+                var focused = window.FocusManager!.GetFocusedElement();
+                return (focused is not null, InGrid(window, list));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.True(result.Item1, "focus lands somewhere");
+        Assert.False(result.Item2, "focus is not on the list");
+    }
+
+    [Fact]
+    public async Task The_Menu_key_opens_the_actions_of_the_selected_tile()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        var page = await CreateAsync();
+
+        var opened = await session.RunAsync(() =>
+        {
+            var (window, list) = Show(page);
+            try
+            {
+                list.Focus(NavigationMethod.Tab);
+                list.SelectedIndex = 0;
+                Dispatcher.UIThread.RunJobs();
+
+                window.KeyPressQwerty(PhysicalKey.ContextMenu, RawInputModifiers.None);
+                Dispatcher.UIThread.RunJobs();
+                var more = list.GetVisualDescendants().OfType<Button>().Single();
+                var isOpen = more.Flyout?.IsOpen ?? false;
+                more.Flyout?.Hide();
+                return isOpen;
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.True(opened);
+    }
+
+    private static bool InGrid(Window window, ListBox list) =>
+        window.FocusManager!.GetFocusedElement() is Visual focused && focused.FindAncestorOfType<ListBoxItem>(includeSelf: true) is not null
+        && focused.GetVisualAncestors().Contains(list);
+
+    private static (Window Window, ListBox List, Button After) ShowWithButton(LibraryViewModel page)
+    {
+        var after = new Button { Content = "After" };
+        var panel = new DockPanel();
+        DockPanel.SetDock(after, Dock.Bottom);
+        panel.Children.Add(after);
+        panel.Children.Add(new LibraryView { DataContext = page });
+        var window = new Window { Content = panel, Width = 860, Height = 680 };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        return (window, window.GetVisualDescendants().OfType<ListBox>().Single(), after);
     }
 
     private async Task<LibraryViewModel> CreateAsync()
