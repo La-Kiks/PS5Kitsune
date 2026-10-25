@@ -23,14 +23,20 @@ public sealed class ShellTests(HeadlessSession session) : IDisposable
         var navigator = new Navigator();
         var viewModel = new MainWindowViewModel(navigator, new FakeDialogs(), new FakePages(), new ThemeService(new AppSettingsStore(_temp.Combine("s")), _ => { }));
         var window = new MainWindow { DataContext = viewModel };
-        window.Show();
-        navigator.GoTo(new BusyPage());
-        Dispatcher.UIThread.RunJobs();
+        try
+        {
+            window.Show();
+            navigator.GoTo(new BusyPage());
+            Dispatcher.UIThread.RunJobs();
 
-        var library = window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Library"));
+            var library = window.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Library"));
 
-        Assert.False(library.IsEffectivelyEnabled);
-        window.Close();
+            Assert.False(library.IsEffectivelyEnabled);
+        }
+        finally
+        {
+            window.Close();
+        }
     });
 
     private sealed partial class BusyPage : ObservableObject, IRunningWork

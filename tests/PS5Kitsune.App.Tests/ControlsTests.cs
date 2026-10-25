@@ -1,4 +1,6 @@
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -28,19 +30,25 @@ public sealed class ControlsTests(HeadlessSession session)
         var panel = new StackPanel { Children = { first, disabled, third } };
         ArrowSelection.SetIsEnabled(panel, true);
         var window = Show(panel);
-        first.Focus(NavigationMethod.Tab);
+        try
+        {
+            first.Focus(NavigationMethod.Tab);
 
-        window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.ArrowDown, RawInputModifiers.None);
 
-        Assert.True(third.IsChecked);
-        Assert.False(first.IsChecked);
-        Assert.True(third.IsFocused);
+            Assert.True(third.IsChecked);
+            Assert.False(first.IsChecked);
+            Assert.True(third.IsFocused);
 
-        window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
 
-        Assert.True(first.IsChecked);
-        Assert.True(first.IsFocused);
-        window.Close();
+            Assert.True(first.IsChecked);
+            Assert.True(first.IsFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
     });
 
     [Fact]
@@ -54,11 +62,16 @@ public sealed class ControlsTests(HeadlessSession session)
         InitialFocus.SetRank(stop, 2);
         var root = new StackPanel { Children = { back, hidden, stop } };
         var window = Show(root);
+        try
+        {
+            Assert.True(InitialFocus.Apply(root));
 
-        Assert.True(InitialFocus.Apply(root));
-
-        Assert.True(stop.IsFocused);
-        window.Close();
+            Assert.True(stop.IsFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
     });
 
     [Fact]
@@ -66,10 +79,15 @@ public sealed class ControlsTests(HeadlessSession session)
     {
         var chip = new StatusChip { Kind = StatusKind.Running, Text = "Running" };
         var window = Show(chip);
-
-        Assert.Equal("Running", AutomationProperties.GetName(chip));
-        Assert.Equal([":running"], chip.ActivePseudoClasses);
-        window.Close();
+        try
+        {
+            Assert.Equal("Running", AutomationProperties.GetName(chip));
+            Assert.Equal([":running"], chip.ActivePseudoClasses);
+        }
+        finally
+        {
+            window.Close();
+        }
     });
 
     [Theory]
@@ -102,12 +120,17 @@ public sealed class ControlsTests(HeadlessSession session)
 
             Assert.Equal(AnyPS5Mode.Build, viewModel.SelectedMode);
             Assert.True(cards[1].IsChecked);
+            Assert.True(IsSelectedForScreenReaders(cards[1]));
+            Assert.False(IsSelectedForScreenReaders(cards[0]));
         }
         finally
         {
             window.Close();
         }
     });
+
+    private static bool IsSelectedForScreenReaders(Control card) =>
+        ControlAutomationPeer.CreatePeerForElement(card).GetProvider<ISelectionItemProvider>()!.IsSelected;
 
     private static Window Show(Control content)
     {

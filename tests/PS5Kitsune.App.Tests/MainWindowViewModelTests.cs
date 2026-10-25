@@ -4,6 +4,7 @@ using PS5Kitsune.App.Sessions;
 using PS5Kitsune.App.Shell;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tests;
 
@@ -42,6 +43,32 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         Assert.False(_viewModel.IsBusy);
         Assert.True(_viewModel.GoLibraryCommand.CanExecute(null));
         Assert.Null(_viewModel.NavTip);
+    }
+
+    [Fact]
+    public async Task The_sidebar_is_locked_while_a_launch_downloads_and_unlocks_when_it_is_done()
+    {
+        using var library = new TestLibrary();
+        await library.AddAsync("PPSA99666", "DOOM");
+        await library.Player.SaveSettingsAsync("PPSA99666", new GameSettings { Lavapipe = true }, TestContext.Current.CancellationToken);
+        library.Lavapipe.Reports = [34L << 20];
+        library.Lavapipe.Gate = new TaskCompletionSource();
+        var page = new GameViewModel(library.Game("PPSA99666"), "DOOM", true, library.Player, library.Platform, new InlineDispatcher(), _navigator, new FakePages());
+
+        _navigator.GoTo(page);
+
+        Assert.True(page.IsPreparing);
+        Assert.True(_viewModel.IsBusy);
+        Assert.False(_viewModel.GoLibraryCommand.CanExecute(null));
+
+        library.Lavapipe.Gate.SetResult();
+        await page.Launching;
+
+        Assert.False(page.IsPreparing);
+        Assert.False(_viewModel.IsBusy);
+        Assert.True(_viewModel.GoLibraryCommand.CanExecute(null));
+        page.CancelLaunchCommand.Execute(null);
+        await page.LeaveAsync();
     }
 
     [Fact]

@@ -68,8 +68,9 @@ public sealed class LibraryViewTests(HeadlessSession session) : IDisposable
                 Dispatcher.UIThread.RunJobs();
                 var more = list.GetVisualDescendants().OfType<Button>().Single();
                 var isOpen = more.Flyout?.IsOpen ?? false;
+                var onMenuItem = more.Flyout is MenuFlyout { Items: [MenuItem first, ..] } && TopLevel.GetTopLevel(first)?.FocusManager?.GetFocusedElement() is MenuItem;
                 more.Flyout?.Hide();
-                return isOpen;
+                return (isOpen, onMenuItem);
             }
             finally
             {
@@ -77,7 +78,8 @@ public sealed class LibraryViewTests(HeadlessSession session) : IDisposable
             }
         });
 
-        Assert.True(opened);
+        Assert.True(opened.isOpen);
+        Assert.True(opened.onMenuItem, "keyboard focus is inside the menu");
     }
 
     [Fact]
@@ -174,8 +176,9 @@ public sealed class LibraryViewTests(HeadlessSession session) : IDisposable
                 Dispatcher.UIThread.RunJobs();
                 var more = list.GetVisualDescendants().OfType<Button>().Single();
                 var isOpen = more.Flyout?.IsOpen ?? false;
+                var onMenuItem = more.Flyout is MenuFlyout { Items: [MenuItem first, ..] } && TopLevel.GetTopLevel(first)?.FocusManager?.GetFocusedElement() is MenuItem;
                 more.Flyout?.Hide();
-                return isOpen;
+                return (isOpen, onMenuItem);
             }
             finally
             {
@@ -183,7 +186,8 @@ public sealed class LibraryViewTests(HeadlessSession session) : IDisposable
             }
         });
 
-        Assert.True(opened);
+        Assert.True(opened.isOpen);
+        Assert.True(opened.onMenuItem, "keyboard focus is inside the menu");
     }
 
     private static bool InGrid(Window window, ListBox list) =>
