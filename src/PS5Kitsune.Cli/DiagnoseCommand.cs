@@ -17,6 +17,14 @@ internal static class DiagnoseCommand
             // An unknown title ID throws GameNotFoundException: CommandHost prints it and exits with 1.
             var (game, record) = services.GetRequiredService<GameLibrary>().Find(parseResult.GetRequiredValue(titleIdArgument));
 
+            // The log is still being written: the app or `run` diagnoses it after the exit.
+            if (services.GetRequiredService<RunningGames>().Check(game) is not null)
+            {
+                var runningName = record.Name;
+                logger.DiagnoseWhileRunning(runningName);
+                return 0;
+            }
+
             // Log names are yyyyMMdd-HHmmss.log: the last in ordinal order is the newest.
             var log = Directory.Exists(game.Logs) ? Directory.EnumerateFiles(game.Logs, "*.log").Order(StringComparer.Ordinal).LastOrDefault() : null;
             if (log is null)
