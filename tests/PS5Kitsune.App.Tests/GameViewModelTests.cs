@@ -565,4 +565,22 @@ public sealed class GameViewModelTests : IDisposable
         Assert.True(page.HasLog);
         Assert.Contains(nameof(GameViewModel.HasLog), raised);
     }
+
+    [Fact]
+    public async Task HasLog_is_announced_only_when_it_changes()
+    {
+        var (page, _) = await LaunchAsync();
+        var raised = 0;
+        page.PropertyChanged += (_, e) => raised += e.PropertyName == nameof(GameViewModel.HasLog) ? 1 : 0;
+
+        page.Log.Add("line 1");
+        Assert.Equal(1, raised);
+        page.Log.Add("line 2");
+        page.Log.Add("line 3");
+        Assert.Equal(1, raised);
+
+        page.Log.Clear();
+        Assert.Equal(2, raised);
+        Assert.False(page.HasLog);
+    }
 }

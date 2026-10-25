@@ -35,6 +35,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
     private readonly DiagnosisServices? _diagnosis;
     private bool _stopped;
     private int _launches;
+    private bool _hasLogAnnounced;
 
     /// <summary>A game found running: the page follows it.</summary>
     public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null, DiagnosisServices? diagnosis = null)
@@ -59,7 +60,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
         Title = name;
         FirstLaunchHint = firstLaunch ? "The first launch may stutter while shaders are prepared." : null;
         IsPreparing = true;
-        Log.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasLog));
+        Log.CollectionChanged += (_, _) => AnnounceHasLog();
     }
 
     public string Title { get; }
@@ -87,6 +88,18 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
 
     /// <summary>The log has at least one line; until then the page says where the game's output will appear.</summary>
     public bool HasLog => Log.Count > 0;
+
+    // Announced only when it flips, so a log line does not make the view re-evaluate the whole page.
+    private void AnnounceHasLog()
+    {
+        if (HasLog == _hasLogAnnounced)
+        {
+            return;
+        }
+
+        _hasLogAnnounced = HasLog;
+        OnPropertyChanged(nameof(HasLog));
+    }
 
     public bool CanLaunchAgain => !IsRunning && !IsPreparing;
 
