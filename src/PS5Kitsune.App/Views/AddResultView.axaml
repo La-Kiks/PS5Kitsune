@@ -28,7 +28,7 @@
         </Grid>
         <TextBlock Text="{Binding CountsText}" />
         <TextBlock Text="{Binding BeforeText}" Classes="caption" IsVisible="{Binding BeforeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <TextBlock Text="{Binding MissingLibrariesText}" Classes="error"
+        <TextBlock Text="{Binding MissingLibrariesText}" Classes="error" AutomationProperties.LiveSetting="Assertive"
                    IsVisible="{Binding MissingLibrariesText, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Expander Header="{Binding UnresolvedHeader}" IsVisible="{Binding HasUnresolved}" HorizontalAlignment="Stretch">
           <ScrollViewer MaxHeight="260">

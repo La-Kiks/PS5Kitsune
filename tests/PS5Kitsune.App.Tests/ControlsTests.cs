@@ -4,15 +4,15 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PS5Kitsune.App.Controls;
+using PS5Kitsune.App.Converters;
 using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.Tests.Headless;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.App.Views;
 using PS5Kitsune.Core.AnyPS5;
-using PS5Kitsune.Core.Profiles;
-using PS5Kitsune.App.Controls;
-using PS5Kitsune.App.Converters;
-using PS5Kitsune.App.Tests.Headless;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.App.Tests;
 

@@ -33,7 +33,7 @@
         <ItemsControl ItemsSource="{Binding BlockingIssues}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="x:String">
-              <TextBlock Text="{Binding}" Classes="error" />
+              <TextBlock Text="{Binding}" Classes="error" AutomationProperties.LiveSetting="Assertive" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>

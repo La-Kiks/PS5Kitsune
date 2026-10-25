@@ -15,7 +15,7 @@
 
     <StackPanel Spacing="16" MaxWidth="680" HorizontalAlignment="Left">
       <TextBlock Text="Build tools" Classes="h1" />
-      <TextBlock Text="Build mode compiles AnyPS5 with portable tools kept in the data folder. Nothing is installed system-wide." />
+      <TextBlock Text="Build mode compiles AnyPS5 with portable tools kept in the data folder. Nothing is installed system-wide." TextWrapping="Wrap" />
       <Border Classes="card">
         <ItemsControl ItemsSource="{Binding Tools}">
           <ItemsControl.ItemsPanel>
