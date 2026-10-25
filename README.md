@@ -18,11 +18,22 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design; the next one is Linux). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
+### Roadmap
+
+- [x] **1. Foundation** — solution, CI on Windows and Linux, profile format, downloads with SHA-256 checks
+- [x] **2. End-to-end CLI** — `install`, `add` and `run` take DOOM for PS5 from a folder to a running game
+- [x] **3. PC checks** — CPU, Vulkan, commit limit, disk and data folder, in the CLI and the app
+- [x] **4. Install screens** — Home, mode choice, progress, release mode
+- [x] **5. Build mode** — AnyPS5 built from source with portable tools (5a CLI, 5b screens), release and build installs side by side (5c)
+- [x] **6. Add-a-game screens** — choose, summary, add and verdict (6a), Reconvert (6b)
+- [x] **7. Launcher** — library and launch (7a), per-game settings with CPU rendering and fonts (7b), crash diagnosis (7c), visual design with light and dark themes and full keyboard use (7d)
+- [ ] **8. Linux** — native Linux support, CLI first, then the app
+
 The command-line tool installs AnyPS5, adds a game and runs it:
 
 ```powershell
 ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
-ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.2
+ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.3
 ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
 ps5kitsune use release|build         # switch between the release and build installs, both kept side by side
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
