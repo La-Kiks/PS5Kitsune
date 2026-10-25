@@ -291,6 +291,18 @@ public sealed class HomeViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Changing_the_root_keeps_the_theme()
+    {
+        await _settings.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, null, AppTheme.Dark), TestContext.Current.CancellationToken);
+        var viewModel = await CreateAsync();
+        _dialogs.Folder = _temp.Combine("other");
+
+        await viewModel.ChangeRootCommand.ExecuteAsync(null);
+
+        Assert.Equal(new AppSettings(AppSettings.CurrentSchemaVersion, _temp.Combine("other"), AppTheme.Dark), _settings.Load().Settings);
+    }
+
+    [Fact]
     public async Task Cancelling_the_picker_changes_nothing()
     {
         var viewModel = await CreateAsync();

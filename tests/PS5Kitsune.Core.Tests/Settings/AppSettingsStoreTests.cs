@@ -70,5 +70,38 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.Contains("invalid dataRoot", load.Problem, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_file_without_a_theme_reads_system()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), """{ "schemaVersion": 1, "dataRoot": null }""", TestContext.Current.CancellationToken);
+
+        var load = Store.Load();
+
+        Assert.Null(load.Problem);
+        Assert.Equal(AppTheme.System, load.Settings.Theme);
+    }
+
+    [Fact]
+    public async Task The_theme_round_trips_as_a_camel_case_string()
+    {
+        await Store.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, null, AppTheme.Dark), TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"theme\": \"dark\"", await File.ReadAllTextAsync(_temp.Combine("settings", "settings.json"), TestContext.Current.CancellationToken), StringComparison.Ordinal);
+        Assert.Equal(AppTheme.Dark, Store.Load().Settings.Theme);
+    }
+
+    [Fact]
+    public async Task An_unknown_theme_gives_the_defaults_and_a_problem()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), """{ "schemaVersion": 1, "theme": "purple" }""", TestContext.Current.CancellationToken);
+
+        var load = Store.Load();
+
+        Assert.Equal(AppSettings.Default, load.Settings);
+        Assert.NotNull(load.Problem);
+    }
+
     public void Dispose() => _temp.Dispose();
 }
