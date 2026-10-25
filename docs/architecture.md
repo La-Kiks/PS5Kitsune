@@ -109,7 +109,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 {
   "schemaVersion": 1,
   "id": "doom-validated-2026-10",
-  "source": { "kind": "release", "tag": "v0.1.2" },
+  "source": { "kind": "release", "tag": "v0.1.3" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
     "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
@@ -482,7 +482,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 
 | Point | Finding |
 | --- | --- |
-| Latest release | `v0.1.2` of 2026-10-14; Windows libs weigh ~82 MB |
+| Latest release | `v0.1.3` of 2026-10-20 (tag commit `3fd1cc3`, the build mode's commit); Windows libs weigh ~92 MB |
 | Release asset names | `relinker-<tag>.exe`, `prx-windows-<tag>.zip` (content under `libs/`), plus `USAGE.md` and `INPUT_MAPPING.md` |
 | Release asset hashes | `digest` field (`sha256:…`) present in the GitHub API |
 | Relinker path after a full build | `build\core\relinker\relinker.exe` (`tools/package_release.py`) |
@@ -508,7 +508,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] License: **GPL v2 only**, public GitHub repository
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
-- [x] Default mode of the first profile: **release `v0.1.2`**, which runs DOOM for PS5 (validated 2026-10-20 with milestone 2's CLI; audit orange: 361 implemented, 3 stubs, 0 absent)
+- [x] Default mode of the first profile: **release `v0.1.3`**, which runs DOOM for PS5 (validated 2026-10-25 from the app: install, Reconvert, launch; audit orange: 360 implemented, 4 stubs, 0 absent). Release `v0.1.2` was validated first, on 2026-10-20 with milestone 2's CLI (361, 3, 0).
 - [x] Build mode disk space threshold: **`buildMinFreeDiskGiB` = 10 GiB**, from the build measured on 2026-10-21 (root of 3.2 GB)
 - [ ] Check for new profiles at startup, or only on demand
 
