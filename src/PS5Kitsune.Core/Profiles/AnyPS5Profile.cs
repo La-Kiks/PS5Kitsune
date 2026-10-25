@@ -26,6 +26,9 @@ public sealed record AnyPS5Profile
 
     public IReadOnlyDictionary<string, ToolDefinition> Tools { get; init; } = new Dictionary<string, ToolDefinition>();
 
+    /// <summary>The Noto font substitutes passed to games through ANYPS5_SYSTEM_FONTS; empty when the profile has none.</summary>
+    public IReadOnlyList<FontFile> Fonts { get; init; } = [];
+
     public RelinkerOptions Relinker { get; init; } = new();
 
     /// <summary>PC check thresholds; a profile without a "checks" section gets the defaults.</summary>
@@ -79,6 +82,10 @@ public static class ProfileAssetKeys
 
 /// <param name="Size">Download size of the archive in bytes, shown on the Tools screen; null when the profile does not give it.</param>
 public sealed record ToolDefinition(string Version, Uri Url, string Sha256, long? Size = null);
+
+/// <param name="Name">File name in &lt;root&gt;/fonts, as AnyPS5 looks it up (for example NotoSans-Regular.ttf).</param>
+/// <param name="Size">Bytes, for the download progress.</param>
+public sealed record FontFile(string Name, Uri Url, string Sha256, long Size);
 
 public sealed record RelinkerOptions
 {

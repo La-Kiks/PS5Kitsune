@@ -23,7 +23,7 @@ public sealed class WriteGameRecordStepTests : IDisposable
 
     private static readonly AnyPS5InstallRecord Build = new(2, "doom-validated-2026-10", AnyPS5Mode.Build, "3fd1cc3", "3fd1cc393b8512c2e989860053f30dee5a8cd1aa", null, default);
 
-    private WriteGameRecordStep CreateStep(AnyPS5InstallRecord? install = null) => new(_context, install ?? Release, _time);
+    private WriteGameRecordStep CreateStep(AnyPS5InstallRecord? install = null) => new(_context, install ?? Release, _time, lavapipe: false);
 
     [Fact]
     public async Task Records_the_game_with_default_settings()

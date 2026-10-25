@@ -34,7 +34,7 @@ public sealed class GameReconverterTests : IDisposable
         _importer = new GameImporter(
             _setup.Layout, _setup.Platform, _setup.Profile, _setup.Paths, _setup.Installer,
             new GameSourceResolver(_setup.Layout), new GameValidator(_ => long.MaxValue),
-            _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time, NullLogger<GameImporter>.Instance);
+            _setup.PythonTool, _setup.Runner, _setup.StepRunner, new FakeVulkanProbeRunner(), _setup.Time, NullLogger<GameImporter>.Instance);
         _library = new GameLibrary(_setup.Layout, _setup.Platform, _setup.Time, NullLogger<GameLibrary>.Instance);
         _running = new RunningGames(_launcher, NullLogger<RunningGames>.Instance);
         _reconverter = new GameReconverter(

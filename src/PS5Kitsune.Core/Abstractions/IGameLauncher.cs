@@ -6,6 +6,9 @@ namespace PS5Kitsune.Core.Abstractions;
 public sealed record GameLaunchRequest(string Executable, string WorkingDirectory, string LogDirectory)
 {
     public IReadOnlyList<string> Arguments { get; init; } = [];
+
+    /// <summary>Variables added to the inherited environment, for the game process only.</summary>
+    public IReadOnlyDictionary<string, string> Environment { get; init; } = new Dictionary<string, string>();
 }
 
 /// <summary>A launched game, as recorded in .ps5kitsune\running.json. See docs/architecture.md, "Launching".</summary>

@@ -77,15 +77,27 @@ public sealed class LibraryViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task Clicking_a_game_launches_it_and_opens_its_page()
+    public async Task Clicking_a_game_opens_its_page_which_launches_it()
     {
         await _library.AddAsync("PPSA00001", "Alpha");
         var page = await CreateAsync();
 
         await page.OpenCommand.ExecuteAsync(Tile(page, "Alpha"));
 
-        Assert.Single(_library.Launcher.Launches);
-        Assert.Equal("game:PPSA00001", _navigator.CurrentPage);
+        Assert.Empty(_library.Launcher.Launches);
+        Assert.Equal("launch:PPSA00001", _navigator.CurrentPage);
+    }
+
+    [Fact]
+    public async Task Clicking_a_game_started_after_the_last_refresh_still_opens_its_launch_page()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        var page = await CreateAsync();
+        using var started = (await StartAsync("PPSA00001")).Process;
+
+        await page.OpenCommand.ExecuteAsync(Tile(page, "Alpha"));
+
+        Assert.Equal("launch:PPSA00001", _navigator.CurrentPage);
     }
 
     [Fact]
@@ -129,33 +141,6 @@ public sealed class LibraryViewModelTests : IDisposable
         Assert.Equal(["Bravo is running. Show it?"], _dialogs.Confirmations);
         Assert.Single(_library.Launcher.Launches);
         Assert.Equal("game:PPSA00002", _navigator.CurrentPage);
-    }
-
-    [Fact]
-    public async Task A_busy_game_says_why()
-    {
-        await _library.AddAsync("PPSA00001", "Alpha");
-        var page = await CreateAsync();
-
-        using (GameLock.TryAcquireNow(_library.Game("PPSA00001")))
-        {
-            await page.LaunchCommand.ExecuteAsync(Tile(page, "Alpha"));
-        }
-
-        Assert.Equal("Another PS5Kitsune action is using Alpha. Try again when it finishes.", page.Message);
-        Assert.Null(_navigator.CurrentPage);
-    }
-
-    [Fact]
-    public async Task A_missing_executable_suggests_a_reconvert()
-    {
-        var game = await _library.AddAsync("PPSA00001", "Alpha");
-        File.Delete(game.Executable);
-        var page = await CreateAsync();
-
-        await page.LaunchCommand.ExecuteAsync(Tile(page, "Alpha"));
-
-        Assert.Equal("The executable is missing: Reconvert Alpha.", page.Message);
     }
 
     [Fact]
@@ -297,6 +282,17 @@ public sealed class LibraryViewModelTests : IDisposable
 
         _library.Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.NotInstalled, null);
         Assert.False(LibraryViewModel.OpensFirst(_library.Installer, _library.Library));
+    }
+
+    [Fact]
+    public async Task Settings_opens_the_game_settings()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        var page = await CreateAsync();
+
+        page.SettingsCommand.Execute(Tile(page, "Alpha"));
+
+        Assert.Equal("settings:PPSA00001", _navigator.CurrentPage);
     }
 
     public void Dispose() => _library.Dispose();

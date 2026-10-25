@@ -4,8 +4,11 @@ using PS5Kitsune.Core.Pipeline;
 
 namespace PS5Kitsune.Core.Games.Steps;
 
-/// <summary>Writes game.json last: its presence means the game is added. It names the install that converted the game.</summary>
-public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5InstallRecord install, TimeProvider time) : IStep
+/// <summary>
+/// Writes game.json last: its presence means the game is added. It names the install that converted the game.
+/// <paramref name="lavapipe"/> is the initial CPU rendering setting.
+/// </summary>
+public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5InstallRecord install, TimeProvider time, bool lavapipe) : IStep
 {
     private const string IconPath = "app0/sce_sys/icon0.png";
 
@@ -27,6 +30,7 @@ public sealed class WriteGameRecordStep(GameImportContext context, AnyPS5Install
             Icon = File.Exists(Path.Combine(context.Game.Root, IconPath)) ? IconPath : null,
             ConvertedWith = new ConversionInfo(install.Profile, InstallModes.Name(install.Mode), install.Version, install.Commit, context.ToIntel),
             Audit = new AuditRecord(audit.Implemented, audit.Stub, audit.Absent, audit.Verdict),
+            Settings = new GameSettings { Lavapipe = lavapipe },
             AddedAt = time.GetLocalNow(),
         };
         return GameRecordStore.WriteAsync(context.Game.RecordFile, record, cancellationToken);

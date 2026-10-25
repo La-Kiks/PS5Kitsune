@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Games.Steps;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Pipeline;
@@ -24,6 +25,7 @@ public sealed partial class GameImporter(
     PythonEmbeddableTool python,
     IProcessRunner processRunner,
     StepRunner stepRunner,
+    IVulkanProbeRunner probe,
     TimeProvider time,
     ILogger<GameImporter> logger) : IGameImporter
 {
@@ -87,6 +89,13 @@ public sealed partial class GameImporter(
 
         var install = installer.ReadRecord() ?? throw new AnyPS5NotInstalledException();
         var context = new GameImportContext(game.Source, metadata, game.Validation.ModuleDirectories, layoutGame, toIntel);
+        var lavapipe = await DefaultLavapipeAsync(metadata.TitleId, cancellationToken).ConfigureAwait(false);
+        if (lavapipe)
+        {
+            var titleId = metadata.TitleId;
+            LogLavapipeByDefault(titleId);
+        }
+
         IStep[] steps =
         [
             new CopyGameStep(context),
@@ -94,12 +103,26 @@ public sealed partial class GameImporter(
             new UnwrapSelfStep(context, paths, python, processRunner),
             new RelinkStep(context, paths, profile, processRunner),
             new AuditStep(context, paths, python, processRunner),
-            new WriteGameRecordStep(context, install, time),
+            new WriteGameRecordStep(context, install, time, lavapipe),
         ];
         await stepRunner.RunAsync(steps, progress, onEvent, cancellationToken).ConfigureAwait(false);
 
         var record = GameRecordStore.Read(layoutGame.RecordFile) ?? throw new InvalidOperationException($"{layoutGame.RecordFile} was not written.");
         return new GameAdded(record, layoutGame.Root, game.Validation.Warnings, context.Audit ?? AuditSummary.Read(layoutGame.AuditFile));
+    }
+
+    // A probe that throws must not fail the add: Lavapipe stays off.
+    private async Task<bool> DefaultLavapipeAsync(string titleId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return DefaultLavapipe(await probe.RunAsync(cancellationToken).ConfigureAwait(false));
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogProbeFailed(exception, titleId);
+            return false;
+        }
     }
 
     private async Task<PreparedGame> PrepareCoreAsync(string input, CancellationToken cancellationToken)
@@ -151,6 +174,21 @@ public sealed partial class GameImporter(
             throw;
         }
     }
+
+    /// <summary>
+    /// Lavapipe starts on when Vulkan works but no GPU has shaderInt64 and bufferDeviceAddress (none at all counts); a failed probe
+    /// or a missing loader leaves it off, since Lavapipe needs the loader too.
+    /// </summary>
+    internal static bool DefaultLavapipe(VulkanProbeOutcome outcome) =>
+        outcome.Status != VulkanProbeStatus.Failed
+        && outcome.Report is { LoaderFound: true } report
+        && !report.Gpus.Any(gpu => gpu.SupportsAnyPS5);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The GPU probe failed for {TitleId}: Lavapipe stays off.")]
+    private partial void LogProbeFailed(Exception exception, string titleId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "No GPU supports AnyPS5: CPU rendering (Lavapipe) is on for {TitleId}.")]
+    private partial void LogLavapipeByDefault(string titleId);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not delete the staging folder {Staging}; it can be deleted by hand.")]
     private partial void LogStagingNotDeleted(Exception exception, string staging);

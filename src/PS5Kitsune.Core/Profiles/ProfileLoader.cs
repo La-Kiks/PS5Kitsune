@@ -97,6 +97,22 @@ public static class ProfileLoader
             }
         }
 
+        var fontNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var font in profile.Fonts)
+        {
+            if (string.IsNullOrEmpty(font.Name) || font.Name is "." or ".." || font.Name.IndexOfAny(['/', '\\', ':']) >= 0 || Path.GetFileName(font.Name) != font.Name || font.Name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || !fontNames.Add(font.Name))
+            {
+                throw new InvalidProfileException($"Profile {profile.Id}: font \"{font.Name}\" needs a unique file name without a folder.");
+            }
+
+            RequireSha256(profile.Id, $"font {font.Name}", font.Sha256);
+            RequireHttps(profile.Id, $"font {font.Name}", font.Url);
+            if (font.Size <= 0)
+            {
+                throw new InvalidProfileException($"Profile {profile.Id}: font {font.Name} size must be positive.");
+            }
+        }
+
         if (profile.Build is { } build)
         {
             RequireHttps(profile.Id, "build repository", build.Repository);

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Tests.AnyPS5;
+using PS5Kitsune.Core.Tests.Fakes;
 
 namespace PS5Kitsune.Core.Tests.Games;
 
@@ -16,7 +17,7 @@ public sealed class PrepareGameTests : IDisposable
         _importer = new GameImporter(
             _setup.Layout, _setup.Platform, _setup.Profile, _setup.Paths, _setup.Installer,
             new GameSourceResolver(_setup.Layout), new GameValidator(_ => long.MaxValue),
-            _setup.PythonTool, _setup.Runner, _setup.StepRunner, _setup.Time, NullLogger<GameImporter>.Instance);
+            _setup.PythonTool, _setup.Runner, _setup.StepRunner, new FakeVulkanProbeRunner(), _setup.Time, NullLogger<GameImporter>.Instance);
     }
 
     private string Staging => Path.Combine(_setup.Layout.Staging, TestGames.TitleId);

@@ -4,10 +4,12 @@ using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Processes;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tests.Fakes;
+using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.Core.Tests.Checks;
 
@@ -94,6 +96,21 @@ public sealed class SystemCheckerTests : IDisposable
 
         Assert.IsType<NoChildProcessJob>(provider.GetRequiredService<IChildProcessJob>());
         Assert.IsType<UnsupportedGameLauncher>(provider.GetRequiredService<IGameLauncher>());
+    }
+
+    [Fact]
+    public void Core_registration_offers_lavapipe_and_the_fonts_from_the_embedded_profile()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IPlatform>(_platform);
+        services.AddPS5KitsuneCore(new DataLayout(_temp.Path), ProfileLoader.LoadEmbedded());
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<MesaTool>(provider.GetRequiredService<ILavapipe>());
+        Assert.Contains(provider.GetServices<IPortableTool>(), tool => tool.Id == "mesa");
+        Assert.IsType<FontPack>(provider.GetRequiredService<IFontPack>());
+        Assert.Equal(_temp.Combine("fonts"), provider.GetRequiredService<IFontPack>().Folder);
     }
 
     private sealed class FakeCpuInfo : ICpuInfo

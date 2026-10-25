@@ -6,6 +6,8 @@
     <IsPublishable>false</IsPublishable>
     <!-- Test code: allow underscores in test names. -->
     <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <!-- Required by the LibraryImport source generator (the job object used by the breakaway test). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

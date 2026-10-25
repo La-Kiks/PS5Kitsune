@@ -18,12 +18,38 @@ internal static class JsonFiles
         where T : class =>
         File.Exists(path) ? JsonSerializer.Deserialize<T>(File.ReadAllText(path), Options) : null;
 
+    private const int MoveAttempts = 5;
+
+    private static readonly TimeSpan MoveRetryDelay = TimeSpan.FromMilliseconds(50);
+
     /// <summary>Writes through a temporary file, so a crash never leaves half a record.</summary>
-    public static async Task WriteAsync<T>(string path, T value, CancellationToken cancellationToken)
+    public static Task WriteAsync<T>(string path, T value, CancellationToken cancellationToken) =>
+        WriteAsync(path, value, MoveAttempts, MoveRetryDelay, cancellationToken);
+
+    /// <summary>
+    /// The final move is retried: while another handle holds the destination open (an antivirus scan, a reader), Windows refuses to replace it
+    /// with access denied, or a sharing or lock violation.
+    /// </summary>
+    internal static async Task WriteAsync<T>(string path, T value, int attempts, TimeSpan delay, CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         var temporary = path + ".tmp";
         await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(value, Options), cancellationToken).ConfigureAwait(false);
-        File.Move(temporary, path, overwrite: true);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                File.Move(temporary, path, overwrite: true);
+                return;
+            }
+            catch (Exception exception) when (attempt < attempts && IsTransient(exception))
+            {
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
+
+    private static bool IsTransient(Exception exception) =>
+        exception is UnauthorizedAccessException
+        || (exception is IOException && exception.HResult is unchecked((int)0x80070020) or unchecked((int)0x80070021));
 }

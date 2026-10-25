@@ -1,5 +1,7 @@
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using Microsoft.Win32.SafeHandles;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Tests;
@@ -7,7 +9,7 @@ using PS5Kitsune.Core.Tests;
 namespace PS5Kitsune.Platform.Windows.Tests;
 
 [SupportedOSPlatform("windows")]
-public sealed class WindowsGameLauncherTests : IDisposable
+public sealed partial class WindowsGameLauncherTests : IDisposable
 {
     private readonly TempDirectory _temp = new();
     private readonly WindowsGameLauncher _launcher = new(NullLogger<WindowsGameLauncher>.Instance) { StopGrace = TimeSpan.FromMilliseconds(200) };
@@ -23,13 +25,19 @@ public sealed class WindowsGameLauncherTests : IDisposable
 
     private string Logs => _temp.Combine("logs");
 
-    private async Task<(int ExitCode, string Log, string LogFile)> RunCmdAsync(params string[] arguments)
+    private async Task<(int ExitCode, string Log, string LogFile)> RunCmdAsync(IReadOnlyDictionary<string, string>? environment, params string[] arguments)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
-        using var game = _launcher.Launch(new GameLaunchRequest(Path.Combine(Environment.SystemDirectory, "cmd.exe"), _temp.Path, Logs) { Arguments = arguments });
+        using var game = _launcher.Launch(new GameLaunchRequest(Path.Combine(Environment.SystemDirectory, "cmd.exe"), _temp.Path, Logs)
+        {
+            Arguments = arguments,
+            Environment = environment ?? new Dictionary<string, string>(),
+        });
         var exitCode = await game.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
         return (exitCode, await File.ReadAllTextAsync(game.LogFile, cancellationToken), game.LogFile);
     }
+
+    private Task<(int ExitCode, string Log, string LogFile)> RunCmdAsync(params string[] arguments) => RunCmdAsync(null, arguments);
 
     [Fact]
     public async Task Writes_the_output_to_a_log_file()
@@ -198,6 +206,115 @@ public sealed class WindowsGameLauncherTests : IDisposable
         Assert.NotNull(attached);
         await attached.StopAsync(cancellationToken);
     }
+
+    [Fact]
+    public async Task Passes_the_settings_to_the_game_only_on_top_of_the_inherited_environment()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+
+        var (_, log, _) = await RunCmdAsync(
+            new Dictionary<string, string> { ["PS5KITSUNE_TEST_SETTING"] = "from-settings" },
+            "/c", "echo", "%PS5KITSUNE_TEST_SETTING%;%SystemRoot%");
+
+        Assert.Contains("from-settings;", log, StringComparison.Ordinal);
+        Assert.Contains(Environment.GetEnvironmentVariable("SystemRoot")!, log, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(Environment.GetEnvironmentVariable("PS5KITSUNE_TEST_SETTING"));
+    }
+
+    [Fact]
+    public async Task A_game_that_exited_with_code_259_is_not_found_running()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+        var cmd = Path.Combine(Environment.SystemDirectory, "cmd.exe");
+        using var game = _launcher.Launch(new GameLaunchRequest(cmd, _temp.Path, Logs) { Arguments = ["/c", "exit", "259"] });
+
+        // The handle held here keeps the PID from being reused while Attach looks at it.
+        var exitCode = await game.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        Assert.Equal(259, exitCode);
+        Assert.Null(_launcher.Attach(RecordOf(game, cmd)));
+    }
+
+    [Fact]
+    public async Task The_game_breaks_away_from_a_job_that_allows_it()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Windows only.");
+        using var self = System.Diagnostics.Process.GetCurrentProcess();
+        if (IsProcessInJob(self.SafeHandle, 0, out var alreadyInJob) && alreadyInJob)
+        {
+            // Breaking away from nested jobs also depends on the outer job.
+            Assert.Skip("The test process already runs in a job.");
+        }
+
+        using var job = CreateJobObject(0, null);
+        var limits = new ExtendedLimitInformation { BasicLimitInformation = new BasicLimitInformation { LimitFlags = JobObjectLimitBreakawayOk } };
+        Assert.True(SetInformationJobObject(job, JobObjectExtendedLimitInformation, ref limits, (uint)Marshal.SizeOf<ExtendedLimitInformation>()));
+        // The test process stays in this job: it has no limit but allowing breakaway, and closing it ends nothing.
+        Assert.True(AssignProcessToJobObject(job, self.SafeHandle));
+
+        using var game = StartPing();
+        using var process = System.Diagnostics.Process.GetProcessById(game.ProcessId);
+
+        Assert.True(IsProcessInJob(process.SafeHandle, job.DangerousGetHandle(), out var inJob));
+        Assert.False(inJob);
+        await game.StopAsync(TestContext.Current.CancellationToken);
+    }
+
+    private const int JobObjectExtendedLimitInformation = 9;
+    private const uint JobObjectLimitBreakawayOk = 0x00000800;
+
+    [LibraryImport("kernel32.dll", EntryPoint = "CreateJobObjectW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    private static partial SafeFileHandle CreateJobObject(nint jobAttributes, string? name);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetInformationJobObject(SafeFileHandle job, int infoClass, ref ExtendedLimitInformation info, uint length);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool AssignProcessToJobObject(SafeFileHandle job, SafeProcessHandle process);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool IsProcessInJob(SafeProcessHandle process, nint job, [MarshalAs(UnmanagedType.Bool)] out bool result);
+
+#pragma warning disable CS0649 // Native layouts: Windows reads fields the C# code never touches.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BasicLimitInformation
+    {
+        public long PerProcessUserTimeLimit;
+        public long PerJobUserTimeLimit;
+        public uint LimitFlags;
+        public nuint MinimumWorkingSetSize;
+        public nuint MaximumWorkingSetSize;
+        public uint ActiveProcessLimit;
+        public nuint Affinity;
+        public uint PriorityClass;
+        public uint SchedulingClass;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IoCounters
+    {
+        public ulong ReadOperationCount;
+        public ulong WriteOperationCount;
+        public ulong OtherOperationCount;
+        public ulong ReadTransferCount;
+        public ulong WriteTransferCount;
+        public ulong OtherTransferCount;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ExtendedLimitInformation
+    {
+        public BasicLimitInformation BasicLimitInformation;
+        public IoCounters IoInfo;
+        public nuint ProcessMemoryLimit;
+        public nuint JobMemoryLimit;
+        public nuint PeakProcessMemoryUsed;
+        public nuint PeakJobMemoryUsed;
+    }
+#pragma warning restore CS0649
 
     public void Dispose() => _temp.Dispose();
 }

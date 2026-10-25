@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.App.ViewModels;
@@ -15,6 +16,7 @@ internal static class LaunchErrors
         GameBusyException => $"Another PS5Kitsune action is using {name}. Try again when it finishes.",
         GameExecutableMissingException => $"The executable is missing: Reconvert {name}.",
         AnyPS5NotInstalledException => "AnyPS5 is not installed. Install it from Home first.",
+        LavapipeUnavailableException => exception.Message,
         GameNotFoundException or InvalidGameRecordException or IOException or UnauthorizedAccessException or Win32Exception or PlatformNotSupportedException =>
             $"Could not launch {name}: {exception.Message}",
         _ => null,

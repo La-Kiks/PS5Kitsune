@@ -5,6 +5,7 @@ using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
@@ -86,5 +87,12 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
     }
 
     public object Game(PlayingGame playing, bool firstLaunch) =>
-        new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this);
+        new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this, Session.Get<ILogger<GameViewModel>>());
+
+    public object Launch(GameLayout game, string name, bool firstLaunch) =>
+        new GameViewModel(game, name, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this, Session.Get<ILogger<GameViewModel>>());
+
+    public object GameSettings(string titleId) =>
+        new GameSettingsViewModel(
+            titleId, Session.Get<GamePlayer>(), Session.Get<GameLibrary>(), Session.Get<RunningGames>(), Session.Get<IVulkanProbeRunner>(), dialogs, navigator);
 }

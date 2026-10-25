@@ -241,4 +241,37 @@ public sealed class GameLibraryTests : IDisposable
     }
 
     public void Dispose() => _temp.Dispose();
+
+    [Fact]
+    public async Task An_invalid_setting_reads_as_its_default_and_the_file_is_kept()
+    {
+        var path = Path.Combine(_layout.GameDirectory("PPSA99666"), ".ps5kitsune", "game.json");
+        await GameRecordStore.WriteAsync(path, TestRecords.Sample() with { Settings = new GameSettings { Language = 99, PresentMode = "vsync" } }, TestContext.Current.CancellationToken);
+
+        var (_, record) = _library.Find("PPSA99666");
+
+        Assert.Equal(new GameSettings(), record.Settings);
+        Assert.Equal(new GameSettings(), Assert.Single(_library.All()).Record.Settings);
+        Assert.Equal(99, GameRecordStore.Read(path)!.Settings.Language);
+    }
+
+    [Fact]
+    public async Task A_record_without_the_new_settings_reads_with_their_defaults()
+    {
+        var path = Path.Combine(_layout.GameDirectory("PPSA99666"), ".ps5kitsune", "game.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, """
+            {
+              "schemaVersion": 1, "titleId": "PPSA99666", "name": "DOOM", "executable": "PPSA99666.exe",
+              "convertedWith": { "profile": "doom-validated-2026-10", "mode": "release", "version": "v0.1.2", "commit": null, "toIntel": false },
+              "audit": { "implemented": 262, "stub": 0, "absent": 0, "verdict": "green" },
+              "settings": { "gpu": null, "lavapipe": true, "language": 2, "presentMode": "mailbox" },
+              "addedAt": "2026-10-18T15:00:00+02:00", "lastPlayedAt": null
+            }
+            """, TestContext.Current.CancellationToken);
+
+        var (_, record) = _library.Find("PPSA99666");
+
+        Assert.Equal(new GameSettings { Lavapipe = true, Language = 2, PresentMode = "mailbox" }, record.Settings);
+    }
 }

@@ -129,4 +129,10 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Information, Message = "{Name} ({TitleId}) is removed: {Directory} is deleted.")]
     public static partial void GameRemoved(this ILogger logger, string name, string titleId, string directory);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Warning}")]
+    public static partial void FontsMissing(this ILogger logger, string warning);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Line}")]
+    public static partial void SettingsLine(this ILogger logger, string line);
 }

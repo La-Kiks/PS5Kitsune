@@ -41,14 +41,30 @@ public sealed record ConversionInfo(string Profile, string Mode, string Version,
 
 public sealed record AuditRecord(int Implemented, int Stub, int Absent, AuditVerdict Verdict);
 
-/// <summary>Per-game settings (milestone 7 edits them); defaults until then.</summary>
+/// <summary>Per-game settings, passed to the game as environment variables at launch. See docs/architecture.md, "Per-game settings".</summary>
 public sealed record GameSettings
 {
+    /// <summary>Part of a GPU name (ANYPS5_GPU); null lets AnyPS5 choose.</summary>
     public string? Gpu { get; init; }
 
+    /// <summary>CPU rendering with Mesa's Lavapipe; overrides <see cref="Gpu"/> and <see cref="DisableDozen"/>.</summary>
     public bool Lavapipe { get; init; }
 
-    public int Language { get; init; } = 1;
+    /// <summary>Console language number, 0 to 30 (<see cref="GameLanguages"/>).</summary>
+    public int Language { get; init; } = GameLanguages.Default;
 
-    public string PresentMode { get; init; } = "fifo";
+    /// <summary>One of <see cref="GameSettingsValidator.PresentModes"/>.</summary>
+    public string PresentMode { get; init; } = GameSettingsValidator.DefaultPresentMode;
+
+    /// <summary>Hides Mesa's Dozen driver from the Vulkan loader.</summary>
+    public bool DisableDozen { get; init; }
+
+    /// <summary>Shows the performance overlay from the first frame.</summary>
+    public bool Overlay { get; init; }
+
+    /// <summary>One of <see cref="GameSettingsValidator.OverlayPositions"/>.</summary>
+    public string OverlayPosition { get; init; } = GameSettingsValidator.DefaultOverlayPosition;
+
+    /// <summary>"installed" or "absent" for dumps without PlayGo files; null keeps AnyPS5's error.</summary>
+    public string? PlayGoUnlistedChunks { get; init; }
 }
