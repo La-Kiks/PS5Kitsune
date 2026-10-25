@@ -23,11 +23,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      # setup-dotnet downloads from dotnetorigin.blob.core.windows.net, which answers 409 since 2026-10-25.
+      - name: Install .NET from builds.dotnet.microsoft.com
         if: runner.os == 'Windows'
-        with:
-          global-json-file: global.json
-      # setup-dotnet's Linux script downloads from dotnetorigin.blob.core.windows.net, which answers 409 since 2026-10-25.
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.ps1 -OutFile "$env:RUNNER_TEMP/dotnet-install.ps1"
+          & "$env:RUNNER_TEMP/dotnet-install.ps1" -JSonFile global.json -InstallDir "$env:USERPROFILE/.dotnet" -AzureFeed https://builds.dotnet.microsoft.com/dotnet
+          "$env:USERPROFILE/.dotnet" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "DOTNET_ROOT=$env:USERPROFILE/.dotnet" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Install .NET from builds.dotnet.microsoft.com
         if: runner.os == 'Linux'
         run: |
