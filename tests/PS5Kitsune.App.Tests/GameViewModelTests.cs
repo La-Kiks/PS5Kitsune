@@ -452,6 +452,29 @@ public sealed class GameViewModelTests : IDisposable
         Assert.Null(page.Diagnosis);
     }
 
+    [Fact]
+    public async Task Back_returns_after_launch_again_even_while_the_old_exit_is_still_diagnosed()
+    {
+        var (page, process) = await LaunchAsync(diagnose: true);
+        await File.AppendAllTextAsync(process.LogFile, "Vulkan: buffer device address and shaderInt64 are required\n", TestContext.Current.CancellationToken);
+        page.OnNavigatedTo();
+        process.Exit(1);
+
+        // As soon as the page shows the exit, the old follow may still be diagnosing it.
+        while (page.IsRunning)
+        {
+            await Task.Delay(1, TestContext.Current.CancellationToken);
+        }
+
+        await page.LaunchAgainCommand.ExecuteAsync(null);
+        Assert.True(page.IsRunning);
+
+        await page.BackToLibraryCommand.ExecuteAsync(null).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        Assert.Equal("library", _navigator.CurrentPage);
+        Assert.Null(page.Diagnosis);
+    }
+
     public void Dispose() => _library.Dispose();
 
     [Fact]

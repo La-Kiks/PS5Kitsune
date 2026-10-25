@@ -245,13 +245,22 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
                 var launch = _launches;
                 var stopped = _stopped;
                 var logFile = playing.Process.LogFile;
-                var found = await Task.Run(() => services.Diagnoser.FinishAsync(logFile, exitCode, stopped, CancellationToken.None), CancellationToken.None)
-                    .ConfigureAwait(true);
-
-                // A launch started meanwhile owns the page.
-                if (found is not null && launch == _launches)
+                try
                 {
-                    Diagnosis = new DiagnosisViewModel(found, _game, Title, _player, _platform, services);
+                    var found = await Task.Run(() => services.Diagnoser.FinishAsync(logFile, exitCode, stopped, CancellationToken.None), CancellationToken.None)
+                        .ConfigureAwait(true);
+
+                    // A launch started meanwhile owns the page.
+                    if (found is not null && launch == _launches)
+                    {
+                        Diagnosis = new DiagnosisViewModel(found, _game, Title, _player, _platform, services);
+                    }
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    // A failed diagnosis must not surface from Back.
+                    var titleId = _game.TitleId;
+                    LogDiagnosisFailed(exception, titleId);
                 }
             }
         }
@@ -261,7 +270,11 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         }
         finally
         {
-            _following = null;
+            // Only this follow's own token: a newer launch may have replaced it meanwhile.
+            if (_following == cancellation)
+            {
+                _following = null;
+            }
         }
     }
 
@@ -334,4 +347,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Could not launch {TitleId}.")]
     private partial void LogLaunchFailed(Exception exception, string titleId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not diagnose the exit of {TitleId}.")]
+    private partial void LogDiagnosisFailed(Exception exception, string titleId);
 }
