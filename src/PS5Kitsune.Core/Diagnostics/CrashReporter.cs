@@ -34,7 +34,17 @@ public sealed class CrashReporter(GameLibrary library, AnyPS5Profile profile, IC
     public async Task<string> BuildAsync(string titleId, string logPath, Diagnosis? diagnosis, CancellationToken cancellationToken)
     {
         var (_, record) = library.Find(titleId);
-        var outcome = await vulkan.RunAsync(cancellationToken).ConfigureAwait(false);
+        VulkanProbeOutcome outcome;
+        try
+        {
+            outcome = await vulkan.RunAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Like the Settings page: a probe that throws is a failed detection, so the report still gets written.
+            outcome = VulkanProbeOutcome.Failed(exception.Message);
+        }
+
         var facts = new CrashReportFacts(
             typeof(CrashReporter).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown",
             RuntimeInformation.OSDescription,

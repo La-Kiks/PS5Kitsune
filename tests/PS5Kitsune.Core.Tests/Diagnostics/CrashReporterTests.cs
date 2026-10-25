@@ -1,7 +1,13 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Diagnostics;
+using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
+using PS5Kitsune.Core.Tests.AnyPS5;
+using PS5Kitsune.Core.Tests.Fakes;
+using PS5Kitsune.Core.Tests.Games;
 using PS5Kitsune.Core.Tests.Library;
 
 namespace PS5Kitsune.Core.Tests.Diagnostics;
@@ -20,6 +26,12 @@ public sealed class CrashReporterTests : IDisposable
         32UL << 30);
 
     private readonly TempDirectory _temp = new();
+    private readonly AnyPS5TestSetup _setup;
+
+    public CrashReporterTests()
+    {
+        _setup = new AnyPS5TestSetup(_temp.Combine("root"));
+    }
 
     private static Diagnosis Unexplained => new(DiagnosisIds.Unexplained, new Dictionary<string, string>(), null, null, 0xC0000005, LogPath);
 
@@ -73,5 +85,23 @@ public sealed class CrashReporterTests : IDisposable
         Assert.Equal(Enumerable.Range(11, 30).Select(index => $"line {index}"), lines);
     }
 
+    [Fact]
+    public async Task A_probe_that_throws_still_gives_a_report_with_the_reason()
+    {
+        var game = new GameLayout(_setup.Layout.GameDirectory(TestGames.TitleId), TestGames.TitleId, _setup.Platform);
+        await GameRecordStore.WriteAsync(game.RecordFile, TestRecords.Sample(), TestContext.Current.CancellationToken);
+        var library = new GameLibrary(_setup.Layout, _setup.Platform, _setup.Time, NullLogger<GameLibrary>.Instance);
+        var reporter = new CrashReporter(library, _setup.Profile, new FakeCpuInfo(), new FakeVulkanProbeRunner { Failure = new InvalidOperationException("boom") }, _setup.Platform);
+
+        var report = await reporter.BuildAsync(TestGames.TitleId, LogPath, null, TestContext.Current.CancellationToken);
+
+        Assert.Contains("GPU: none detected (boom)", report, StringComparison.Ordinal);
+    }
+
     public void Dispose() => _temp.Dispose();
+
+    private sealed class FakeCpuInfo : ICpuInfo
+    {
+        public CpuFacts Read() => new("AuthenticAMD", []);
+    }
 }
