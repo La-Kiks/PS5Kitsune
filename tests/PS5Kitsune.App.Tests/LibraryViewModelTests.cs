@@ -26,6 +26,18 @@ public sealed class LibraryViewModelTests : IDisposable
     private Task<PlayingGame> StartAsync(string titleId) => _library.Player.LaunchAsync(titleId, TestContext.Current.CancellationToken);
 
     [Fact]
+    public async Task A_library_that_cannot_be_read_still_lets_the_user_add_a_game()
+    {
+        _library.Installer.ReadRecordFailure = new IOException("disk gone");
+
+        var page = await CreateAsync();
+
+        Assert.StartsWith("Cannot read the library", page.Message, StringComparison.Ordinal);
+        Assert.True(page.CanAddGame);
+        Assert.True(page.AddGameCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task A_tile_shows_one_status_running_first_then_reconvert_then_compatibility()
     {
         await _library.AddAsync("PPSA00001", "Alpha");

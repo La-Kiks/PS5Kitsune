@@ -88,9 +88,17 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
     /// <summary>When set, ReadRecord() blocks on it (at most 5 s, so a broken test cannot hang): the library read stays pending.</summary>
     public ManualResetEventSlim? ReadRecordGate { get; set; }
 
+    /// <summary>Thrown by ReadRecord() when set: the library read fails.</summary>
+    public Exception? ReadRecordFailure { get; set; }
+
     public AnyPS5InstallRecord? ReadRecord()
     {
         ReadRecordGate?.Wait(TimeSpan.FromSeconds(5));
+        if (ReadRecordFailure is not null)
+        {
+            throw ReadRecordFailure;
+        }
+
         return State.Record;
     }
 

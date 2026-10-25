@@ -73,6 +73,8 @@ public sealed partial class LibraryViewModel(
             if (generation == _generation)
             {
                 Message = $"Cannot read the library: {exception.Message}";
+                // The add flow checks the install itself; failing open keeps Add a game as usable as before the read.
+                CanAddGame = true;
                 IsLoading = false;
             }
 
