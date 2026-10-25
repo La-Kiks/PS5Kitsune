@@ -13,7 +13,7 @@ using PS5Kitsune.Core.Library;
 namespace PS5Kitsune.App.ViewModels;
 
 /// <summary>
-/// A game's page: launches it (downloading Lavapipe and the fonts first when needed), follows its log live, Stop, then its exit code.
+/// A game's page: launches it (downloading Lavapipe and the fonts first when needed), follows its log live, Stop, then its exit code and, after an error AnyPS5 is known to print, its diagnosis.
 /// Leaving the page never stops the game; leaving during a download cancels the launch.
 /// </summary>
 public sealed partial class GameViewModel : ObservableObject, INavigationAware
@@ -32,10 +32,13 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     private CancellationTokenSource? _following;
     private CancellationTokenSource? _launching;
     private bool _started;
+    private readonly DiagnosisServices? _diagnosis;
+    private bool _stopped;
+    private int _launches;
 
     /// <summary>A game found running: the page follows it.</summary>
-    public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null)
-        : this(playing.Game, playing.Record.Name, firstLaunch, player, platform, ui, navigator, pages, logger)
+    public GameViewModel(PlayingGame playing, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null, DiagnosisServices? diagnosis = null)
+        : this(playing.Game, playing.Record.Name, firstLaunch, player, platform, ui, navigator, pages, logger, diagnosis)
     {
         _playing = playing;
         IsPreparing = false;
@@ -43,9 +46,10 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     }
 
     /// <summary>A game to launch: the page launches it when shown.</summary>
-    public GameViewModel(GameLayout game, string name, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null)
+    public GameViewModel(GameLayout game, string name, bool firstLaunch, GamePlayer player, IPlatform platform, IUiDispatcher ui, Navigator navigator, IPages pages, ILogger<GameViewModel>? logger = null, DiagnosisServices? diagnosis = null)
     {
         _logger = logger ?? NullLogger<GameViewModel>.Instance;
+        _diagnosis = diagnosis;
         _game = game;
         _player = player;
         _platform = platform;
@@ -89,6 +93,10 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     [ObservableProperty]
     public partial string? Message { get; private set; }
 
+    /// <summary>The known error of the last exit this page watched; null otherwise, and once Launch again starts.</summary>
+    [ObservableProperty]
+    public partial DiagnosisViewModel? Diagnosis { get; private set; }
+
     /// <summary>Completes when the current launch has started the game, failed or been cancelled.</summary>
     public Task Launching { get; private set; } = Task.CompletedTask;
 
@@ -122,6 +130,9 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
     // Launches, then starts following the game without waiting for it to exit.
     private async Task LaunchAsync()
     {
+        _launches++;
+        _stopped = false;
+        Diagnosis = null;
         var previousStatus = StatusText;
         Message = null;
         FontsWarning = null;
@@ -193,6 +204,12 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
             return;
         }
 
+        if (value.Download == LaunchDownload.Waiting)
+        {
+            StatusText = "Waiting for another launch to finish its downloads…";
+            return;
+        }
+
         var what = value.Download == LaunchDownload.Lavapipe ? "Lavapipe" : "fonts";
         var received = value.Progress.ReceivedBytes >> 20;
         StatusText = value.Progress.TotalBytes is { } total
@@ -223,6 +240,29 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
             _player.Forget(playing);
             IsRunning = false;
             StatusText = string.Create(CultureInfo.InvariantCulture, $"Exited with code {exitCode}");
+            if (_diagnosis is { } services)
+            {
+                var launch = _launches;
+                var stopped = _stopped;
+                var logFile = playing.Process.LogFile;
+                try
+                {
+                    var found = await Task.Run(() => services.Diagnoser.FinishAsync(logFile, exitCode, stopped, CancellationToken.None), CancellationToken.None)
+                        .ConfigureAwait(true);
+
+                    // A launch started meanwhile owns the page.
+                    if (found is not null && launch == _launches)
+                    {
+                        Diagnosis = new DiagnosisViewModel(found, _game, Title, playing.Record.Settings, _player, _platform, services);
+                    }
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    // A failed diagnosis must not surface from Back.
+                    var titleId = _game.TitleId;
+                    LogDiagnosisFailed(exception, titleId);
+                }
+            }
         }
         catch (OperationCanceledException)
         {
@@ -230,7 +270,11 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         }
         finally
         {
-            _following = null;
+            // Only this follow's own token: a newer launch may have replaced it meanwhile.
+            if (_following == cancellation)
+            {
+                _following = null;
+            }
         }
     }
 
@@ -257,10 +301,12 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
         Message = null;
         try
         {
+            _stopped = true;
             await playing.Process.StopAsync().ConfigureAwait(true);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            _stopped = false;
             Message = $"Could not stop {Title}: {exception.Message}";
         }
     }
@@ -301,4 +347,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Could not launch {TitleId}.")]
     private partial void LogLaunchFailed(Exception exception, string titleId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not diagnose the exit of {TitleId}.")]
+    private partial void LogDiagnosisFailed(Exception exception, string titleId);
 }

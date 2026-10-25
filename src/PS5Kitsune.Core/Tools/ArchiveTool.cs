@@ -23,6 +23,9 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
     /// <summary>Files that must exist once the tool is extracted.</summary>
     protected abstract IEnumerable<string> RequiredFiles { get; }
 
+    /// <summary>False deletes the downloaded archive once the tool is installed.</summary>
+    protected virtual bool KeepsArchive => true;
+
     public bool IsInstalled()
     {
         var marker = Path.Combine(InstallDirectory, MarkerFileName);
@@ -71,6 +74,18 @@ public abstract class ArchiveTool(string id, ToolDefinition definition, DataLayo
         }
 
         Directory.Move(staging, InstallDirectory);
+
+        if (!KeepsArchive)
+        {
+            try
+            {
+                File.Delete(archive);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // The tool is installed: an archive left behind only costs disk space.
+            }
+        }
     }
 
     /// <summary>Extracts the downloaded archive into the staging folder.</summary>

@@ -36,6 +36,7 @@ public sealed partial class GameSettingsViewModel(
     private bool _readFailed;
     private IReadOnlyList<VulkanGpu> _detected = [];
     private bool _detectionDone;
+    private CancellationTokenSource? _watch;
 
     [ObservableProperty]
     public partial string Title { get; private set; } = "Settings";
@@ -120,6 +121,9 @@ public sealed partial class GameSettingsViewModel(
     /// <summary>Completes once the settings are read and the GPUs detected.</summary>
     public Task Loading { get; private set; } = Task.CompletedTask;
 
+    /// <summary>Completes when the page stops watching the running game: it exited, or the page was left.</summary>
+    public Task Watching { get; private set; } = Task.CompletedTask;
+
     public void OnNavigatedTo()
     {
         if (_loaded)
@@ -143,6 +147,11 @@ public sealed partial class GameSettingsViewModel(
             _name = record.Name;
             Title = $"{record.Name} settings";
             IsRunning = isRunning;
+            if (isRunning)
+            {
+                StartWatching();
+            }
+
             _saved = record.Settings;
             Apply(record.Settings);
         }
@@ -212,6 +221,55 @@ public sealed partial class GameSettingsViewModel(
         SelectedPlayGo = PlayGoChoices.First(choice => choice.Value == settings.PlayGoUnlistedChunks);
     }
 
+    private const string RunningMessageEnd = " is running. Stop it to change its settings.";
+
+    // Settings only apply at launch, so a running game makes the page read-only until it exits.
+    private void StartWatching()
+    {
+        if (_watch is not null)
+        {
+            return;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        _watch = cancellation;
+        Watching = WatchAsync(cancellation.Token);
+    }
+
+    private async Task WatchAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var playing = await Task.Run(() => player.Attach(titleId), cancellationToken).ConfigureAwait(true);
+            if (playing is not null)
+            {
+                using (playing.Process)
+                {
+                    await playing.Process.WaitForExitAsync(cancellationToken).ConfigureAwait(true);
+                }
+            }
+
+            IsRunning = false;
+            if (Message?.EndsWith(RunningMessageEnd, StringComparison.Ordinal) == true)
+            {
+                Message = null;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The page was left.
+        }
+        catch (Exception exception) when (exception is GameNotFoundException or InvalidGameRecordException or IOException or UnauthorizedAccessException)
+        {
+            // The game can no longer be read: the page stays read-only, as when it opened.
+        }
+        finally
+        {
+            _watch?.Dispose();
+            _watch = null;
+        }
+    }
+
     // A hidden Disable Dozen keeps its saved value because nothing writes DisableDozen while it is hidden;
     // the `with` on _saved keeps nothing itself, as every property is overwritten.
     private GameSettings Current() => _saved with
@@ -241,7 +299,8 @@ public sealed partial class GameSettingsViewModel(
         catch (GameRunningException)
         {
             IsRunning = true;
-            Message = $"{_name} is running. Stop it to change its settings.";
+            Message = $"{_name}{RunningMessageEnd}";
+            StartWatching();
         }
         catch (GameBusyException)
         {
@@ -268,6 +327,11 @@ public sealed partial class GameSettingsViewModel(
             && !await dialogs.ConfirmAsync("Discard changes?", $"Your changes to the settings of {_name} are not saved.", "Discard").ConfigureAwait(true))
         {
             return;
+        }
+
+        if (_watch is { } watch)
+        {
+            await watch.CancelAsync().ConfigureAwait(true);
         }
 
         navigator.GoBack();

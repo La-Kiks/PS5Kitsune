@@ -61,4 +61,14 @@ public sealed class MesaToolTests : IDisposable
     }
 
     public void Dispose() => _temp.Dispose();
+
+    [Fact]
+    public async Task Install_deletes_the_downloaded_archive()
+    {
+        _downloader.Serve(Definition.Url, Archive);
+
+        await CreateTool().InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.False(File.Exists(_temp.Combine("downloads", "mesa3d-26.2.4-release-msvc.7z")));
+    }
 }

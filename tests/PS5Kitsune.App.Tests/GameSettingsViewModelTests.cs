@@ -213,6 +213,38 @@ public sealed class GameSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task The_page_becomes_editable_when_the_running_game_exits()
+    {
+        await _library.AddAsync("PPSA99666", "DOOM");
+        var playing = await _library.Player.LaunchAsync("PPSA99666", TestContext.Current.CancellationToken);
+        var page = await OpenAsync();
+        Assert.True(page.IsRunning);
+
+        ((FakeLaunchedGame)playing.Process).Exit(0);
+        await page.Watching.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        Assert.False(page.IsRunning);
+        Assert.True(page.CanEdit);
+        Assert.True(page.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_refused_save_clears_once_the_game_exits()
+    {
+        var page = await OpenAsync();
+        var playing = await _library.Player.LaunchAsync("PPSA99666", TestContext.Current.CancellationToken);
+        page.Overlay = true;
+
+        await page.SaveCommand.ExecuteAsync(null);
+        Assert.Equal("DOOM is running. Stop it to change its settings.", page.Message);
+        ((FakeLaunchedGame)playing.Process).Exit(0);
+        await page.Watching.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        Assert.False(page.IsRunning);
+        Assert.Null(page.Message);
+    }
+
+    [Fact]
     public async Task Reset_keeps_a_hidden_disable_dozen()
     {
         _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Radeon);

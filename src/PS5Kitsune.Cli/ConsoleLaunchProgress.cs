@@ -2,7 +2,7 @@ using PS5Kitsune.Core.Launch;
 
 namespace PS5Kitsune.Cli;
 
-/// <summary>Prints which download a launch waits for, then its progress every 10 %.</summary>
+/// <summary>Prints which download a launch waits for (or that it waits for another launch), then its progress every 10 %.</summary>
 internal sealed class ConsoleLaunchProgress : IProgress<LaunchProgress>
 {
     private LaunchDownload? _current;
@@ -14,9 +14,17 @@ internal sealed class ConsoleLaunchProgress : IProgress<LaunchProgress>
         {
             _current = value.Download;
             _progress = new ConsoleDownloadProgress();
-            Console.WriteLine(value.Download == LaunchDownload.Lavapipe ? "Downloading Lavapipe…" : "Downloading fonts…");
+            Console.WriteLine(value.Download switch
+            {
+                LaunchDownload.Lavapipe => "Downloading Lavapipe…",
+                LaunchDownload.Fonts => "Downloading fonts…",
+                _ => "Waiting for another launch to finish its downloads…",
+            });
         }
 
-        _progress.Report(value.Progress);
+        if (value.Download != LaunchDownload.Waiting)
+        {
+            _progress.Report(value.Progress);
+        }
     }
 }

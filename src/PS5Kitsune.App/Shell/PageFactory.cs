@@ -6,6 +6,7 @@ using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
@@ -87,10 +88,13 @@ public sealed class PageFactory(SessionHost sessions, Navigator navigator, IDial
     }
 
     public object Game(PlayingGame playing, bool firstLaunch) =>
-        new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this, Session.Get<ILogger<GameViewModel>>());
+        new GameViewModel(playing, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this, Session.Get<ILogger<GameViewModel>>(), Diagnosis());
 
     public object Launch(GameLayout game, string name, bool firstLaunch) =>
-        new GameViewModel(game, name, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this, Session.Get<ILogger<GameViewModel>>());
+        new GameViewModel(game, name, firstLaunch, Session.Get<GamePlayer>(), platform, ui, navigator, this, Session.Get<ILogger<GameViewModel>>(), Diagnosis());
+
+    private DiagnosisServices Diagnosis() => new(
+        Session.Get<CrashDiagnoser>(), Session.Get<LibsRepair>(), Session.Get<CrashReporter>(), dialogs, Session.Get<AnyPS5Profile>().Diagnostics.ReportUrl);
 
     public object GameSettings(string titleId) =>
         new GameSettingsViewModel(

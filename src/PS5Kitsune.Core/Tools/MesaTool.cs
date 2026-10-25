@@ -26,6 +26,9 @@ public sealed class MesaTool(ToolDefinition definition, DataLayout layout, IDown
 
     protected override IEnumerable<string> RequiredFiles => [Manifest, Path.Combine(InstallDirectory, DriverName)];
 
+    // 70 MB that nothing reads once Lavapipe is extracted.
+    protected override bool KeepsArchive => false;
+
     /// <summary>Lavapipe is a driver, not a program to run: the version is the profile's.</summary>
     public override Task<string> GetVersionAsync(CancellationToken cancellationToken = default) => Task.FromResult(Definition.Version);
 

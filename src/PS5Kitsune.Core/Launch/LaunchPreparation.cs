@@ -10,13 +10,20 @@ namespace PS5Kitsune.Core.Launch;
 /// </summary>
 /// <param name="lavapipe">Null when the profile has no Mesa download.</param>
 /// <param name="fonts">Null when the profile has no fonts.</param>
-public sealed partial class LaunchPreparation(ILavapipe? lavapipe, IFontPack? fonts, ILogger<LaunchPreparation> logger)
+/// <param name="preparationLock">Null in tests that do not need it: downloads are then not serialized.</param>
+public sealed partial class LaunchPreparation(ILavapipe? lavapipe, IFontPack? fonts, ILogger<LaunchPreparation> logger, PreparationLock? preparationLock = null)
 {
     /// <exception cref="LavapipeUnavailableException">The settings use Lavapipe and Mesa cannot be installed.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     public async Task<LaunchResources> PrepareAsync(GameSettings settings, IProgress<LaunchProgress>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        // Nothing to download takes no lock, so a launch never waits behind another game's download for nothing. Once the lock is held,
+        // the checks below run again: the other launch may have installed what this one needed.
+        using var held = preparationLock is not null && NeedsDownload(settings)
+            ? await preparationLock.AcquireAsync(() => progress?.Report(new LaunchProgress(LaunchDownload.Waiting, default)), cancellationToken).ConfigureAwait(false)
+            : null;
+
         string? manifest = null;
         if (settings.Lavapipe)
         {
@@ -64,6 +71,24 @@ public sealed partial class LaunchPreparation(ILavapipe? lavapipe, IFontPack? fo
 
     /// <summary>Mesa's manifest when it is installed; null otherwise. For settings that turned Lavapipe on after the preparation.</summary>
     public string? InstalledLavapipe() => lavapipe is not null && lavapipe.IsInstalled() ? lavapipe.Manifest : null;
+
+    private bool NeedsDownload(GameSettings settings)
+    {
+        if (settings.Lavapipe && lavapipe is not null && !lavapipe.IsInstalled())
+        {
+            return true;
+        }
+
+        try
+        {
+            return fonts is not null && !fonts.IsInstalled();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // An unreadable marker is handled below like a failed download; taking the lock first is harmless.
+            return true;
+        }
+    }
 
     // An HttpClient timeout surfaces as a cancellation the caller did not ask for: it is a failure.
     private static bool IsDownloadFailure(Exception exception, CancellationToken cancellationToken) =>

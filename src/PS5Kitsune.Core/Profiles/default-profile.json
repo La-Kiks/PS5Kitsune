@@ -87,5 +87,39 @@
     "minFreeDiskGiB": 5,
     "buildMinFreeDiskGiB": 10,
     "nvidiaBadDrivers": [ "610.47" ]
+  },
+  "diagnostics": {
+    "reportUrl": "https://github.com/boykopovar/AnyPS5/discussions/categories/game-bring-up",
+    "rules": [
+      { "id": "nvidia-shader-compiler", "log": [ "unhandled exception 0xc0000005", "rip 0x[0-9a-f]+ nvgpucomp64\\.dll\\+" ] },
+      { "id": "libs-not-dll", "log": [ "Failed to load module: (?<module>.+)", "GetLastError: 193 " ] },
+      { "id": "libs-missing-dll", "log": [ "Failed to load module: (?<module>.+)", "GetLastError: 126 " ] },
+      {
+        "id": "commit-limit",
+        "match": "any",
+        "log": [
+          "replace guest placeholder with resident direct memory",
+          "commit direct memory pages",
+          "keep unmapped direct memory",
+          "create direct memory backing"
+        ]
+      },
+      { "id": "gpu-features", "log": [ "buffer device address and shaderInt64 are required" ] },
+      { "id": "cpu-too-old", "match": "any", "log": [ "unhandled exception 0xc000001d" ], "exitCodes": [ "0xC000001D" ] },
+      {
+        "id": "param-json",
+        "match": "any",
+        "log": [ "param\\.json not found", "failed to open param\\.json", "unexpected end of param\\.json", "malformed param\\.json", " in param\\.json" ]
+      },
+      { "id": "invalid-setting", "log": [ "(?<variable>A(?:NY)?PS5_[A-Z_]+) must " ] },
+      { "id": "invalid-setting", "log": [ "(?<variable>ANYPS5_SYSTEM_FONTS) is not a directory" ] },
+      { "id": "invalid-setting", "log": [ "whose name contains (?<variable>ANYPS5_GPU)=" ] },
+      {
+        "id": "invalid-setting",
+        "log": [ "the surface does not support the requested present mode" ],
+        "captures": { "variable": "ANYPS5_PRESENT_MODE" }
+      },
+      { "id": "not-implemented", "log": [ "(is|are) not implemented" ] }
+    ]
   }
 }

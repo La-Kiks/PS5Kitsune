@@ -2,10 +2,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Sessions;
+using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
@@ -234,6 +236,27 @@ internal sealed class FakeDialogs : IDialogService
         Confirmations.Add(message);
         return Task.FromResult(Confirm);
     }
+
+    public List<string> Copied { get; } = [];
+
+    /// <summary>Thrown by CopyTextAsync when set.</summary>
+    public Exception? CopyFailure { get; set; }
+
+    public Task CopyTextAsync(string text)
+    {
+        if (CopyFailure is not null)
+        {
+            throw CopyFailure;
+        }
+
+        Copied.Add(text);
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeCpuInfo : ICpuInfo
+{
+    public CpuFacts Read() => new("AuthenticAMD", []);
 }
 
 internal sealed class InlineDispatcher : IUiDispatcher
@@ -384,14 +407,30 @@ internal sealed class TestLibrary : IDisposable
     public TestLibrary()
     {
         Layout = new DataLayout(_temp.Combine("root"));
+        Lock = new PreparationLock(Layout) { RetryDelay = TimeSpan.FromMilliseconds(20) };
         Library = new GameLibrary(Layout, Platform, TimeProvider.System, NullLogger<GameLibrary>.Instance);
         Running = new RunningGames(Launcher, NullLogger<RunningGames>.Instance);
         Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Release);
-        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance), NullLogger<GamePlayer>.Instance);
+        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance, Lock), NullLogger<GamePlayer>.Instance);
         Cleaner = new GameCleaner(Library, Running, NullLogger<GameCleaner>.Instance);
     }
 
     public DataLayout Layout { get; }
+
+    public AnyPS5Paths Paths => new(Layout, Platform);
+
+    public FakeDialogs Dialogs { get; } = new();
+
+    /// <summary>The real diagnoser with the embedded profile's rules, and the real fixes on this library.</summary>
+    public DiagnosisServices Diagnosis(Uri? reportUrl = null) => new(
+        new CrashDiagnoser(ProfileLoader.LoadEmbedded(), NullLogger<CrashDiagnoser>.Instance),
+        new LibsRepair(Library, Installer, Paths, Running),
+        new CrashReporter(Library, ProfileLoader.LoadEmbedded(), new FakeCpuInfo(), new FakeVulkanProbeRunner(), Platform),
+        Dialogs,
+        reportUrl);
+
+    /// <summary>The preparation lock on the test root, retried every 20 ms.</summary>
+    public PreparationLock Lock { get; }
 
     public TestPlatform Platform { get; } = new();
 

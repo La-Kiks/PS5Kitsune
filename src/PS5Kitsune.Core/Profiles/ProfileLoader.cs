@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using PS5Kitsune.Core.Diagnostics;
 
 namespace PS5Kitsune.Core.Profiles;
 
@@ -126,6 +127,8 @@ public static class ProfileLoader
         {
             throw new InvalidProfileException($"Profile {profile.Id}: checks.commitLimitMiB must be positive, checks.minFreeDiskGiB and checks.buildMinFreeDiskGiB not negative.");
         }
+
+        DiagnosticRules.Compile(profile.Id, profile.Diagnostics);
     }
 
     private static void RequireSha256(string profileId, string what, string value)

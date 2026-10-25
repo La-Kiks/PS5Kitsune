@@ -79,4 +79,15 @@ public sealed class FontPackTests : IDisposable
     {
         public void Report(DownloadProgress value) => report(value);
     }
+
+    [Fact]
+    public async Task Install_deletes_part_files_left_by_an_interrupted_download()
+    {
+        _downloader.Serve(RegularFont.Url, Regular);
+        TestFiles.Write(_temp.Combine("fonts", "NotoSans-Old.ttf.part"), "partial");
+
+        await CreatePack(RegularFont).InstallAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Empty(Directory.EnumerateFiles(_temp.Combine("fonts"), "*.part"));
+    }
 }

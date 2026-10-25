@@ -34,6 +34,9 @@ public sealed record AnyPS5Profile
     /// <summary>PC check thresholds; a profile without a "checks" section gets the defaults.</summary>
     public CheckThresholds Checks { get; init; } = new();
 
+    /// <summary>Known AnyPS5 errors, searched in a game's log after it exits; a profile without the section has no rules.</summary>
+    public ProfileDiagnostics Diagnostics { get; init; } = new();
+
     /// <exception cref="InvalidProfileException">The profile has no asset named <paramref name="key"/>.</exception>
     public ProfileAsset Asset(string key) =>
         Assets.TryGetValue(key, out var asset) ? asset : throw new InvalidProfileException($"Profile {Id} has no asset \"{key}\".");
@@ -108,4 +111,39 @@ public sealed record CheckThresholds
 
     /// <summary>NVIDIA driver versions, as Vulkan's driverInfo reports them, known to crash AnyPS5 games.</summary>
     public IReadOnlyList<string> NvidiaBadDrivers { get; init; } = [];
+}
+
+/// <summary>The crash diagnosis rules. See docs/architecture.md, "Crash diagnosis".</summary>
+public sealed record ProfileDiagnostics
+{
+    /// <summary>The page Report opens after copying its text; null when the profile names none.</summary>
+    public Uri? ReportUrl { get; init; }
+
+    /// <summary>Tried in order: the first rule whose conditions are met wins.</summary>
+    public IReadOnlyList<DiagnosticRule> Rules { get; init; } = [];
+}
+
+/// <summary>A known error: .NET regexes searched in every line of the log, and exit codes.</summary>
+public sealed record DiagnosticRule
+{
+    public const string MatchAll = "all";
+
+    public const string MatchAny = "any";
+
+    /// <summary>Names the explanation and the fix in the app; several rules may share one.</summary>
+    public required string Id { get; init; }
+
+    public IReadOnlyList<string> Log { get; init; } = [];
+
+    /// <summary>Hex strings such as "0xC000001D", compared with the exit code as a 32-bit unsigned value.</summary>
+    public IReadOnlyList<string> ExitCodes { get; init; } = [];
+
+    /// <summary>
+    /// "all": every regex matches somewhere in the log and, when exit codes are given, the exit code is one of them.
+    /// "any": one regex matches, or the exit code is one of them.
+    /// </summary>
+    public string Match { get; init; } = MatchAll;
+
+    /// <summary>Values for the explanation that no named group of the regexes supplies, for example the variable of a message that names none.</summary>
+    public IReadOnlyDictionary<string, string> Captures { get; init; } = new Dictionary<string, string>();
 }

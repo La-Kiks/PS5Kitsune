@@ -6,6 +6,7 @@ using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.AnyPS5.Build;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Downloads;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.IO;
@@ -64,10 +65,15 @@ public static class ServiceCollectionExtensions
         // The platform registers its launcher first; elsewhere nothing can run, so nothing is running.
         services.TryAddSingleton<IGameLauncher, UnsupportedGameLauncher>();
         services.AddSingleton<RunningGames>();
+        services.AddSingleton<PreparationLock>();
         services.AddSingleton(provider => new LaunchPreparation(
-            provider.GetService<ILavapipe>(), provider.GetService<IFontPack>(), provider.GetRequiredService<ILogger<LaunchPreparation>>()));
+            provider.GetService<ILavapipe>(), provider.GetService<IFontPack>(), provider.GetRequiredService<ILogger<LaunchPreparation>>(),
+            provider.GetRequiredService<PreparationLock>()));
         services.AddSingleton<GamePlayer>();
         services.AddSingleton<GameCleaner>();
+        services.AddSingleton<CrashDiagnoser>();
+        services.AddSingleton<LibsRepair>();
+        services.AddSingleton<CrashReporter>();
         services.AddSingleton<GameReconverter>();
         services.AddSingleton<IGameReconverter>(provider => provider.GetRequiredService<GameReconverter>());
 

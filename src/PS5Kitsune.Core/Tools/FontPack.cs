@@ -43,6 +43,19 @@ public sealed class FontPack(AnyPS5Profile profile, DataLayout layout, IDownload
         }
 
         await File.WriteAllTextAsync(Marker, Fingerprint(), cancellationToken).ConfigureAwait(false);
+
+        // An interrupted download leaves its .part file; once every font is installed, nothing resumes it.
+        foreach (var part in Directory.EnumerateFiles(Folder, "*.part"))
+        {
+            try
+            {
+                File.Delete(part);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // The fonts are installed: a file left behind only costs disk space.
+            }
+        }
     }
 
     private string Fingerprint() => string.Join('\n', profile.Fonts.Select(font => $"{font.Name} {font.Sha256}"));

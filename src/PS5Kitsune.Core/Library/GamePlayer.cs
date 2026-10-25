@@ -88,10 +88,25 @@ public sealed partial class GamePlayer(
     /// <exception cref="InvalidGameRecordException">The game.json is malformed.</exception>
     /// <exception cref="GameBusyException">Another action holds the game's lock.</exception>
     /// <exception cref="GameRunningException">The game is running: settings only apply at launch.</exception>
-    public async Task<GameRecord> SaveSettingsAsync(string titleId, GameSettings settings, CancellationToken cancellationToken)
+    public Task<GameRecord> SaveSettingsAsync(string titleId, GameSettings settings, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        return UpdateSettingsAsync(titleId, _ => settings, cancellationToken);
+    }
+
+    /// <summary>
+    /// Changes the settings game.json holds now, under the game lock, then normalizes and writes them: for a diagnosis' fixes,
+    /// which change one setting and keep the others.
+    /// </summary>
+    /// <returns>The record written.</returns>
+    /// <exception cref="GameNotFoundException">No game with this title ID.</exception>
+    /// <exception cref="InvalidGameRecordException">The game.json is malformed.</exception>
+    /// <exception cref="GameBusyException">Another action holds the game's lock.</exception>
+    /// <exception cref="GameRunningException">The game is running: settings only apply at launch.</exception>
+    public async Task<GameRecord> UpdateSettingsAsync(string titleId, Func<GameSettings, GameSettings> change, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(titleId);
-        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(change);
         var game = library.Layout(titleId);
         using var held = GameLock.TryAcquire(game) ?? throw new GameBusyException(titleId);
         var record = library.ReadHeld(game);
@@ -100,7 +115,7 @@ public sealed partial class GamePlayer(
             throw new GameRunningException(record.Name, current);
         }
 
-        var saved = record with { Settings = GameSettingsValidator.Normalize(settings).Settings };
+        var saved = record with { Settings = GameSettingsValidator.Normalize(change(record.Settings)).Settings };
         await GameRecordStore.WriteAsync(game.RecordFile, saved, cancellationToken).ConfigureAwait(false);
         return saved;
     }
