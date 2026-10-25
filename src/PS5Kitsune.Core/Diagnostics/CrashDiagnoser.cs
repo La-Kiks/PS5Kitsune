@@ -94,7 +94,8 @@ public sealed partial class CrashDiagnoser
     private Diagnosis? Diagnose(string logPath, uint? exitCode, CancellationToken cancellationToken)
     {
         var states = _rules.Select(rule => new RuleState(rule)).ToList();
-        ExitRecord? exit = null;
+        uint? loggedCode = null;
+        var stoppedSeen = false;
         using (var reader = new StreamReader(new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete)))
         {
             var number = 0;
@@ -104,7 +105,8 @@ public sealed partial class CrashDiagnoser
                 number++;
                 if (ExitLines.Parse(line) is { } parsed)
                 {
-                    exit = parsed;
+                    loggedCode = parsed.Code;
+                    stoppedSeen |= parsed.Stopped;
                     continue;
                 }
 
@@ -115,12 +117,12 @@ public sealed partial class CrashDiagnoser
             }
         }
 
-        if (exitCode is null && exit is { Stopped: true })
+        if (exitCode is null && stoppedSeen)
         {
             return null;
         }
 
-        var code = exitCode ?? exit?.Code;
+        var code = exitCode ?? loggedCode;
         foreach (var state in states)
         {
             if (state.IsMet(code))
