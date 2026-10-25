@@ -17,6 +17,8 @@ public sealed class GalleryFixture : IAsyncLifetime
 
     internal IReadOnlyDictionary<string, object> Pages { get; private set; } = new Dictionary<string, object>();
 
+    internal string SettingsFolder => _gallery!.SettingsFolder;
+
     public async ValueTask InitializeAsync()
     {
         _gallery = new PageGallery();
@@ -36,7 +38,9 @@ public sealed class FocusTests(HeadlessSession session, GalleryFixture gallery) 
     public static TheoryData<string, string> Expected { get; } = new()
     {
         { "Home", "Verify / repair" },
+        // Continue is disabled with a blocking check, so the focus falls back to "Check again" (rank 2).
         { "SystemCheck", "Check again" },
+        { "SystemCheck-Ok", "Continue" },
         { "Mode", "Continue" },
         { "Tools", "Download what's missing and build" },
         { "Install-Running", "Cancel" },
@@ -63,7 +67,7 @@ public sealed class FocusTests(HeadlessSession session, GalleryFixture gallery) 
         var actual = await session.RunAsync(() =>
         {
             var navigator = new Navigator();
-            var theme = new ThemeService(new AppSettingsStore(Path.Combine(Path.GetTempPath(), "ps5k-focus-settings")), _ => { });
+            var theme = new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { });
             var window = new MainWindow { DataContext = new MainWindowViewModel(navigator, new FakeDialogs(), new FakePages(), theme) };
             try
             {

@@ -32,6 +32,27 @@
           <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
           <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
           <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
+          <!-- Fluent's inputs and expanders. The palette's Alt* colors are translucent black (white in light), so these controls would
+               render near-black (white) over our surfaces: use the tokens. Repeated per variant like the accent aliases above. -->
+          <StaticResource x:Key="ComboBoxBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderContentBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderContentBorderBrush" ResourceKey="Border.Subtle" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="Surface.Page" Color="#FAF5EE" />
@@ -60,6 +81,27 @@
           <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
           <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
           <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
+          <!-- Fluent's inputs and expanders. The palette's Alt* colors are translucent black (white in light), so these controls would
+               render near-black (white) over our surfaces: use the tokens. Repeated per variant like the accent aliases above. -->
+          <StaticResource x:Key="ComboBoxBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ComboBoxBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ComboBoxBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ComboBoxBorderBrushPressed" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundPointerOver" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBackgroundFocused" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="TextControlBorderBrush" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="TextControlBorderBrushPointerOver" ResourceKey="Border.Strong" />
+          <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBackgroundPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPointerOver" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderHeaderBorderBrushPressed" ResourceKey="Border.Subtle" />
+          <StaticResource x:Key="ExpanderContentBackground" ResourceKey="Surface.Raised" />
+          <StaticResource x:Key="ExpanderContentBorderBrush" ResourceKey="Border.Subtle" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
 
@@ -235,6 +277,15 @@
     <Setter Property="BorderBrush" Value="Transparent" />
     <Setter Property="CornerRadius" Value="4" />
     <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+  </Style>
+  <!-- A disabled item keeps its look at half opacity: no Fluent grey fill, so the template's presenter is cleared too. -->
+  <Style Selector="Button.nav:disabled">
+    <Setter Property="Opacity" Value="0.5" />
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.nav:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Text.Primary}" />
   </Style>
   <Style Selector="Button.nav.current">
     <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />

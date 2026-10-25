@@ -15,7 +15,9 @@
       </StackPanel>
     </Border>
 
-    <Border DockPanel.Dock="Top" Classes="card">
+    <TextBlock DockPanel.Dock="Top" Text="System check" Classes="h1" />
+
+    <Border DockPanel.Dock="Top" Classes="card" Margin="0,16,0,0">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <c:StatusChip Kind="{Binding BannerStatus, Converter={x:Static conv:CheckStatusKindConverter.Instance}}"
                       Text="{Binding BannerLabel}" VerticalAlignment="Center" />

@@ -43,7 +43,8 @@ internal sealed class PageGallery : IDisposable
     public async Task<IReadOnlyList<(string Name, object Page)>> BuildAsync() =>
     [
         ("Home", await HomeAsync()),
-        ("SystemCheck", await SystemCheckAsync()),
+        ("SystemCheck", await SystemCheckAsync(Blocked())),
+        ("SystemCheck-Ok", await SystemCheckAsync(AllOk())),
         ("Mode", Mode()),
         ("Tools", Tools()),
         ("Install-Running", InstallRunning()),
@@ -63,19 +64,37 @@ internal sealed class PageGallery : IDisposable
         ("GameSettings", await GameSettingsAsync()),
     ];
 
+    // Every clean-up runs even when one throws; the failures are rethrown together.
     public void Dispose()
     {
+        var errors = new List<Exception>();
         foreach (var cleanup in _cleanups)
         {
-            cleanup().GetAwaiter().GetResult();
+            Guard(() => cleanup().GetAwaiter().GetResult());
         }
 
         foreach (var library in _libraries)
         {
-            library.Dispose();
+            Guard(library.Dispose);
         }
 
-        _temp.Dispose();
+        Guard(_temp.Dispose);
+        if (errors.Count > 0)
+        {
+            throw new AggregateException(errors);
+        }
+
+        void Guard(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                errors.Add(ex);
+            }
+        }
     }
 
     private async Task<HomeViewModel> HomeAsync()
@@ -87,15 +106,25 @@ internal sealed class PageGallery : IDisposable
         return viewModel;
     }
 
-    private static async Task<SystemCheckViewModel> SystemCheckAsync()
+    private static SystemCheckReport Blocked() => new(
+        [
+            new CheckResult("os-arch", "64-bit x86 system", CheckStatus.Ok, "64-bit x86 system."),
+            new CheckResult("commit-limit", "Memory commit limit", CheckStatus.Warning, "Too low.", "Enlarge the page file.", CheckFix.OpenPerformanceSettings),
+            new CheckResult("disk", "Free disk space", CheckStatus.Blocking, "Only 2 GiB are free.", "Free some space, or choose another data folder."),
+        ],
+        new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(true, null, [Radeon]), null));
+
+    // Only Ok checks, so Continue is enabled.
+    private static SystemCheckReport AllOk() => new(
+        [
+            new CheckResult("os-arch", "64-bit x86 system", CheckStatus.Ok, "64-bit x86 system."),
+            new CheckResult("commit-limit", "Memory commit limit", CheckStatus.Ok, "Plenty of virtual memory."),
+            new CheckResult("disk", "Free disk space", CheckStatus.Ok, "120 GiB are free."),
+        ],
+        new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(true, null, [Radeon]), null));
+
+    private static async Task<SystemCheckViewModel> SystemCheckAsync(SystemCheckReport report)
     {
-        var report = new SystemCheckReport(
-            [
-                new CheckResult("os-arch", "64-bit x86 system", CheckStatus.Ok, "64-bit x86 system."),
-                new CheckResult("commit-limit", "Memory commit limit", CheckStatus.Warning, "Too low.", "Enlarge the page file.", CheckFix.OpenPerformanceSettings),
-                new CheckResult("disk", "Free disk space", CheckStatus.Blocking, "Only 2 GiB are free.", "Free some space, or choose another data folder."),
-            ],
-            new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(true, null, [Radeon]), null));
         var viewModel = new SystemCheckViewModel(new FakeChecker(report), AnyPS5Mode.Release, new TestPlatform(), new Navigator(), new FakePages());
         await viewModel.CheckCommand.ExecuteAsync(null);
         return viewModel;
@@ -241,6 +270,11 @@ internal sealed class PageGallery : IDisposable
     private void Run(StepRunViewModel viewModel)
     {
         _ = viewModel.RunAsync();
+        if (!viewModel.IsRunning)
+        {
+            throw new InvalidOperationException($"{viewModel.GetType().Name} is not running: the run no longer starts synchronously.");
+        }
+
         _cleanups.Add(viewModel.CancelAndWaitAsync);
     }
 
@@ -304,6 +338,7 @@ internal sealed class PageGallery : IDisposable
         }
 
         page.OnNavigatedTo();
+        _cleanups.Add(() => page.LeaveAsync());
         await WaitUntilAsync(() => page.IsRunning && page.Log.Count == logLines);
         return page;
     }

@@ -6,6 +6,7 @@
                 x:Class="PS5Kitsune.App.Views.HomeView"
                 x:DataType="vm:HomeViewModel">
   <StackPanel Spacing="24" MaxWidth="680" HorizontalAlignment="Left">
+    <TextBlock Text="Home" Classes="h1" />
     <Border Classes="card">
       <StackPanel Spacing="8">
         <TextBlock Text="{Binding StateTitle}" Classes="h2" />

@@ -48,6 +48,10 @@ public sealed class Screenshots(HeadlessSession session)
                             navigator.GoTo(page);
                             Dispatcher.UIThread.RunJobs();
                             Dispatcher.UIThread.RunJobs();
+
+                            // Fluent animates the Expander chevron when a page appears; a frame captured mid-flight shows it tilted.
+                            Thread.Sleep(500);
+                            Dispatcher.UIThread.RunJobs();
                             window.CaptureRenderedFrame()!.Save(Path.Combine(folder, $"{name}-{variant.Key}.png"), new PngBitmapEncoderOptions());
                         }
                         finally
