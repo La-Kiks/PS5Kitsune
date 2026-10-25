@@ -323,7 +323,7 @@ The launcher searches the log and error output for known patterns, then shows an
 
 Rules live in the profile's `diagnostics` section (`reportUrl`, `rules`: `id`, `log` regexes, `exitCodes`, `match` `all`/`any`, `captures`); the first rule met, in profile order, wins. An id the app does not know is skipped with a warning; an invalid rule makes the profile invalid.
 
-After the exit it watched, the Game page or `run` appends `[ps5kitsune] exited with code N (0x…)` to the launch's log (`stopped by the user` after Stop, which is never diagnosed). With no match, a non-zero exit is `unexplained` and offers Report.
+After the exit it watched, the Game page or `run` appends `[ps5kitsune] exited with code N (0x…)` to the launch's log (`stopped by the user` after Stop, which is never diagnosed). A zero exit code returns null without searching the log (no AnyPS5 error in the table exits with 0). With no match, a non-zero exit is `unexplained` and offers Report.
 
 Report copies a text (PC, AnyPS5, game, settings, exit, matched line, last 30 log lines, log path) and opens the Game bring-up Discussions; nothing is sent. `ps5kitsune diagnose <titleId> [--report]` does the same from the game's newest log.
 

@@ -74,7 +74,7 @@ public sealed partial class CrashDiagnoser
 
     /// <param name="exitCode">The exit code; null to use the log's exit line, when it has one.</param>
     /// <returns>
-    /// The first rule met, in profile order; else "unexplained" for a non-zero exit code; else null (a zero or unknown exit code, or a game
+    /// The first rule met, in profile order; else "unexplained" for a non-zero exit code; else null (a zero exit code, which is not searched; an unknown one; or a game
     /// the user stopped). An unreadable log or a regex that times out is logged and gives null.
     /// </returns>
     public async Task<Diagnosis?> DiagnoseAsync(string logPath, uint? exitCode, CancellationToken cancellationToken)
@@ -123,6 +123,12 @@ public sealed partial class CrashDiagnoser
         }
 
         var code = exitCode ?? loggedCode;
+        // No AnyPS5 error in the table exits with 0: a zero code means a normal quit, whatever the log says.
+        if (code == 0)
+        {
+            return null;
+        }
+
         foreach (var state in states)
         {
             if (state.IsMet(code))

@@ -103,6 +103,7 @@ A game ended with Stop gets `[ps5kitsune] stopped by the user (exit code …)` i
 - With `exitCode` null, it uses the exit line when the log has one.
 - A log whose last line is the "stopped by the user" line returns null, and so does a call from the Game page after Stop.
 - It returns the first rule, in profile order, whose conditions are met.
+- A zero exit code returns null without searching the log (no AnyPS5 error in the table exits with 0).
 - With no match: a non-zero exit code returns the `unexplained` diagnosis. A zero or unknown exit code returns null.
 - A rule whose `id` the app does not know is skipped, with a warning in the log (once per profile load).
 - `Diagnosis`: `Id`, `Captures` (name → value), `Line` (the first matched line, trimmed to 300 characters), `LineNumber`, `ExitCode`, `LogPath`.

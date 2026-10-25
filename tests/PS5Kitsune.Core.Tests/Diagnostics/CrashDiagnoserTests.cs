@@ -96,6 +96,15 @@ public sealed class CrashDiagnoserTests : IDisposable
     }
 
     [Fact]
+    public async Task A_clean_exit_is_not_diagnosed_even_when_the_log_has_a_known_message()
+    {
+        var text = "Vulkan: buffer device address and shaderInt64 are required\n";
+
+        Assert.Null(await _diagnoser.DiagnoseAsync(Log(text), 0, Token));
+        Assert.Null(await _diagnoser.DiagnoseAsync(Log(text + ExitLines.Exited(0) + "\n"), null, Token));
+    }
+
+    [Fact]
     public async Task The_exit_line_gives_the_exit_code_when_none_is_passed()
     {
         var log = Log("all good\n" + ExitLines.Exited(unchecked((int)0xC000001D)) + "\n");
