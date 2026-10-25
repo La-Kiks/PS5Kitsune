@@ -83,7 +83,7 @@ public static class DiagnosisTexts
         var fix = text.Action switch
         {
             DiagnosisAction.RepairLibs or DiagnosisAction.TurnOnLavapipe or DiagnosisAction.TurnOffLavapipe or DiagnosisAction.ResetSetting or DiagnosisAction.OpenPageFileSettings =>
-                $"Fix: in the app, open {name} and choose {text.ActionText}.",
+                $"Fix: launch {name} from the app; when it stops, choose {text.ActionText}.",
             DiagnosisAction.OpenNvidiaDrivers => $"Fix: update the NVIDIA driver from {NvidiaDriversUrl}",
             DiagnosisAction.OpenFolder => "Fix: remove the game and add it again from its original folder.",
             DiagnosisAction.Report => $"Fix: run ps5kitsune diagnose {titleId} --report and paste the text in a new Game bring-up thread.",

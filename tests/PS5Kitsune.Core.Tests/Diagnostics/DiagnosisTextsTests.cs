@@ -91,7 +91,7 @@ public sealed class DiagnosisTextsTests
             [
                 "A library could not load: libSceAudioOut.prx needs a DLL that is missing from the game's libs folder.",
                 "Line 2: the line",
-                "Fix: in the app, open DOOM and choose Repair libs.",
+                "Fix: launch DOOM from the app; when it stops, choose Repair libs.",
             ],
             lines);
     }
