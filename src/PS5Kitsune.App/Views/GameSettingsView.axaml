@@ -1,30 +1,39 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:PS5Kitsune.App.ViewModels"
-             xmlns:library="using:PS5Kitsune.Core.Library"
-             x:Class="PS5Kitsune.App.Views.GameSettingsView"
-             x:DataType="vm:GameSettingsViewModel">
+<views:PageView xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:PS5Kitsune.App.ViewModels"
+                xmlns:library="using:PS5Kitsune.Core.Library"
+                xmlns:views="using:PS5Kitsune.App.Views"
+                xmlns:c="using:PS5Kitsune.App.Controls"
+                x:Class="PS5Kitsune.App.Views.GameSettingsView"
+                x:DataType="vm:GameSettingsViewModel">
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Spacing="6">
-      <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding RunningNotice}" IsVisible="{Binding IsRunning}" Foreground="#005FB8" TextWrapping="Wrap" />
-      <TextBlock Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 Foreground="#C42B1C" TextWrapping="Wrap" />
-      <TextBlock Text="{Binding Notice}" IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 Foreground="#0F7B0F" />
+      <TextBlock Text="{Binding Title}" Classes="h1" />
+      <Border Classes="card" IsVisible="{Binding IsRunning}">
+        <TextBlock Text="{Binding RunningNotice}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+      </Border>
+      <TextBlock Text="{Binding Message}" Classes="error" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
+                 IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+      <TextBlock Text="{Binding Notice}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                 IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
 
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
-      <Button Content="Back" Command="{Binding BackCommand}" />
-      <Button Content="Reset to defaults" Command="{Binding ResetCommand}" />
-      <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}" />
-    </StackPanel>
+    <Border DockPanel.Dock="Bottom" Classes="footer">
+      <DockPanel>
+        <Button Content="Reset to defaults" Command="{Binding ResetCommand}" />
+        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+          <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" c:InitialFocus.Rank="3" />
+          <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}" IsDefault="True" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
 
     <ScrollViewer Margin="0,12,0,0">
-      <StackPanel Spacing="14" MaxWidth="560" HorizontalAlignment="Left">
+      <StackPanel Spacing="16" MaxWidth="560" HorizontalAlignment="Left">
         <StackPanel Spacing="4">
-          <TextBlock Text="GPU" FontWeight="SemiBold" />
-          <ComboBox ItemsSource="{Binding Gpus}" SelectedItem="{Binding SelectedGpu}" IsEnabled="{Binding CanChooseGpu}" MinWidth="320">
+          <TextBlock x:Name="GpuLabel" Text="GPU" FontWeight="SemiBold" />
+          <ComboBox ItemsSource="{Binding Gpus}" SelectedItem="{Binding SelectedGpu}" IsEnabled="{Binding CanChooseGpu}" MinWidth="320"
+                    AutomationProperties.LabeledBy="{Binding #GpuLabel}" c:InitialFocus.Rank="1">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:GpuChoice">
                 <TextBlock Text="{Binding Label}" />
@@ -32,17 +41,18 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
           <TextBlock Text="{Binding GpuStatus}" IsVisible="{Binding GpuStatus, Converter={x:Static ObjectConverters.IsNotNull}}"
-                     Opacity="0.85" TextWrapping="Wrap" />
+                     Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="4">
-          <CheckBox Content="CPU rendering (Lavapipe)" IsChecked="{Binding Lavapipe}" IsEnabled="{Binding CanEdit}" />
-          <TextBlock Text="{Binding LavapipeHelp}" Opacity="0.85" TextWrapping="Wrap" />
+          <CheckBox Content="CPU rendering (Lavapipe)" IsChecked="{Binding Lavapipe}" IsEnabled="{Binding CanEdit}" c:InitialFocus.Rank="2" />
+          <TextBlock Text="{Binding LavapipeHelp}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="4">
-          <TextBlock Text="Game language" FontWeight="SemiBold" />
-          <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" IsEnabled="{Binding CanEdit}" MinWidth="320">
+          <TextBlock x:Name="LanguageLabel" Text="Game language" FontWeight="SemiBold" />
+          <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" IsEnabled="{Binding CanEdit}" MinWidth="320"
+                    AutomationProperties.LabeledBy="{Binding #LanguageLabel}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="library:GameLanguage">
                 <TextBlock Text="{Binding Name}" />
@@ -52,8 +62,9 @@
         </StackPanel>
 
         <StackPanel Spacing="4">
-          <TextBlock Text="Vertical sync" FontWeight="SemiBold" />
-          <ComboBox ItemsSource="{Binding PresentModes}" SelectedItem="{Binding SelectedPresentMode}" IsEnabled="{Binding CanEdit}" MinWidth="320">
+          <TextBlock x:Name="VsyncLabel" Text="Vertical sync" FontWeight="SemiBold" />
+          <ComboBox ItemsSource="{Binding PresentModes}" SelectedItem="{Binding SelectedPresentMode}" IsEnabled="{Binding CanEdit}" MinWidth="320"
+                    AutomationProperties.LabeledBy="{Binding #VsyncLabel}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:SettingChoice">
                 <TextBlock Text="{Binding Label}" />
@@ -64,14 +75,15 @@
 
         <StackPanel Spacing="4" IsVisible="{Binding ShowDisableDozen}">
           <CheckBox Content="Disable Dozen" IsChecked="{Binding DisableDozen}" IsEnabled="{Binding CanChooseGpu}" />
-          <TextBlock Text="{Binding DozenHelp}" Opacity="0.85" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding DozenHelp}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
 
         <StackPanel Spacing="4">
           <CheckBox Content="Performance overlay" IsChecked="{Binding Overlay}" IsEnabled="{Binding CanEdit}" />
-          <TextBlock Text="{Binding OverlayHelp}" Opacity="0.85" />
-          <TextBlock Text="Overlay position" />
-          <ComboBox ItemsSource="{Binding OverlayPositions}" SelectedItem="{Binding SelectedOverlayPosition}" IsEnabled="{Binding CanChooseOverlayPosition}" MinWidth="200">
+          <TextBlock Text="{Binding OverlayHelp}" Classes="caption" />
+          <TextBlock x:Name="OverlayPositionLabel" Text="Overlay position" FontWeight="SemiBold" />
+          <ComboBox ItemsSource="{Binding OverlayPositions}" SelectedItem="{Binding SelectedOverlayPosition}" IsEnabled="{Binding CanChooseOverlayPosition}" MinWidth="200"
+                    AutomationProperties.LabeledBy="{Binding #OverlayPositionLabel}">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:SettingChoice">
                 <TextBlock Text="{Binding Label}" />
@@ -82,18 +94,19 @@
 
         <Expander Header="Advanced">
           <StackPanel Spacing="4">
-            <TextBlock Text="PlayGo unlisted chunks" FontWeight="SemiBold" />
-            <ComboBox ItemsSource="{Binding PlayGoChoices}" SelectedItem="{Binding SelectedPlayGo}" IsEnabled="{Binding CanEdit}" MinWidth="320">
+            <TextBlock x:Name="PlayGoLabel" Text="PlayGo unlisted chunks" FontWeight="SemiBold" />
+            <ComboBox ItemsSource="{Binding PlayGoChoices}" SelectedItem="{Binding SelectedPlayGo}" IsEnabled="{Binding CanEdit}" MinWidth="320"
+                      AutomationProperties.LabeledBy="{Binding #PlayGoLabel}">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:SettingChoice">
                   <TextBlock Text="{Binding Label}" />
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <TextBlock Text="{Binding PlayGoHelp}" Opacity="0.85" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding PlayGoHelp}" Classes="caption" TextWrapping="Wrap" />
           </StackPanel>
         </Expander>
       </StackPanel>
     </ScrollViewer>
   </DockPanel>
-</UserControl>
+</views:PageView>

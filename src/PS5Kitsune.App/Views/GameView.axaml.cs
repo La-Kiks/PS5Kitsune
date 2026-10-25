@@ -4,7 +4,7 @@ using PS5Kitsune.App.ViewModels;
 
 namespace PS5Kitsune.App.Views;
 
-public sealed partial class GameView : UserControl
+public sealed partial class GameView : PageView
 {
     private GameViewModel? _viewModel;
 

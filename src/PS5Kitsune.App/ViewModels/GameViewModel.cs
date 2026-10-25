@@ -59,6 +59,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
         Title = name;
         FirstLaunchHint = firstLaunch ? "The first launch may stutter while shaders are prepared." : null;
         IsPreparing = true;
+        Log.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasLog));
     }
 
     public string Title { get; }
@@ -75,6 +76,17 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
     [NotifyPropertyChangedFor(nameof(CanLaunchAgain))]
     [NotifyCanExecuteChangedFor(nameof(CancelLaunchCommand), nameof(LaunchAgainCommand))]
     public partial bool IsPreparing { get; private set; }
+
+    /// <summary>The download's progress from 0 to 1; 0 when unknown.</summary>
+    [ObservableProperty]
+    public partial double DownloadValue { get; private set; }
+
+    /// <summary>True unless a download with a known size is running.</summary>
+    [ObservableProperty]
+    public partial bool IsDownloadIndeterminate { get; private set; } = true;
+
+    /// <summary>The log has at least one line; until then the page says where the game's output will appear.</summary>
+    public bool HasLog => Log.Count > 0;
 
     public bool CanLaunchAgain => !IsRunning && !IsPreparing;
 
@@ -186,6 +198,8 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
             // Only now, so Launch again cannot start while an attach is still running.
             _launching = null;
             IsPreparing = false;
+            DownloadValue = 0;
+            IsDownloadIndeterminate = true;
         }
 
         _playing?.Process.Dispose();
@@ -207,11 +221,15 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
         if (value.Download == LaunchDownload.Waiting)
         {
             StatusText = "Waiting for another launch to finish its downloads…";
+            DownloadValue = 0;
+            IsDownloadIndeterminate = true;
             return;
         }
 
         var what = value.Download == LaunchDownload.Lavapipe ? "Lavapipe" : "fonts";
         var received = value.Progress.ReceivedBytes >> 20;
+        IsDownloadIndeterminate = value.Progress.TotalBytes is not > 0;
+        DownloadValue = value.Progress.TotalBytes is > 0 and var known ? (double)value.Progress.ReceivedBytes / known : 0;
         StatusText = value.Progress.TotalBytes is { } total
             ? string.Create(CultureInfo.InvariantCulture, $"Downloading {what}… {received} MB / {total >> 20} MB")
             : string.Create(CultureInfo.InvariantCulture, $"Downloading {what}… {received} MB");
