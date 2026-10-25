@@ -87,7 +87,7 @@ public sealed class FocusTests(HeadlessSession session, GalleryFixture gallery) 
         Assert.True(expected == actual.Text, $"{page}: expected focus on \"{expected}\", got {actual.Type} \"{actual.Text}\".");
     }
 
-    private static (string Type, string? Text) Describe(object? element) => element switch
+    internal static (string Type, string? Text) Describe(object? element) => element switch
     {
         Button { Content: string content } => ("Button", content),
         TextBox box => ("TextBox", AutomationProperties.GetName(box)),

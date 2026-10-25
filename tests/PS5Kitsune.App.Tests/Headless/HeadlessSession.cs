@@ -29,6 +29,9 @@ public sealed class HeadlessSession
     public Task RunAsync(Action action) => _session.Dispatch(action, TestContext.Current.CancellationToken);
 
     public Task<T> RunAsync<T>(Func<T> action) => _session.Dispatch(action, TestContext.Current.CancellationToken);
+
+    /// <summary>Runs async UI work on the UI thread; its continuations stay there.</summary>
+    public Task<T> RunUiAsync<T>(Func<Task<T>> action) => _session.Dispatch(action, TestContext.Current.CancellationToken);
 }
 
 [CollectionDefinition("Headless")]
