@@ -310,7 +310,7 @@ The launcher searches the log and error output for known patterns, then shows an
 
 | Rule id | Pattern in the log (or exit code) | Explanation | Action |
 | --- | --- | --- | --- |
-| `libs-missing-dll` | `Failed to load module: <module>` and `GetLastError: 126 ` | **A library could not load.** {module} needs a DLL that is missing from the game's libs folder. | Repair libs |
+| `libs-missing-dll` | `Failed to load module: <module>` and `GetLastError: 126 ` | **A library could not load.** {module} needs a DLL that is missing from the game's libs folder or from Windows. | Repair libs |
 | `libs-not-dll` | `Failed to load module: <module>` and `GetLastError: 193 ` | **A file in libs is not a Windows DLL.** {module} is not a Windows library. Repair libs copies the folder again from the AnyPS5 install. | Repair libs |
 | `commit-limit` | Any of `replace guest placeholder with resident direct memory`, `commit direct memory pages`, `keep unmapped direct memory`, `create direct memory backing` | **Windows ran out of memory to commit.** The page file plus RAM is too small for this game. Enlarge the page file, or close other programs such as the browser. | Open page file settings |
 | `gpu-features` | `buffer device address and shaderInt64 are required` | **No GPU here supports AnyPS5.** The graphics driver lacks buffer device address or shaderInt64. CPU rendering works on any PC, more slowly. | Turn on CPU rendering |

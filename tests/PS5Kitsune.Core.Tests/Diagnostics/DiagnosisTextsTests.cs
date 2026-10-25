@@ -14,7 +14,7 @@ public sealed class DiagnosisTextsTests
         var text = DiagnosisTexts.For(Of(DiagnosisIds.LibsMissingDll, "module", "C:\\G\\libs\\libSceAudioOut.prx"), new GameSettings());
 
         Assert.Equal("A library could not load", text.Title);
-        Assert.Equal("libSceAudioOut.prx needs a DLL that is missing from the game's libs folder.", text.Explanation);
+        Assert.Equal("libSceAudioOut.prx needs a DLL that is missing from the game's libs folder or from Windows.", text.Explanation);
         Assert.Equal(DiagnosisAction.RepairLibs, text.Action);
         Assert.Equal("Repair libs", text.ActionText);
     }
@@ -89,7 +89,7 @@ public sealed class DiagnosisTextsTests
 
         Assert.Equal(
             [
-                "A library could not load: libSceAudioOut.prx needs a DLL that is missing from the game's libs folder.",
+                "A library could not load: libSceAudioOut.prx needs a DLL that is missing from the game's libs folder or from Windows.",
                 "Line 2: the line",
                 "Fix: launch DOOM from the app; when it stops, choose Repair libs.",
             ],

@@ -36,7 +36,7 @@ public static class DiagnosisTexts
         return diagnosis.Id switch
         {
             DiagnosisIds.LibsMissingDll => new(
-                "A library could not load", $"{module} needs a DLL that is missing from the game's libs folder.", DiagnosisAction.RepairLibs, "Repair libs"),
+                "A library could not load", $"{module} needs a DLL that is missing from the game's libs folder or from Windows.", DiagnosisAction.RepairLibs, "Repair libs"),
             DiagnosisIds.LibsNotDll => new(
                 "A file in libs is not a Windows DLL",
                 $"{module} is not a Windows library. Repair libs copies the folder again from the AnyPS5 install.",
