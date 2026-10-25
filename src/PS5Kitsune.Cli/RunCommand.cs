@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.Cli;
@@ -43,6 +44,16 @@ internal static class RunCommand
                 var exitCode = await exit;
                 player.Forget(playing);
                 logger.GameExited(record.Name, exitCode);
+                // The exit is seen: it goes to the log, then the log is searched. Ctrl+C below saw no exit and writes nothing.
+                var diagnosis = await services.GetRequiredService<CrashDiagnoser>().FinishAsync(launched.LogFile, exitCode, stopped: false, CancellationToken.None);
+                if (diagnosis is not null)
+                {
+                    foreach (var line in DiagnosisTexts.Lines(diagnosis, record.Name, record.TitleId))
+                    {
+                        logger.DiagnosisLine(line);
+                    }
+                }
+
                 return exitCode;
             }
             catch (OperationCanceledException)

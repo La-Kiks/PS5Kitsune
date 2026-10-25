@@ -135,4 +135,13 @@ internal static partial class CliLog
 
     [LoggerMessage(Level = LogLevel.Information, Message = "{Line}")]
     public static partial void SettingsLine(this ILogger logger, string line);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "{Line}")]
+    public static partial void DiagnosisLine(this ILogger logger, string line);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "No known error in {Log}.")]
+    public static partial void NoKnownError(this ILogger logger, string log);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "{Name} has no log yet. Launch it first.")]
+    public static partial void NoLogYet(this ILogger logger, string name);
 }
