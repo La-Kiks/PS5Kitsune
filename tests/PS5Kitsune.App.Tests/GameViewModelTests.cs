@@ -13,11 +13,12 @@ public sealed class GameViewModelTests : IDisposable
     private readonly TestLibrary _library = new();
     private readonly Navigator _navigator = new();
 
-    private async Task<(GameViewModel Page, FakeLaunchedGame Process)> LaunchAsync(bool firstLaunch = true)
+    private async Task<(GameViewModel Page, FakeLaunchedGame Process)> LaunchAsync(bool firstLaunch = true, bool diagnose = false)
     {
         await _library.AddAsync("PPSA99666", "DOOM");
         var playing = await _library.Player.LaunchAsync("PPSA99666", TestContext.Current.CancellationToken);
-        var page = new GameViewModel(playing, firstLaunch, _library.Player, _library.Platform, new InlineDispatcher(), _navigator, new FakePages());
+        var page = new GameViewModel(
+            playing, firstLaunch, _library.Player, _library.Platform, new InlineDispatcher(), _navigator, new FakePages(), null, diagnose ? _library.Diagnosis() : null);
         return (page, (FakeLaunchedGame)playing.Process);
     }
 
@@ -394,6 +395,61 @@ public sealed class GameViewModelTests : IDisposable
         Assert.Equal("Downloading fonts… 34 MB", page.StatusText);
         page.CancelLaunchCommand.Execute(null);
         await page.Launching;
+    }
+
+    [Fact]
+    public async Task An_exit_with_a_known_error_shows_its_diagnosis_and_writes_the_exit_line()
+    {
+        var (page, process) = await LaunchAsync(diagnose: true);
+        await File.AppendAllTextAsync(process.LogFile, "Vulkan: buffer device address and shaderInt64 are required\n", TestContext.Current.CancellationToken);
+        process.Exit(1);
+
+        page.OnNavigatedTo();
+        await FinishedAsync(page);
+
+        Assert.Equal("No GPU here supports AnyPS5", page.Diagnosis?.Title);
+        Assert.Equal("Exited with code 1", page.StatusText);
+        Assert.Equal("[ps5kitsune] exited with code 1 (0x00000001)", (await File.ReadAllLinesAsync(process.LogFile, TestContext.Current.CancellationToken))[^1]);
+    }
+
+    [Fact]
+    public async Task A_clean_exit_shows_no_diagnosis()
+    {
+        var (page, process) = await LaunchAsync(diagnose: true);
+        process.Exit(0);
+
+        page.OnNavigatedTo();
+        await FinishedAsync(page);
+
+        Assert.Null(page.Diagnosis);
+    }
+
+    [Fact]
+    public async Task A_game_ended_with_stop_is_not_diagnosed()
+    {
+        var (page, process) = await LaunchAsync(diagnose: true);
+        await File.AppendAllTextAsync(process.LogFile, "Vulkan: buffer device address and shaderInt64 are required\n", TestContext.Current.CancellationToken);
+        page.OnNavigatedTo();
+
+        await page.StopCommand.ExecuteAsync(null);
+        await FinishedAsync(page);
+
+        Assert.Null(page.Diagnosis);
+        Assert.Equal("[ps5kitsune] stopped by the user (exit code 1)", (await File.ReadAllLinesAsync(process.LogFile, TestContext.Current.CancellationToken))[^1]);
+    }
+
+    [Fact]
+    public async Task Launch_again_hides_the_diagnosis()
+    {
+        var (page, process) = await LaunchAsync(diagnose: true);
+        process.Exit(1);
+        page.OnNavigatedTo();
+        await FinishedAsync(page);
+        Assert.NotNull(page.Diagnosis);
+
+        await page.LaunchAgainCommand.ExecuteAsync(null);
+
+        Assert.Null(page.Diagnosis);
     }
 
     public void Dispose() => _library.Dispose();

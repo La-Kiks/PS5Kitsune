@@ -14,6 +14,20 @@
                  Foreground="#9D5D00" TextWrapping="Wrap" />
       <TextBlock Text="{Binding Message}" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}"
                  Foreground="#C42B1C" TextWrapping="Wrap" />
+      <Border IsVisible="{Binding Diagnosis, Converter={x:Static ObjectConverters.IsNotNull}}"
+              Padding="10" CornerRadius="4" BorderThickness="1" BorderBrush="#C42B1C">
+        <StackPanel DataContext="{Binding Diagnosis}" x:DataType="vm:DiagnosisViewModel" Spacing="6">
+          <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding LineText}" IsVisible="{Binding LineText, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     FontFamily="Cascadia Mono,Consolas,monospace" FontSize="12" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="{Binding ActionText}" Command="{Binding FixCommand}" IsVisible="{Binding HasAction}" />
+            <TextBlock Text="{Binding Result}" IsVisible="{Binding Result, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       VerticalAlignment="Center" TextWrapping="Wrap" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
     </StackPanel>
 
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">

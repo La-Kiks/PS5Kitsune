@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.Views;
@@ -33,6 +34,12 @@ public sealed class AvaloniaDialogService(Func<Window?> owner) : IDialogService
         }
 
         return await new ConfirmWindow(title, message, confirmText).ShowDialog<bool>(window).ConfigureAwait(true);
+    }
+
+    public async Task CopyTextAsync(string text)
+    {
+        var clipboard = owner()?.Clipboard ?? throw new InvalidOperationException("There is no window to copy from.");
+        await clipboard.SetTextAsync(text).ConfigureAwait(true);
     }
 
     public async Task<string?> PickFileAsync(string title, string extension)

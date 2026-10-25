@@ -11,4 +11,7 @@ public interface IDialogService
 
     /// <returns>True when the user confirms.</returns>
     Task<bool> ConfirmAsync(string title, string message, string confirmText);
+
+    /// <exception cref="InvalidOperationException">There is no window, so no clipboard.</exception>
+    Task CopyTextAsync(string text);
 }
