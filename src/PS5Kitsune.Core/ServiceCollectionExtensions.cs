@@ -70,6 +70,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<GamePlayer>();
         services.AddSingleton<GameCleaner>();
         services.AddSingleton<CrashDiagnoser>();
+        services.AddSingleton<LibsRepair>();
+        services.AddSingleton<CrashReporter>();
         services.AddSingleton<GameReconverter>();
         services.AddSingleton<IGameReconverter>(provider => provider.GetRequiredService<GameReconverter>());
 

@@ -296,5 +296,27 @@ public sealed class GamePlayerTests : IDisposable
         await Assert.ThrowsAsync<GameRunningException>(() => _player.SaveSettingsAsync(TestGames.TitleId, new GameSettings(), TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task Updating_settings_changes_what_game_json_holds_now()
+    {
+        await AddDoomAsync();
+        await _player.SaveSettingsAsync(TestGames.TitleId, new GameSettings { Language = 5, Overlay = true }, TestContext.Current.CancellationToken);
+
+        var saved = await _player.UpdateSettingsAsync(TestGames.TitleId, settings => settings with { Language = 1 }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new GameSettings { Overlay = true }, saved.Settings);
+        Assert.Equal(new GameSettings { Overlay = true }, _library.Find(TestGames.TitleId).Record.Settings);
+    }
+
+    [Fact]
+    public async Task Updating_settings_refuses_a_running_game()
+    {
+        await AddDoomAsync();
+        await LaunchAsync();
+
+        await Assert.ThrowsAsync<GameRunningException>(
+            () => _player.UpdateSettingsAsync(TestGames.TitleId, settings => settings with { Lavapipe = true }, TestContext.Current.CancellationToken));
+    }
+
     public void Dispose() => _temp.Dispose();
 }
