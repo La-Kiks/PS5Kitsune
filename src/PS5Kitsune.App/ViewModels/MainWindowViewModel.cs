@@ -114,10 +114,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigate))]
-    private Task GoHomeAsync() => LeaveAndShowAsync(_pages.Home);
+    private Task GoHomeAsync() => CurrentSection == NavSection.Home ? Task.CompletedTask : LeaveAndShowAsync(_pages.Home);
 
     [RelayCommand(CanExecute = nameof(CanNavigate))]
-    private Task GoLibraryAsync() => LeaveAndShowAsync(_pages.Library);
+    private Task GoLibraryAsync() => CurrentSection == NavSection.Library ? Task.CompletedTask : LeaveAndShowAsync(_pages.Library);
 
     /// <summary>Leaves every page in the stack, current first, as their Back would; a page may keep the user there.</summary>
     private async Task LeaveAndShowAsync(Func<object> target)

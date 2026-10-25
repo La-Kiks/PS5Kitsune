@@ -109,6 +109,38 @@ public sealed partial class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Clicking_Home_on_the_Home_page_does_nothing()
+    {
+        var below = new FakeLeavable();
+        var home = new HomeViewModel(_sessions, new AppSettingsStore(_temp.Combine("settings")), _dialogs, _navigator, new FakePages(), new TestPlatform());
+        _navigator.GoTo(below);
+        _navigator.GoTo(home);
+
+        await _viewModel.GoHomeCommand.ExecuteAsync(null);
+
+        Assert.False(below.Left);
+        Assert.Same(home, _navigator.CurrentPage);
+        Assert.Equal(2, _navigator.Pages.Count());
+    }
+
+    [Fact]
+    public async Task Clicking_Library_on_the_Library_page_does_nothing()
+    {
+        using var library = new TestLibrary();
+        var below = new FakeLeavable();
+        var page = new LibraryViewModel(library.Player, library.Cleaner, library.Running, library.Installer, library.Platform, library.Dialogs, _navigator, new FakePages());
+        _navigator.GoTo(below);
+        _navigator.GoTo(page);
+
+        await _viewModel.GoLibraryCommand.ExecuteAsync(null);
+
+        Assert.False(below.Left);
+        Assert.Same(page, _navigator.CurrentPage);
+        Assert.Equal(2, _navigator.Pages.Count());
+        await page.Refreshing;
+    }
+
+    [Fact]
     public async Task Choosing_a_theme_applies_and_saves_it()
     {
         Assert.True(_viewModel.IsSystemTheme);
