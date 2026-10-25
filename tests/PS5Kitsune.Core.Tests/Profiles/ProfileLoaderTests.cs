@@ -318,12 +318,33 @@ public sealed class ProfileLoaderTests
     [InlineData("""{ "id": "gpu-features", "log": [ "(unclosed" ] }""")]
     [InlineData("""{ "id": "cpu-too-old", "exitCodes": [ "3221225501" ] }""")]
     [InlineData("""{ "id": "gpu-features", "log": [ "x" ], "match": "most" }""")]
+    [InlineData("""{ "id": "gpu-features", "log": null }""")]
+    [InlineData("""{ "id": "gpu-features", "log": [ null ] }""")]
+    [InlineData("""{ "id": "cpu-too-old", "exitCodes": [ null ] }""")]
+    [InlineData("""{ "id": "cpu-too-old", "exitCodes": [ "0x" ] }""")]
+    [InlineData("""{ "id": "cpu-too-old", "exitCodes": [ "0x1FFFFFFFF" ] }""")]
+    [InlineData("""{ "id": "gpu-features", "log": [ "x" ], "captures": null }""")]
+    [InlineData("null")]
     public void Rejects_an_invalid_diagnostics_rule(string rule)
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
               "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "diagnostics": { "rules": [ {{rule}} ] }
+            }
+            """));
+    }
+
+    [Theory]
+    [InlineData("""null""")]
+    [InlineData("""{ "rules": null }""")]
+    [InlineData("""{ "reportUrl": "game-bring-up", "rules": [] }""")]
+    public void Rejects_a_null_or_relative_diagnostics_field(string diagnostics)
+    {
+        Assert.Throws<InvalidProfileException>(() => Load($$"""
+            {
+              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "diagnostics": {{diagnostics}}
             }
             """));
     }

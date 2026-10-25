@@ -16,22 +16,52 @@ internal static class DiagnosticRules
     public static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
 
     /// <exception cref="InvalidProfileException">
-    /// The report URL is not HTTPS, or a rule has no id, no condition, an unknown match mode, a regex that does not compile or an exit code that is not hex.
+    /// The diagnostics or a rule is null, the report URL is not an absolute HTTPS URL, or a rule has no id, no condition, an unknown match mode,
+    /// a regex that does not compile or an exit code that is not hex.
     /// </exception>
     public static IReadOnlyList<CompiledRule> Compile(string profileId, ProfileDiagnostics diagnostics)
     {
-        ArgumentNullException.ThrowIfNull(diagnostics);
-        if (diagnostics.ReportUrl is { } url && url.Scheme != Uri.UriSchemeHttps)
+        if (diagnostics is null)
         {
-            throw new InvalidProfileException($"Profile {profileId}: diagnostics.reportUrl must use HTTPS.");
+            throw new InvalidProfileException($"Profile {profileId}: diagnostics must be an object.");
+        }
+
+        if (diagnostics.ReportUrl is { } url && (!url.IsAbsoluteUri || url.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidProfileException($"Profile {profileId}: diagnostics.reportUrl must be an absolute HTTPS URL.");
+        }
+
+        if (diagnostics.Rules is null)
+        {
+            throw new InvalidProfileException($"Profile {profileId}: diagnostics.rules must be a list.");
         }
 
         var compiled = new List<CompiledRule>();
         foreach (var rule in diagnostics.Rules)
         {
+            if (rule is null)
+            {
+                throw new InvalidProfileException($"Profile {profileId}: a diagnostics rule is null.");
+            }
+
             if (string.IsNullOrWhiteSpace(rule.Id))
             {
                 throw new InvalidProfileException($"Profile {profileId}: a diagnostics rule has no id.");
+            }
+
+            if (rule.Log is null || rule.Log.Any(pattern => pattern is null))
+            {
+                throw new InvalidProfileException($"Profile {profileId}: diagnostics rule {rule.Id} has a null log pattern or list.");
+            }
+
+            if (rule.ExitCodes is null || rule.ExitCodes.Any(code => code is null))
+            {
+                throw new InvalidProfileException($"Profile {profileId}: diagnostics rule {rule.Id} has a null exit code or list.");
+            }
+
+            if (rule.Captures is null)
+            {
+                throw new InvalidProfileException($"Profile {profileId}: diagnostics rule {rule.Id} has null captures.");
             }
 
             if (rule.Log.Count == 0 && rule.ExitCodes.Count == 0)
