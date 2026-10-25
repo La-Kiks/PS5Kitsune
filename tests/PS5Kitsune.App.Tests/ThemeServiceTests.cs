@@ -29,12 +29,32 @@ public sealed class ThemeServiceTests : IDisposable
     {
         // A file where the settings folder should be: the save cannot create it.
         await File.WriteAllTextAsync(_temp.Combine("settings"), "x", TestContext.Current.CancellationToken);
-        var service = new ThemeService(new AppSettingsStore(_temp.Combine("settings")), _applied.Add);
+        var logger = new ListLogger();
+        var service = new ThemeService(new AppSettingsStore(_temp.Combine("settings")), _applied.Add, () => logger);
 
         await service.ChangeAsync(AppTheme.Dark);
 
         Assert.Equal([AppTheme.Dark], _applied);
         Assert.Equal(AppTheme.Dark, service.Current);
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, entry.Level);
+        Assert.Equal("Could not save the theme.", entry.Message);
+    }
+
+    [Fact]
+    public async Task Changes_started_back_to_back_are_saved_one_at_a_time_and_the_last_one_wins()
+    {
+        var store = new AppSettingsStore(_temp.Combine("settings"));
+        await store.SaveAsync(new AppSettings(AppSettings.CurrentSchemaVersion, _temp.Combine("root")), TestContext.Current.CancellationToken);
+        var logger = new ListLogger();
+        var service = new ThemeService(store, _applied.Add, () => logger);
+
+        var first = service.ChangeAsync(AppTheme.Light);
+        var second = service.ChangeAsync(AppTheme.Dark);
+        await Task.WhenAll(first, second);
+
+        Assert.Empty(logger.Entries);
+        Assert.Equal(AppTheme.Dark, store.Load().Settings.Theme);
     }
 
     [Theory]
