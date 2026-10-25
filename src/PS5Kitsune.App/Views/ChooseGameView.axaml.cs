@@ -1,11 +1,10 @@
-using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using PS5Kitsune.App.ViewModels;
 
 namespace PS5Kitsune.App.Views;
 
-public sealed partial class ChooseGameView : UserControl
+public sealed partial class ChooseGameView : PageView
 {
     public ChooseGameView()
     {

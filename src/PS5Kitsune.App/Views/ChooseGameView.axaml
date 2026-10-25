@@ -1,30 +1,34 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:PS5Kitsune.App.ViewModels"
-             x:Class="PS5Kitsune.App.Views.ChooseGameView"
-             x:DataType="vm:ChooseGameViewModel"
-             DragDrop.AllowDrop="True">
+<views:PageView xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:PS5Kitsune.App.ViewModels"
+                xmlns:views="using:PS5Kitsune.App.Views"
+                xmlns:c="using:PS5Kitsune.App.Controls"
+                x:Class="PS5Kitsune.App.Views.ChooseGameView"
+                x:DataType="vm:ChooseGameViewModel"
+                DragDrop.AllowDrop="True">
   <DockPanel>
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left" Margin="0,12,0,0">
-      <Button Content="Back" Command="{Binding BackCommand}" />
-    </StackPanel>
+    <Border DockPanel.Dock="Bottom" Classes="footer">
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left">
+        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
+      </StackPanel>
+    </Border>
 
     <StackPanel Spacing="16">
-      <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding Instructions}" TextWrapping="Wrap" Opacity="0.85" />
-      <Border BorderThickness="2" BorderBrush="#40808080" CornerRadius="6" Padding="24" MinHeight="120">
+      <TextBlock Text="{Binding Title}" Classes="h1" />
+      <TextBlock Text="{Binding Instructions}" TextWrapping="Wrap" />
+      <Border BorderThickness="2" BorderBrush="{DynamicResource Border.Strong}" CornerRadius="8" Padding="24" MinHeight="120">
         <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <Button Content="Choose a folder…" Command="{Binding ChooseFolderCommand}" />
+          <Button Content="Choose a folder…" Command="{Binding ChooseFolderCommand}" c:InitialFocus.Rank="1" />
           <Button Content="Choose a .zip…" Command="{Binding ChooseZipCommand}" />
         </StackPanel>
       </Border>
       <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsPreparing}">
         <TextBlock Text="Reading the game…" VerticalAlignment="Center" />
-        <ProgressBar IsIndeterminate="True" Width="80" />
+        <ProgressBar IsIndeterminate="True" Width="80" AutomationProperties.Name="Reading the game" />
         <Button Content="Cancel" Command="{Binding CancelCommand}" />
       </StackPanel>
-      <TextBlock Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 Foreground="#C42B1C" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding Error}" Classes="error" AutomationProperties.LiveSetting="Assertive"
+                 IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
     </StackPanel>
   </DockPanel>
-</UserControl>
+</views:PageView>

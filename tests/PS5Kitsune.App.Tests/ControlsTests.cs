@@ -3,6 +3,12 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using PS5Kitsune.App.Navigation;
+using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.App.Views;
+using PS5Kitsune.Core.AnyPS5;
+using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.App.Controls;
 using PS5Kitsune.App.Converters;
 using PS5Kitsune.App.Tests.Headless;
@@ -74,6 +80,34 @@ public sealed class ControlsTests(HeadlessSession session)
     [InlineData(null, StatusKind.Neutral)]
     public void Check_statuses_map_to_chip_kinds(CheckStatus? status, StatusKind kind) =>
         Assert.Equal(kind, CheckStatusKindConverter.Instance.Convert(status, typeof(StatusKind), null, System.Globalization.CultureInfo.InvariantCulture));
+
+    [Fact]
+    public Task Mode_cards_are_radio_buttons_the_arrow_keys_move_between() => session.RunAsync(() =>
+    {
+        var profile = TestSessions.Profile with
+        {
+            Build = new ProfileBuild(new Uri("https://github.com/boykopovar/AnyPS5.git"), "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"),
+            Checks = new CheckThresholds { BuildMinFreeDiskGiB = 10 },
+        };
+        var viewModel = new ModeViewModel(profile, new FakeInstaller(), new Navigator(), new FakePages());
+        var view = new ModeView { DataContext = viewModel };
+        var window = Show(view);
+        try
+        {
+            var cards = view.GetVisualDescendants().OfType<RadioButton>().ToList();
+            Assert.Equal(2, cards.Count);
+            cards[0].Focus(NavigationMethod.Tab);
+
+            window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
+
+            Assert.Equal(AnyPS5Mode.Build, viewModel.SelectedMode);
+            Assert.True(cards[1].IsChecked);
+        }
+        finally
+        {
+            window.Close();
+        }
+    });
 
     private static Window Show(Control content)
     {

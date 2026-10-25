@@ -62,6 +62,32 @@ public sealed class ThemeTests(HeadlessSession session)
         Assert.Equal("Inter", name);
     }
 
+    [Fact]
+    public void Views_hold_no_color_literals()
+    {
+        var views = Path.Combine(RepositoryRoot(), "src", "PS5Kitsune.App", "Views");
+        var literal = new System.Text.RegularExpressions.Regex("\"#[0-9A-Fa-f]{3,8}\"|\"(White|Black)\"");
+
+        var offenders = Directory.EnumerateFiles(views, "*.axaml")
+            .SelectMany(file => File.ReadLines(file).Select((line, index) => (file, line, index)))
+            .Where(entry => literal.IsMatch(entry.line))
+            .Select(entry => $"{Path.GetFileName(entry.file)}:{entry.index + 1}: {entry.line.Trim()}")
+            .ToList();
+
+        Assert.Empty(offenders);
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PS5Kitsune.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("PS5Kitsune.slnx not found above the test folder.");
+    }
+
     private static Color Color(string key, ThemeVariant theme) =>
         Application.Current!.TryGetResource(key, theme, out var value) && value is ISolidColorBrush brush
             ? brush.Color

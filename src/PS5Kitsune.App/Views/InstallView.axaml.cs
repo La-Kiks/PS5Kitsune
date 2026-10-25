@@ -1,9 +1,8 @@
-using Avalonia.Controls;
 using PS5Kitsune.App.ViewModels;
 
 namespace PS5Kitsune.App.Views;
 
-public sealed partial class InstallView : UserControl
+public sealed partial class InstallView : PageView
 {
     public InstallView() => InitializeComponent();
 

@@ -28,12 +28,16 @@ public sealed partial class SystemCheckViewModel(ISystemChecker checker, AnyPS5M
     /// <summary>Null while checking, before the first check and after a cancelled one.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BannerStatus))]
+    [NotifyPropertyChangedFor(nameof(BannerLabel))]
     [NotifyPropertyChangedFor(nameof(CanContinue))]
     [NotifyCanExecuteChangedFor(nameof(ContinueCommand))]
     public partial CheckStatus? Overall { get; private set; }
 
     /// <summary>Colors the verdict banner: <see cref="Overall"/> with Info shown as Ok, because cpu-vendor is always Info.</summary>
     public CheckStatus? BannerStatus => Overall == CheckStatus.Info ? CheckStatus.Ok : Overall;
+
+    /// <summary>The banner chip's word: "Checking" while there is no status.</summary>
+    public string BannerLabel => BannerStatus is { } status ? CheckRowViewModel.Label(status) : "Checking";
 
     /// <summary>Warnings do not block: the banner already shows them.</summary>
     public bool CanContinue => !IsChecking && Overall is { } overall && overall != CheckStatus.Blocking;

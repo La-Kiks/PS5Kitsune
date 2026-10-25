@@ -61,6 +61,18 @@ public sealed class SystemCheckViewModelTests
     }
 
     [Fact]
+    public async Task The_banner_label_follows_the_banner_status()
+    {
+        var report = new SystemCheckReport([new CheckResult("a", "A", CheckStatus.Info, "s")], Report().Vulkan);
+        var viewModel = Create(_ => Task.FromResult(report));
+        Assert.Equal("Checking", viewModel.BannerLabel);
+
+        await viewModel.CheckCommand.ExecuteAsync(null);
+
+        Assert.Equal("OK", viewModel.BannerLabel);
+    }
+
+    [Fact]
     public async Task Is_checking_until_the_checker_answers()
     {
         var answer = new TaskCompletionSource<SystemCheckReport>();

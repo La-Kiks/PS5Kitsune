@@ -79,9 +79,30 @@ public sealed partial class ModeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsBuildSelected))]
     public partial AnyPS5Mode SelectedMode { get; private set; }
 
-    public bool IsReleaseSelected => SelectedMode == AnyPS5Mode.Release;
+    /// <summary>Bound two-way to the release card: checking it selects Release; unchecking is ignored (the other card's check selects).</summary>
+    public bool IsReleaseSelected
+    {
+        get => SelectedMode == AnyPS5Mode.Release;
+        set
+        {
+            if (value)
+            {
+                SelectedMode = AnyPS5Mode.Release;
+            }
+        }
+    }
 
-    public bool IsBuildSelected => SelectedMode == AnyPS5Mode.Build;
+    public bool IsBuildSelected
+    {
+        get => SelectedMode == AnyPS5Mode.Build;
+        set
+        {
+            if (value && CanBuild)
+            {
+                SelectedMode = AnyPS5Mode.Build;
+            }
+        }
+    }
 
     /// <summary>Why the last "Use this install" failed; null otherwise, and cleared when the selected card changes.</summary>
     [ObservableProperty]

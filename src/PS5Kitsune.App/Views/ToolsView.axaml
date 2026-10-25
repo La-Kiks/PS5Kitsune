@@ -1,47 +1,46 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:PS5Kitsune.App.ViewModels"
-             x:Class="PS5Kitsune.App.Views.ToolsView"
-             x:DataType="vm:ToolsViewModel">
+<views:PageView xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:vm="using:PS5Kitsune.App.ViewModels"
+                xmlns:views="using:PS5Kitsune.App.Views"
+                xmlns:c="using:PS5Kitsune.App.Controls"
+                x:Class="PS5Kitsune.App.Views.ToolsView"
+                x:DataType="vm:ToolsViewModel">
   <DockPanel>
-    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
-      <Button Content="Back" Command="{Binding BackCommand}" />
-      <Button Content="{Binding ContinueText}" Classes="accent" Command="{Binding ContinueCommand}" />
-    </StackPanel>
+    <Border DockPanel.Dock="Bottom" Classes="footer">
+      <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+        <Button Content="Back" Command="{Binding BackCommand}" IsCancel="True" />
+        <Button Content="{Binding ContinueText}" Classes="accent" Command="{Binding ContinueCommand}" IsDefault="True" c:InitialFocus.Rank="1" />
+      </StackPanel>
+    </Border>
 
     <StackPanel Spacing="16" MaxWidth="680" HorizontalAlignment="Left">
-      <TextBlock Text="Build tools" FontSize="20" FontWeight="SemiBold" />
-      <TextBlock Text="Build mode compiles AnyPS5 with portable tools kept in the data folder. Nothing is installed system-wide."
-                 TextWrapping="Wrap" Opacity="0.85" />
-      <ItemsControl ItemsSource="{Binding Tools}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:ToolRowViewModel">
-            <Grid ColumnDefinitions="90,*,Auto" ColumnSpacing="12" Margin="0,6">
-              <Border CornerRadius="4" Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center"
-                      Classes.installed="{Binding IsInstalled}">
-                <Border.Styles>
-                  <Style Selector="Border">
-                    <Setter Property="Background" Value="#616161" />
-                  </Style>
-                  <Style Selector="Border.installed">
-                    <Setter Property="Background" Value="#2E7D32" />
-                  </Style>
-                </Border.Styles>
-                <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="12" FontWeight="SemiBold" />
-              </Border>
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Version}" Opacity="0.7" />
-              </StackPanel>
-              <TextBlock Grid.Column="2" Text="{Binding SizeText}" Opacity="0.85" VerticalAlignment="Center" />
-            </Grid>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
+      <TextBlock Text="Build tools" Classes="h1" />
+      <TextBlock Text="Build mode compiles AnyPS5 with portable tools kept in the data folder. Nothing is installed system-wide." />
+      <Border Classes="card">
+        <ItemsControl ItemsSource="{Binding Tools}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ToolRowViewModel">
+              <Grid ColumnDefinitions="90,*,Auto" ColumnSpacing="12">
+                <c:StatusChip Kind="{Binding Kind}" Text="{Binding StatusText}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Version}" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
       <StackPanel Spacing="4">
         <TextBlock Text="{Binding DownloadText}" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding DiskText}" Opacity="0.85" />
+        <TextBlock Text="{Binding DiskText}" Classes="caption" />
       </StackPanel>
     </StackPanel>
   </DockPanel>
-</UserControl>
+</views:PageView>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using PS5Kitsune.App.Controls;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Games;
@@ -50,6 +51,20 @@ public sealed partial class AddResultViewModel : ObservableObject
     public bool IsOrange => Verdict == AuditVerdict.Orange;
 
     public bool IsRed => Verdict == AuditVerdict.Red;
+
+    public StatusKind VerdictKind => Verdict switch
+    {
+        AuditVerdict.Green => StatusKind.Green,
+        AuditVerdict.Orange => StatusKind.Orange,
+        _ => StatusKind.Red,
+    };
+
+    public string VerdictLabel => Verdict switch
+    {
+        AuditVerdict.Green => "Green",
+        AuditVerdict.Orange => "Orange",
+        _ => "Red",
+    };
 
     public string VerdictText => Verdict switch
     {
