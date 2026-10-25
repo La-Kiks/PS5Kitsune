@@ -1,3 +1,4 @@
+using PS5Kitsune.App.Controls;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.AnyPS5;
@@ -23,6 +24,22 @@ public sealed class LibraryViewModelTests : IDisposable
     private static GameTileViewModel Tile(LibraryViewModel page, string name) => page.Games.Single(tile => tile.Name == name);
 
     private Task<PlayingGame> StartAsync(string titleId) => _library.Player.LaunchAsync(titleId, TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task A_tile_shows_one_status_running_first_then_reconvert_then_compatibility()
+    {
+        await _library.AddAsync("PPSA00001", "Alpha");
+        await _library.AddAsync("PPSA00004", "Delta", new ConversionInfo("test-profile", "build", "3fd1cc3", new string('3', 40), false));
+        await StartAsync("PPSA00001");
+
+        var page = await CreateAsync();
+
+        Assert.Equal(StatusKind.Running, Tile(page, "Alpha").Status);
+        Assert.Equal("Alpha, PPSA00001, Running", Tile(page, "Alpha").AutomationName);
+        Assert.Equal(StatusKind.Reconvert, Tile(page, "Delta").Status);
+        Assert.Equal("Needs reconvert", Tile(page, "Delta").StatusText);
+        Assert.Equal("Actions for Delta", Tile(page, "Delta").ActionsName);
+    }
 
     [Fact]
     public async Task Lists_the_games_last_played_first_with_their_badges()

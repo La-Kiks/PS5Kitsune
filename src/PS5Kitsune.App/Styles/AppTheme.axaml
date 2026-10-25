@@ -24,6 +24,12 @@
           <SolidColorBrush x:Key="Status.Red" Color="#B03A22" />
           <SolidColorBrush x:Key="Status.Reconvert" Color="#8A5A10" />
           <SolidColorBrush x:Key="Status.Running" Color="#3B6EA8" />
+          <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
+          <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="Surface.Page" Color="#FAF5EE" />
@@ -44,16 +50,16 @@
           <SolidColorBrush x:Key="Status.Red" Color="#B3261E" />
           <SolidColorBrush x:Key="Status.Reconvert" Color="#8A5300" />
           <SolidColorBrush x:Key="Status.Running" Color="#2D5F96" />
+          <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
+          <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
+          <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
+          <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
 
       <!-- Fluent's accent buttons: our accent with white text in both variants (Fluent's dark accent button uses black text). -->
-      <StaticResource x:Key="AccentButtonBackground" ResourceKey="Accent" />
-      <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="Accent.Hover" />
-      <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="Accent.Hover" />
-      <StaticResource x:Key="AccentButtonForeground" ResourceKey="OnAccent" />
-      <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="OnAccent" />
-      <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="OnAccent" />
 
       <CornerRadius x:Key="Radius.Small">4</CornerRadius>
       <CornerRadius x:Key="Radius.Medium">6</CornerRadius>
