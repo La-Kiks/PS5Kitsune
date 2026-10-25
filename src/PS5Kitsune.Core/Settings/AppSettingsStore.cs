@@ -24,7 +24,11 @@ public sealed class AppSettingsStore(string settingsDirectory)
 
             if (settings.SchemaVersion != AppSettings.CurrentSchemaVersion)
             {
-                return new AppSettingsLoad(AppSettings.Default, $"{FilePath} has schema version {settings.SchemaVersion}; using the default settings.", OtherSchema: true);
+                // Only a newer version may be another build's file worth keeping; 0 (no schemaVersion) or older is just unusable.
+                return new AppSettingsLoad(
+                    AppSettings.Default,
+                    $"{FilePath} has schema version {settings.SchemaVersion}; using the default settings.",
+                    OtherSchema: settings.SchemaVersion > AppSettings.CurrentSchemaVersion);
             }
 
             // A relative root would resolve against each process's own current directory.

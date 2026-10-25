@@ -133,6 +133,7 @@ public sealed class AppSettingsStoreTests : IDisposable
     [Theory]
     [InlineData("{ nope", AppTheme.System)]
     [InlineData("""{ "schemaVersion": 1, "dataRoot": "relative", "theme": "dark" }""", AppTheme.Dark)]
+    [InlineData("""{ "dataRoot": "relative" }""", AppTheme.System)]
     public async Task A_chosen_root_repairs_a_corrupt_file_or_an_invalid_root(string json, AppTheme theme)
     {
         Directory.CreateDirectory(_temp.Combine("settings"));
