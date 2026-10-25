@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 6 of 8 (add a game; 6a, add a game from the app, done; 6b, reconvert, in progress). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding a game is also possible from the app. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design; the next one is Linux). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
@@ -76,7 +76,7 @@ dotnet test --solution PS5Kitsune.slnx -c Release
 | `src/PS5Kitsune.Cli` | `ps5kitsune` command-line tool |
 | `src/PS5Kitsune.App` | Avalonia desktop app |
 | `tests/PS5Kitsune.Core.Tests` | Unit tests |
-| `tests/PS5Kitsune.App.Tests` | View model tests |
+| `tests/PS5Kitsune.App.Tests` | View model tests, and headless view tests (focus, keyboard, screenshots) |
 | `tests/PS5Kitsune.Platform.Windows.Tests` | Windows tests (skipped on Linux) |
 
 ## License
