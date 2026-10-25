@@ -6,6 +6,7 @@ using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.AnyPS5.Build;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Downloads;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.IO;
@@ -68,6 +69,7 @@ public static class ServiceCollectionExtensions
             provider.GetService<ILavapipe>(), provider.GetService<IFontPack>(), provider.GetRequiredService<ILogger<LaunchPreparation>>()));
         services.AddSingleton<GamePlayer>();
         services.AddSingleton<GameCleaner>();
+        services.AddSingleton<CrashDiagnoser>();
         services.AddSingleton<GameReconverter>();
         services.AddSingleton<IGameReconverter>(provider => provider.GetRequiredService<GameReconverter>());
 

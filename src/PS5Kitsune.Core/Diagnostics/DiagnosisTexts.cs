@@ -1,0 +1,112 @@
+using System.Globalization;
+
+namespace PS5Kitsune.Core.Diagnostics;
+
+/// <summary>What the Game page offers for a diagnosis. See the 7c spec, "Game page".</summary>
+public enum DiagnosisAction
+{
+    None,
+    RepairLibs,
+    OpenPageFileSettings,
+    TurnOnLavapipe,
+    OpenNvidiaDrivers,
+    OpenFolder,
+    ResetSetting,
+    Report,
+}
+
+/// <param name="ActionText">The button's text; null with <see cref="DiagnosisAction.None"/>.</param>
+public sealed record DiagnosisText(string Title, string Explanation, DiagnosisAction Action, string? ActionText);
+
+/// <summary>Each diagnosis id's title, explanation and action, shared by the app and the CLI.</summary>
+public static class DiagnosisTexts
+{
+    public const string NvidiaDriversUrl = "https://www.nvidia.com/en-us/drivers/";
+
+    private const string SettingTitle = "A setting has a value AnyPS5 refuses";
+
+    public static DiagnosisText For(Diagnosis diagnosis)
+    {
+        ArgumentNullException.ThrowIfNull(diagnosis);
+        var module = FileName(diagnosis.Capture("module")) ?? "A library";
+        return diagnosis.Id switch
+        {
+            DiagnosisIds.LibsMissingDll => new(
+                "A library could not load", $"{module} needs a DLL that is missing from the game's libs folder.", DiagnosisAction.RepairLibs, "Repair libs"),
+            DiagnosisIds.LibsNotDll => new(
+                "A file in libs is not a Windows DLL",
+                $"{module} is not a Windows library. Repair libs copies the folder again from the AnyPS5 install.",
+                DiagnosisAction.RepairLibs,
+                "Repair libs"),
+            DiagnosisIds.CommitLimit => new(
+                "Windows ran out of memory to commit",
+                "The page file plus RAM is too small for this game. Enlarge the page file, or close other programs such as the browser.",
+                DiagnosisAction.OpenPageFileSettings,
+                "Open page file settings"),
+            DiagnosisIds.GpuFeatures => new(
+                "No GPU here supports AnyPS5",
+                "The graphics driver lacks buffer device address or shaderInt64. CPU rendering works on any PC, more slowly.",
+                DiagnosisAction.TurnOnLavapipe,
+                "Turn on CPU rendering"),
+            DiagnosisIds.NvidiaShaderCompiler => new(
+                "Known NVIDIA driver crash",
+                "NVIDIA's shader compiler (nvgpucomp64.dll) crashed. Driver 610.47 is known to do this.",
+                DiagnosisAction.OpenNvidiaDrivers,
+                "Open NVIDIA drivers page"),
+            DiagnosisIds.CpuTooOld => new("This CPU is not supported", "The CPU lacks instructions AnyPS5 needs.", DiagnosisAction.None, null),
+            DiagnosisIds.ParamJson => new(
+                "The game's metadata is missing",
+                @"sce_sys\param.json is missing or damaged. Remove the game and add it again from its original folder.",
+                DiagnosisAction.OpenFolder,
+                "Open folder"),
+            DiagnosisIds.InvalidSetting => Setting(diagnosis.Capture("variable")),
+            DiagnosisIds.NotImplemented => new(
+                "AnyPS5 does not handle this game yet", "The game uses a feature AnyPS5 has not implemented.", DiagnosisAction.Report, "Report"),
+            _ => new(
+                "The game stopped with an error",
+                $"AnyPS5 stopped with an error it does not explain yet (exit code {Code(diagnosis.ExitCode)}).",
+                DiagnosisAction.Report,
+                "Report"),
+        };
+    }
+
+    /// <summary>What `run` and `diagnose` print: the title and explanation, the matched line, then the fix in words when there is one.</summary>
+    public static IReadOnlyList<string> Lines(Diagnosis diagnosis, string name, string titleId)
+    {
+        var text = For(diagnosis);
+        var lines = new List<string> { $"{text.Title}: {text.Explanation}" };
+        if (diagnosis.Line is { } line)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"Line {diagnosis.LineNumber}: {line}"));
+        }
+
+        var fix = text.Action switch
+        {
+            DiagnosisAction.RepairLibs or DiagnosisAction.TurnOnLavapipe or DiagnosisAction.ResetSetting or DiagnosisAction.OpenPageFileSettings =>
+                $"Fix: in the app, open {name} and choose {text.ActionText}.",
+            DiagnosisAction.OpenNvidiaDrivers => $"Fix: update the NVIDIA driver from {NvidiaDriversUrl}",
+            DiagnosisAction.OpenFolder => "Fix: remove the game and add it again from its original folder.",
+            DiagnosisAction.Report => $"Fix: run ps5kitsune diagnose {titleId} --report and paste the text in a new Game bring-up thread.",
+            _ => null,
+        };
+        if (fix is not null)
+        {
+            lines.Add(fix);
+        }
+
+        return lines;
+    }
+
+    private static DiagnosisText Setting(string? variable)
+    {
+        var explanation = $"{variable ?? "A setting"} has a value AnyPS5 refuses.";
+        return SettingVariables.Find(variable) is { } setting
+            ? new(SettingTitle, explanation, DiagnosisAction.ResetSetting, $"Reset {setting.Label}")
+            : new(SettingTitle, explanation, DiagnosisAction.None, null);
+    }
+
+    // The log names Windows paths; Path.GetFileName would not split them on Linux, where the tests also run.
+    private static string? FileName(string? path) => path?[(path.LastIndexOfAny(['\\', '/']) + 1)..];
+
+    private static string Code(uint? code) => code is { } value ? string.Create(CultureInfo.InvariantCulture, $"0x{value:X8}") : "unknown";
+}
