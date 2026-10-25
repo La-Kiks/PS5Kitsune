@@ -38,7 +38,7 @@ public sealed partial class CrashDiagnoser
         _rules = rules;
     }
 
-    /// <summary>Appends the exit line to the log, then diagnoses it unless the user stopped the game.</summary>
+    /// <summary>Appends the exit line to the log, then diagnoses it unless the user stopped the game (`stopped`, or a stopped line already in the log).</summary>
     public async Task<Diagnosis?> FinishAsync(string logPath, int exitCode, bool stopped, CancellationToken cancellationToken)
     {
         await AppendExitLineAsync(logPath, exitCode, stopped).ConfigureAwait(false);
@@ -76,7 +76,7 @@ public sealed partial class CrashDiagnoser
         }
     }
 
-    /// <param name="exitCode">The exit code; null to use the log's exit line, when it has one.</param>
+    /// <param name="exitCode">The exit code; null to use the log's exit line, when it has one. A "stopped by the user" line anywhere in the log wins over it.</param>
     /// <returns>
     /// The first rule met, in profile order; else "unexplained" for a non-zero exit code; else null (a zero exit code, which is not searched; an unknown one; or a game
     /// the user stopped). An unreadable log or a regex that times out is logged and gives null.
@@ -121,7 +121,7 @@ public sealed partial class CrashDiagnoser
             }
         }
 
-        if (exitCode is null && stoppedSeen)
+        if (stoppedSeen)
         {
             return null;
         }

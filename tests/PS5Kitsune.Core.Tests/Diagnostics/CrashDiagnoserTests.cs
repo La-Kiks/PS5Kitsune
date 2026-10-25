@@ -124,6 +124,14 @@ public sealed class CrashDiagnoserTests : IDisposable
     }
 
     [Fact]
+    public async Task A_stop_in_the_log_wins_even_when_an_exit_code_is_passed()
+    {
+        var log = Log("Vulkan: buffer device address and shaderInt64 are required\n" + ExitLines.Stopped(1) + "\n");
+
+        Assert.Null(await _diagnoser.DiagnoseAsync(log, 1, Token));
+    }
+
+    [Fact]
     public async Task A_stop_recorded_before_a_later_exit_line_still_wins()
     {
         var log = Log("Vulkan: buffer device address and shaderInt64 are required\n" + ExitLines.Stopped(1) + "\n" + ExitLines.Exited(1) + "\n");
