@@ -103,5 +103,18 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.NotNull(load.Problem);
     }
 
+    [Fact]
+    public async Task Updates_started_back_to_back_both_reach_the_file()
+    {
+        var store = Store;
+        var root = _temp.Combine("data");
+
+        var theme = store.UpdateAsync(settings => settings with { Theme = AppTheme.Dark }, TestContext.Current.CancellationToken);
+        var dataRoot = store.UpdateAsync(settings => settings with { DataRoot = root }, TestContext.Current.CancellationToken);
+        await Task.WhenAll(theme, dataRoot);
+
+        Assert.Equal(new AppSettings(AppSettings.CurrentSchemaVersion, root, AppTheme.Dark), store.Load().Settings);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

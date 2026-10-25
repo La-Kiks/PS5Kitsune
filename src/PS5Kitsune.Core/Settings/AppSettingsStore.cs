@@ -6,6 +6,9 @@ namespace PS5Kitsune.Core.Settings;
 /// <summary>Reads and writes settings.json in the platform's settings folder, outside the data root.</summary>
 public sealed class AppSettingsStore(string settingsDirectory)
 {
+    private readonly object _gate = new();
+    private Task _lastUpdate = Task.CompletedTask;
+
     public string FilePath { get; } = Path.Combine(settingsDirectory, "settings.json");
 
     /// <summary>Never throws: a file that cannot be used gives the defaults and says why.</summary>
@@ -38,4 +41,23 @@ public sealed class AppSettingsStore(string settingsDirectory)
     /// <summary>Writes through a temporary file, so a crash never leaves half a file.</summary>
     public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default) =>
         JsonFiles.WriteAsync(FilePath, settings, cancellationToken);
+
+    /// <summary>
+    /// Loads the current settings, applies <paramref name="change"/> and saves. Updates on this store run one at a time in the order they were
+    /// started, so two writers (the theme and the data root) cannot fight over the temporary file or save a stale copy of each other's field.
+    /// </summary>
+    public Task UpdateAsync(Func<AppSettings, AppSettings> change, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return _lastUpdate = UpdateAfterAsync(_lastUpdate, change, cancellationToken);
+        }
+    }
+
+    private async Task UpdateAfterAsync(Task previous, Func<AppSettings, AppSettings> change, CancellationToken cancellationToken)
+    {
+        // WhenAny never throws, so one failed update cannot block the next.
+        await Task.WhenAny(previous).ConfigureAwait(false);
+        await SaveAsync(change(Load().Settings), cancellationToken).ConfigureAwait(false);
+    }
 }
