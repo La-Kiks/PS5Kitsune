@@ -179,7 +179,7 @@ When the page opens on a running game, it attaches to the process and clears "ru
 - **`run`:** after the exit, it appends the exit line, runs the diagnoser and prints:
   - the title and the explanation;
   - `Line {n}: {line}`;
-  - the fix in words, for example `Fix: in the app, open DOOM and choose Repair libs.` For Report: `Fix: run ps5kitsune diagnose {titleId} --report and paste the text in a new Game bring-up thread.`
+  - the fix in words, for example `Fix: launch DOOM from the app; when it stops, choose Repair libs.` For Report: `Fix: run ps5kitsune diagnose {titleId} --report and paste the text in a new Game bring-up thread.`
 
   The exit code of `run` stays the game's.
 - **`ps5kitsune diagnose <titleId> [--report]`:**
