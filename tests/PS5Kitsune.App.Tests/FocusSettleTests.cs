@@ -11,6 +11,9 @@ using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Library;
+using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Settings;
 using PS5Kitsune.Core.Tests;
 using PS5Kitsune.Core.Tests.Fakes;
@@ -149,6 +152,83 @@ public sealed class FocusSettleTests(HeadlessSession session) : IDisposable
 
         Assert.NotEqual("GPU", before.Text);
         Assert.Equal("GPU", after.Text);
+    }
+
+    [Fact]
+    public async Task Install_moves_focus_from_Cancel_to_Retry_when_the_run_fails()
+    {
+        IProgress<StepProgress>? reported = null;
+        var release = new TaskCompletionSource();
+        var installer = new FakeInstaller("Download the relinker")
+        {
+            Install = (progress, _, _) =>
+            {
+                reported = progress;
+                return release.Task;
+            },
+        };
+        var viewModel = new InstallViewModel(installer, AnyPS5Mode.Release, "C:/root/logs/app.log", new TestPlatform(), new InlineDispatcher(), new Navigator(), new FakePages(), _ => { });
+        var (during, after) = await session.RunUiAsync(async () =>
+        {
+            var window = new Window { Content = new InstallView { DataContext = viewModel } };
+            try
+            {
+                window.Show();
+                Flush();
+                var running = viewModel.RunAsync();
+                Flush();
+                reported!.Report(new StepProgress(Download: new(50, 200)));
+                Flush();
+                reported.Report(new StepProgress(Download: new(100, 200)));
+                Flush();
+                var cancel = FocusTests.Describe(window.FocusManager!.GetFocusedElement());
+
+                release.SetException(new StepFailedException("Download the relinker", new IOException("disk full")));
+                await running;
+                Flush();
+                return (cancel, FocusTests.Describe(window.FocusManager!.GetFocusedElement()));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Equal("Cancel", during.Text);
+        Assert.Equal("Retry", after.Text);
+    }
+
+    [Fact]
+    public async Task A_game_page_moves_focus_from_Library_to_Stop_once_the_game_runs()
+    {
+        await _library.AddAsync(Doom, "DOOM");
+        await _library.Player.SaveSettingsAsync(Doom, new GameSettings { Lavapipe = true }, TestContext.Current.CancellationToken);
+        _library.Lavapipe.Reports = [34L << 20];
+        _library.Lavapipe.Gate = new TaskCompletionSource();
+        var page = new GameViewModel(_library.Game(Doom), "DOOM", true, _library.Player, _library.Platform, new InlineDispatcher(), new Navigator(), new FakePages());
+        var (during, after) = await session.RunUiAsync(async () =>
+        {
+            var window = new Window { Content = new GameView { DataContext = page } };
+            try
+            {
+                window.Show();
+                page.OnNavigatedTo();
+                Flush();
+                var first = FocusTests.Describe(window.FocusManager!.GetFocusedElement());
+
+                _library.Lavapipe.Gate.SetResult();
+                await page.Launching;
+                Flush();
+                return (first, FocusTests.Describe(window.FocusManager!.GetFocusedElement()));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains("Library", during.Text, StringComparison.Ordinal);
+        Assert.Equal("Stop", after.Text);
     }
 
     public void Dispose()

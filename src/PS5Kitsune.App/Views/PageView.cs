@@ -12,7 +12,7 @@ namespace PS5Kitsune.App.Views;
 /// <summary>
 /// Every page's view: once loaded, focus goes to its <see cref="InitialFocus"/> candidate, so the keyboard starts on the page.
 /// A page that loads in the background has no candidate yet (or a worse one), so the choice is repeated whenever its view model changes,
-/// until the user moves focus themselves, focus leaves the page after we placed it, a later pass leaves the placed focus where it is, or the view is unloaded.
+/// until the user moves focus themselves, focus leaves the page after we placed it, or the view is unloaded.
 /// </summary>
 public class PageView : UserControl
 {
@@ -112,18 +112,18 @@ public class PageView : UserControl
             return;
         }
 
-        var before = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+        // The first choice has focus and nothing can beat it: skip the walk over the tree. We keep watching, because it may be hidden
+        // later (the Library search box when the last game goes) and then another candidate must take over.
+        if (_placed && TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is Control { IsEffectivelyVisible: true, IsEffectivelyEnabled: true } best
+            && InitialFocus.GetRank(best) == 1 && this.IsVisualAncestorOf(best))
+        {
+            return;
+        }
+
         _causing = true;
         try
         {
-            var applied = InitialFocus.Apply(this);
-            if (_placed && applied && ReferenceEquals(before, TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement()))
-            {
-                // A later pass found nothing better: the choice is settled, so a long-lived page stops walking its tree.
-                _watching = false;
-            }
-
-            _placed |= applied;
+            _placed |= InitialFocus.Apply(this);
         }
         finally
         {
