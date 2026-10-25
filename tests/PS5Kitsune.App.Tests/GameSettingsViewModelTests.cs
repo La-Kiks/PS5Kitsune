@@ -174,6 +174,26 @@ public sealed class GameSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Back_is_leaving_while_the_discard_question_is_open()
+    {
+        var page = await OpenAsync();
+        page.Overlay = true;
+        _dialogs.ConfirmGate = new TaskCompletionSource<bool>();
+        var window = new MainWindowViewModel(_navigator, _dialogs, new FakePages(), new PS5Kitsune.App.Shell.ThemeService(new PS5Kitsune.Core.Settings.AppSettingsStore(Path.Combine(Path.GetTempPath(), "ps5k-leaving")), _ => { }));
+
+        var back = page.BackCommand.ExecuteAsync(null);
+
+        Assert.True(page.IsLeaving);
+        Assert.True(window.IsBusy);
+
+        _dialogs.ConfirmGate.SetResult(true);
+        await back;
+
+        Assert.False(page.IsLeaving);
+        Assert.False(window.IsBusy);
+    }
+
+    [Fact]
     public async Task Leaving_with_unsaved_changes_asks_first_and_can_be_declined()
     {
         var page = await OpenAsync();

@@ -16,7 +16,7 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
 {
     private bool _handedOver;
 
-    /// <summary>Back is releasing the prepared game; the sidebar stays locked meanwhile.</summary>
+    /// <summary>Back or Reconvert is releasing the prepared game; the sidebar stays locked meanwhile.</summary>
     [ObservableProperty]
     public partial bool IsLeaving { get; private set; }
 
@@ -126,12 +126,20 @@ public sealed partial class GameSummaryViewModel(PreparedGame game, bool cpuIsIn
     [RelayCommand(CanExecute = nameof(CanReconvert))]
     private async Task ReconvertAsync()
     {
-        var disposing = game.DisposeAsync();
-        AddCommand.NotifyCanExecuteChanged();
-        BackCommand.NotifyCanExecuteChanged();
-        ReconvertCommand.NotifyCanExecuteChanged();
-        await disposing.ConfigureAwait(true);
-        navigator.GoTo(pages.Reconvert(TitleId, Name));
+        IsLeaving = true;
+        try
+        {
+            var disposing = game.DisposeAsync();
+            AddCommand.NotifyCanExecuteChanged();
+            BackCommand.NotifyCanExecuteChanged();
+            ReconvertCommand.NotifyCanExecuteChanged();
+            await disposing.ConfigureAwait(true);
+            navigator.GoTo(pages.Reconvert(TitleId, Name));
+        }
+        finally
+        {
+            IsLeaving = false;
+        }
     }
 
     [RelayCommand]

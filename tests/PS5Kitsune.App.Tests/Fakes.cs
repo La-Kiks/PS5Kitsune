@@ -246,10 +246,13 @@ internal sealed class FakeDialogs : IDialogService
 
     public Task<string?> PickFolderAsync(string title, string? startFolder) => Task.FromResult(Folder);
 
+    /// <summary>When set, ConfirmAsync waits for it instead of answering <see cref="Confirm"/>.</summary>
+    public TaskCompletionSource<bool>? ConfirmGate { get; set; }
+
     public Task<bool> ConfirmAsync(string title, string message, string confirmText)
     {
         Confirmations.Add(message);
-        return Task.FromResult(Confirm);
+        return ConfirmGate?.Task ?? Task.FromResult(Confirm);
     }
 
     public List<string> Copied { get; } = [];
