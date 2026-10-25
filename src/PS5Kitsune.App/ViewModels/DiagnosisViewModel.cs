@@ -20,7 +20,7 @@ public sealed partial class DiagnosisViewModel : ObservableObject
     private readonly DiagnosisServices _services;
     private readonly DiagnosisText _text;
 
-    public DiagnosisViewModel(Diagnosis diagnosis, GameLayout game, string name, GamePlayer player, IPlatform platform, DiagnosisServices services)
+    public DiagnosisViewModel(Diagnosis diagnosis, GameLayout game, string name, GameSettings settings, GamePlayer player, IPlatform platform, DiagnosisServices services)
     {
         _diagnosis = diagnosis;
         _game = game;
@@ -28,7 +28,7 @@ public sealed partial class DiagnosisViewModel : ObservableObject
         _player = player;
         _platform = platform;
         _services = services;
-        _text = DiagnosisTexts.For(diagnosis);
+        _text = DiagnosisTexts.For(diagnosis, settings);
         LineText = diagnosis.Line is { } line ? string.Create(CultureInfo.InvariantCulture, $"Line {diagnosis.LineNumber}: {line}") : null;
     }
 
@@ -77,6 +77,8 @@ public sealed partial class DiagnosisViewModel : ObservableObject
             case DiagnosisAction.TurnOnLavapipe:
                 return await ChangeSettingsAsync(
                     settings => settings with { Lavapipe = true }, "CPU rendering is on. Launch again to download Mesa and start the game.").ConfigureAwait(true);
+            case DiagnosisAction.TurnOffLavapipe:
+                return await ChangeSettingsAsync(settings => settings with { Lavapipe = false }, "CPU rendering is off. Launch again to check.").ConfigureAwait(true);
             case DiagnosisAction.ResetSetting when SettingVariables.Find(_diagnosis.Capture("variable")) is { } setting:
                 var label = char.ToUpperInvariant(setting.Label[0]) + setting.Label[1..];
                 return await ChangeSettingsAsync(setting.Reset, $"{label} reset. Launch again to check.").ConfigureAwait(true);

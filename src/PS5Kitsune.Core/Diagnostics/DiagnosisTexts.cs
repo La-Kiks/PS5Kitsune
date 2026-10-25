@@ -1,4 +1,6 @@
 using System.Globalization;
+using PS5Kitsune.Core.Library;
+using PS5Kitsune.Core.Launch;
 
 namespace PS5Kitsune.Core.Diagnostics;
 
@@ -9,6 +11,7 @@ public enum DiagnosisAction
     RepairLibs,
     OpenPageFileSettings,
     TurnOnLavapipe,
+    TurnOffLavapipe,
     OpenNvidiaDrivers,
     OpenFolder,
     ResetSetting,
@@ -25,9 +28,10 @@ public static class DiagnosisTexts
 
     private const string SettingTitle = "A setting has a value AnyPS5 refuses";
 
-    public static DiagnosisText For(Diagnosis diagnosis)
+    public static DiagnosisText For(Diagnosis diagnosis, GameSettings settings)
     {
         ArgumentNullException.ThrowIfNull(diagnosis);
+        ArgumentNullException.ThrowIfNull(settings);
         var module = FileName(diagnosis.Capture("module")) ?? "A library";
         return diagnosis.Id switch
         {
@@ -43,11 +47,7 @@ public static class DiagnosisTexts
                 "The page file plus RAM is too small for this game. Enlarge the page file, or close other programs such as the browser.",
                 DiagnosisAction.OpenPageFileSettings,
                 "Open page file settings"),
-            DiagnosisIds.GpuFeatures => new(
-                "No GPU here supports AnyPS5",
-                "The graphics driver lacks buffer device address or shaderInt64. CPU rendering works on any PC, more slowly.",
-                DiagnosisAction.TurnOnLavapipe,
-                "Turn on CPU rendering"),
+            DiagnosisIds.GpuFeatures => GpuFeatures(settings),
             DiagnosisIds.NvidiaShaderCompiler => new(
                 "Known NVIDIA driver crash",
                 "NVIDIA's shader compiler (nvgpucomp64.dll) crashed. Driver 610.47 is known to do this.",
@@ -59,7 +59,7 @@ public static class DiagnosisTexts
                 @"sce_sys\param.json is missing or damaged. Remove the game and add it again from its original folder.",
                 DiagnosisAction.OpenFolder,
                 "Open folder"),
-            DiagnosisIds.InvalidSetting => Setting(diagnosis.Capture("variable")),
+            DiagnosisIds.InvalidSetting => Setting(diagnosis.Capture("variable"), settings),
             DiagnosisIds.NotImplemented => new(
                 "AnyPS5 does not handle this game yet", "The game uses a feature AnyPS5 has not implemented.", DiagnosisAction.Report, "Report"),
             _ => new(
@@ -71,9 +71,9 @@ public static class DiagnosisTexts
     }
 
     /// <summary>What `run` and `diagnose` print: the title and explanation, the matched line, then the fix in words when there is one.</summary>
-    public static IReadOnlyList<string> Lines(Diagnosis diagnosis, string name, string titleId)
+    public static IReadOnlyList<string> Lines(Diagnosis diagnosis, GameSettings settings, string name, string titleId)
     {
-        var text = For(diagnosis);
+        var text = For(diagnosis, settings);
         var lines = new List<string> { $"{text.Title}: {text.Explanation}" };
         if (diagnosis.Line is { } line)
         {
@@ -82,7 +82,7 @@ public static class DiagnosisTexts
 
         var fix = text.Action switch
         {
-            DiagnosisAction.RepairLibs or DiagnosisAction.TurnOnLavapipe or DiagnosisAction.ResetSetting or DiagnosisAction.OpenPageFileSettings =>
+            DiagnosisAction.RepairLibs or DiagnosisAction.TurnOnLavapipe or DiagnosisAction.TurnOffLavapipe or DiagnosisAction.ResetSetting or DiagnosisAction.OpenPageFileSettings =>
                 $"Fix: in the app, open {name} and choose {text.ActionText}.",
             DiagnosisAction.OpenNvidiaDrivers => $"Fix: update the NVIDIA driver from {NvidiaDriversUrl}",
             DiagnosisAction.OpenFolder => "Fix: remove the game and add it again from its original folder.",
@@ -97,8 +97,30 @@ public static class DiagnosisTexts
         return lines;
     }
 
-    private static DiagnosisText Setting(string? variable)
+    private static DiagnosisText GpuFeatures(GameSettings settings) => settings.Lavapipe
+        ? new(
+            "No GPU here supports AnyPS5",
+            "The graphics driver lacks buffer device address or shaderInt64, even with CPU rendering on.",
+            DiagnosisAction.Report,
+            "Report")
+        : new(
+            "No GPU here supports AnyPS5",
+            "The graphics driver lacks buffer device address or shaderInt64. CPU rendering works on any PC, more slowly.",
+            DiagnosisAction.TurnOnLavapipe,
+            "Turn on CPU rendering");
+
+    private static DiagnosisText Setting(string? variable, GameSettings settings)
     {
+        // CPU rendering sets ANYPS5_GPU itself: resetting the GPU setting would change nothing.
+        if (settings.Lavapipe && string.Equals(variable, LaunchEnvironment.Gpu, StringComparison.OrdinalIgnoreCase))
+        {
+            return new(
+                SettingTitle,
+                "CPU rendering sets ANYPS5_GPU=llvmpipe, and Vulkan found no llvmpipe device.",
+                DiagnosisAction.TurnOffLavapipe,
+                "Turn off CPU rendering");
+        }
+
         var explanation = $"{variable ?? "A setting"} has a value AnyPS5 refuses.";
         return SettingVariables.Find(variable) is { } setting
             ? new(SettingTitle, explanation, DiagnosisAction.ResetSetting, $"Reset {setting.Label}")

@@ -253,7 +253,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware
                     // A launch started meanwhile owns the page.
                     if (found is not null && launch == _launches)
                     {
-                        Diagnosis = new DiagnosisViewModel(found, _game, Title, _player, _platform, services);
+                        Diagnosis = new DiagnosisViewModel(found, _game, Title, playing.Record.Settings, _player, _platform, services);
                     }
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)

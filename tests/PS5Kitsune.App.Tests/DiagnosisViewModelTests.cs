@@ -20,10 +20,10 @@ public sealed class DiagnosisViewModelTests : IDisposable
         1,
         "missing.log");
 
-    private async Task<DiagnosisViewModel> OpenAsync(Diagnosis diagnosis)
+    private async Task<DiagnosisViewModel> OpenAsync(Diagnosis diagnosis, GameSettings? settings = null)
     {
         var game = await _library.AddAsync("PPSA99666", "DOOM");
-        return new DiagnosisViewModel(diagnosis, game, "DOOM", _library.Player, _library.Platform, _library.Diagnosis(ReportUrl));
+        return new DiagnosisViewModel(diagnosis, game, "DOOM", settings ?? new GameSettings(), _library.Player, _library.Platform, _library.Diagnosis(ReportUrl));
     }
 
     private GameSettings Saved() => _library.Library.Find("PPSA99666").Record.Settings;
@@ -49,6 +49,20 @@ public sealed class DiagnosisViewModelTests : IDisposable
 
         Assert.True(Saved().Lavapipe);
         Assert.Equal("CPU rendering is on. Launch again to download Mesa and start the game.", panel.Result);
+    }
+
+    [Fact]
+    public async Task A_missing_llvmpipe_device_offers_to_turn_cpu_rendering_off()
+    {
+        var settings = new GameSettings { Lavapipe = true };
+        var panel = await OpenAsync(Of(DiagnosisIds.InvalidSetting, "ANYPS5_GPU"), settings);
+        await _library.Player.SaveSettingsAsync("PPSA99666", settings, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Turn off CPU rendering", panel.ActionText);
+        await panel.FixCommand.ExecuteAsync(null);
+
+        Assert.False(Saved().Lavapipe);
+        Assert.Equal("CPU rendering is off. Launch again to check.", panel.Result);
     }
 
     [Fact]

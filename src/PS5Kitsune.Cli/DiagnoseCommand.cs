@@ -40,7 +40,7 @@ internal static class DiagnoseCommand
                 return 0;
             }
 
-            foreach (var line in DiagnosisTexts.Lines(diagnosis, record.Name, record.TitleId))
+            foreach (var line in DiagnosisTexts.Lines(diagnosis, record.Settings, record.Name, record.TitleId))
             {
                 logger.DiagnosisLine(line);
             }

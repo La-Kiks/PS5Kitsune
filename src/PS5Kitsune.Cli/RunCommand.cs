@@ -48,7 +48,7 @@ internal static class RunCommand
                 var diagnosis = await services.GetRequiredService<CrashDiagnoser>().FinishAsync(launched.LogFile, exitCode, stopped: false, CancellationToken.None);
                 if (diagnosis is not null)
                 {
-                    foreach (var line in DiagnosisTexts.Lines(diagnosis, record.Name, record.TitleId))
+                    foreach (var line in DiagnosisTexts.Lines(diagnosis, record.Settings, record.Name, record.TitleId))
                     {
                         logger.DiagnosisLine(line);
                     }
