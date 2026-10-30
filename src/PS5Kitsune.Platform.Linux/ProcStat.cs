@@ -5,7 +5,7 @@ using System.Runtime.Versioning;
 namespace PS5Kitsune.Platform.Linux;
 
 /// <summary>The fields of /proc/&lt;pid&gt;/stat the launcher reads. See proc(5).</summary>
-/// <param name="State">Field 3: R, S, D, Z (zombie), T…</param>
+/// <param name="State">Field 3: R, S, D, Z (zombie), T...</param>
 /// <param name="Session">Field 6: the session ID.</param>
 /// <param name="StartTicks">Field 22: when the process started, in clock ticks since boot.</param>
 internal readonly partial record struct ProcStat(char State, int Session, ulong StartTicks)
@@ -62,6 +62,16 @@ internal readonly partial record struct ProcStat(char State, int Session, ulong 
 
         throw new InvalidDataException("/proc/stat has no btime line.");
     }
+
+    /// <summary>
+    /// How far a computed start time may be from the recorded one and still be the same start. The start time is btime + ticks,
+    /// and btime follows the wall clock when it is stepped (NTP, WSL resyncing after the host sleeps), so an exact comparison
+    /// would lose a running game. PID reuse within the tolerance is caught by the executable check.
+    /// </summary>
+    public static readonly TimeSpan StartTimeTolerance = TimeSpan.FromSeconds(5);
+
+    /// <summary>Whether <paramref name="computed"/> and <paramref name="recorded"/> are the same process start, within <see cref="StartTimeTolerance"/>.</summary>
+    public static bool SameStart(DateTimeOffset computed, DateTimeOffset recorded) => (computed - recorded).Duration() <= StartTimeTolerance;
 
     public static DateTimeOffset StartTime(ulong startTicks, long bootTimeSeconds, long ticksPerSecond) =>
         DateTimeOffset.FromUnixTimeSeconds(bootTimeSeconds).AddTicks((long)(startTicks * (ulong)TimeSpan.TicksPerSecond / (ulong)ticksPerSecond));

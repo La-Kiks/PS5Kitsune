@@ -139,8 +139,28 @@ public sealed class LinuxGameLauncherTests : IDisposable
         using var game = Sleep(30);
         try
         {
-            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartedAt = game.StartedAt.AddSeconds(-5) }));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartedAt = game.StartedAt.AddSeconds(-60) }));
             Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/true")));
+        }
+        finally
+        {
+            await game.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task Attach_follows_symbolic_links_in_the_recorded_executable()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        // Like a games folder reached through a link (~/Games -> /mnt/data/Games): /proc/<pid>/exe shows the resolved path.
+        var linkedBin = _temp.Combine("bin");
+        Directory.CreateSymbolicLink(linkedBin, "/usr/bin");
+        using var game = Sleep(30);
+        try
+        {
+            using var attached = _launcher.Attach(RecordOf(game, linkedBin + "/sleep"));
+
+            Assert.NotNull(attached);
         }
         finally
         {
@@ -152,10 +172,24 @@ public sealed class LinuxGameLauncherTests : IDisposable
     public async Task Attach_returns_null_once_the_game_has_exited()
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
-        using var game = Shell("exit 0");
+        // The record would match if the process still ran, so only its exit can make Attach refuse it.
+        using var game = Sleep(0);
         await ExitOf(game);
 
-        Assert.Null(_launcher.Attach(RecordOf(game, "/bin/sh")));
+        Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep")));
+    }
+
+    [Fact]
+    public async Task The_game_does_not_inherit_ignored_sigpipe()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        // .NET ignores SIGPIPE, and an ignored signal stays ignored across exec unless posix_spawn resets it.
+        using var game = Shell("grep SigIgn /proc/$$/status");
+
+        Assert.Equal(0, await ExitOf(game));
+        var line = (await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken)).Trim();
+        var ignored = ulong.Parse(line["SigIgn:".Length..].Trim(), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(0UL, ignored & 0x1000); // SIGPIPE is 13: bit 12.
     }
 
     [Fact]

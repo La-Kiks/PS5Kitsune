@@ -30,7 +30,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         var pid = PosixSpawn.Start(request.Executable, request.Arguments, request.WorkingDirectory, logFile, EnvironmentOf(request.Environment));
 
         // The child cannot be reaped before the waiting thread starts, so its stat is readable (at worst as a zombie).
-        var game = new SpawnedGame(pid, logFile, ProcStat.StartTimeOf(pid) ?? DateTimeOffset.UtcNow, StopGrace);
+        var game = new SpawnedGame(pid, logFile, StartTimeOrNow(pid), StopGrace);
         var executable = request.Executable;
         LogLaunched(executable, pid, logFile);
         return game;
@@ -56,13 +56,29 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         try
         {
             return ProcStat.Read(record.ProcessId) is { State: not 'Z' }
-                && ProcStat.StartTimeOf(record.ProcessId) == record.StartedAt
+                && ProcStat.StartTimeOf(record.ProcessId) is { } started
+                && ProcStat.SameStart(started, record.StartedAt)
                 && new FileInfo($"/proc/{record.ProcessId.ToString(CultureInfo.InvariantCulture)}/exe").LinkTarget is { } target
-                && string.Equals(target, Path.GetFullPath(record.Executable), StringComparison.Ordinal);
+                // The kernel shows the resolved path: resolve the recorded one too (a games folder reached through a link).
+                && PosixSpawn.CanonicalPath(record.Executable) is { } executable
+                && string.Equals(target, executable, StringComparison.Ordinal);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
         {
             return false;
+        }
+    }
+
+    // Never throws: the game is already running, so it must still get its SpawnedGame and the thread that reaps it.
+    private static DateTimeOffset StartTimeOrNow(int pid)
+    {
+        try
+        {
+            return ProcStat.StartTimeOf(pid) ?? DateTimeOffset.UtcNow;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return DateTimeOffset.UtcNow;
         }
     }
 
@@ -139,7 +155,9 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
 
         public Task<int> WaitForExitAsync(CancellationToken cancellationToken = default) => _exited.Task.WaitAsync(cancellationToken);
 
-        public Task StopAsync(CancellationToken cancellationToken = default) => LinuxGameLauncher.StopAsync(this, _stopGrace, cancellationToken);
+        // Once reaped, the PID (and so the group) may belong to another process: never signal it.
+        public Task StopAsync(CancellationToken cancellationToken = default) =>
+            _exited.Task.IsCompleted ? _exited.Task : LinuxGameLauncher.StopAsync(this, _stopGrace, cancellationToken);
 
         // The waiting thread keeps running: it reaps the game whenever it exits. Nothing else to release.
         public void Dispose()
@@ -166,7 +184,9 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
             return -1;
         }
 
-        public Task StopAsync(CancellationToken cancellationToken = default) => LinuxGameLauncher.StopAsync(this, stopGrace, cancellationToken);
+        // A PID that is no longer the recorded game means the game has exited: its group may be another process's now.
+        public Task StopAsync(CancellationToken cancellationToken = default) =>
+            IsRecorded(record) ? LinuxGameLauncher.StopAsync(this, stopGrace, cancellationToken) : Task.CompletedTask;
 
         public void Dispose()
         {
@@ -177,7 +197,9 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         {
             try
             {
-                return ProcStat.Read(record.ProcessId) is { State: not 'Z' } && ProcStat.StartTimeOf(record.ProcessId) == record.StartedAt;
+                return ProcStat.Read(record.ProcessId) is { State: not 'Z' }
+                    && ProcStat.StartTimeOf(record.ProcessId) is { } started
+                    && ProcStat.SameStart(started, record.StartedAt);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
             {

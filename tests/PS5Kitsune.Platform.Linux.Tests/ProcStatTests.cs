@@ -36,4 +36,15 @@ public sealed class ProcStatTests
         Assert.Equal(1761800000, bootTime);
         Assert.Equal(DateTimeOffset.FromUnixTimeSeconds(1761800000).AddMilliseconds(1234560), ProcStat.StartTime(123456, bootTime, 100));
     }
+
+    [Fact]
+    public void Start_times_up_to_five_seconds_apart_are_the_same_start()
+    {
+        var recorded = DateTimeOffset.FromUnixTimeSeconds(1761800000);
+
+        Assert.True(ProcStat.SameStart(recorded.AddSeconds(4), recorded));
+        Assert.True(ProcStat.SameStart(recorded.AddSeconds(-4), recorded));
+        Assert.False(ProcStat.SameStart(recorded.AddSeconds(6), recorded));
+        Assert.False(ProcStat.SameStart(recorded.AddSeconds(-6), recorded));
+    }
 }

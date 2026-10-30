@@ -12,20 +12,30 @@ internal static unsafe partial class PosixSpawn
     private const int LogFlags = 0x641;      // O_WRONLY | O_CREAT | O_TRUNC | O_APPEND
     private const int LogMode = 0x1A4;       // 0644
     private const short SetSid = 0x80;       // POSIX_SPAWN_SETSID
+    private const short SetSigDefault = 0x04; // POSIX_SPAWN_SETSIGDEF
+    private const short SetSigMask = 0x08;   // POSIX_SPAWN_SETSIGMASK
     private const int StructSize = 512;      // glibc: posix_spawn_file_actions_t is 80 bytes, posix_spawnattr_t 336
+    private const int SigSetSize = 128;      // glibc: sigset_t
+    private const int SigPipe = 13;
 
     public const int SigKill = 9;
     public const int SigTerm = 15;
     private const int Interrupted = 4;       // EINTR
     public const int NoSuchProcess = 3;      // ESRCH
 
-    /// <summary>Starts <paramref name="executable"/> in a new session, stdin on /dev/null, stdout and stderr on <paramref name="logFile"/>.</summary>
+    /// <summary>
+    /// Starts <paramref name="executable"/> in a new session, stdin on /dev/null, stdout and stderr on <paramref name="logFile"/>,
+    /// SIGPIPE back to its default action and no signal blocked: an ignored signal stays ignored across exec, and .NET ignores SIGPIPE
+    /// (Process.Start resets them the same way).
+    /// </summary>
     /// <returns>The PID.</returns>
     /// <exception cref="Win32Exception">posix_spawn failed, for example ENOENT or EACCES.</exception>
     public static int Start(string executable, IReadOnlyList<string> arguments, string workingDirectory, string logFile, IEnumerable<string> environment)
     {
         var actions = (nint)NativeMemory.AllocZeroed(StructSize);
         var attributes = (nint)NativeMemory.AllocZeroed(StructSize);
+        var defaultSignals = (nint)NativeMemory.AllocZeroed(SigSetSize);
+        var mask = (nint)NativeMemory.AllocZeroed(SigSetSize);
         var owned = new List<nint>();
         try
         {
@@ -39,7 +49,12 @@ internal static unsafe partial class PosixSpawn
                 Check(AttributesInit(attributes));
                 try
                 {
-                    Check(SetFlags(attributes, SetSid));
+                    CheckErrno(SigEmptySet(defaultSignals));
+                    CheckErrno(SigAddSet(defaultSignals, SigPipe));
+                    CheckErrno(SigEmptySet(mask));
+                    Check(SetSigDefaultSet(attributes, defaultSignals));
+                    Check(SetSigMaskSet(attributes, mask));
+                    Check(SetFlags(attributes, SetSid | SetSigDefault | SetSigMask));
                     var argv = Block(owned, [executable, .. arguments]);
                     var envp = Block(owned, [.. environment]);
                     fixed (nint* argvPointer = argv)
@@ -68,6 +83,8 @@ internal static unsafe partial class PosixSpawn
 
             NativeMemory.Free((void*)actions);
             NativeMemory.Free((void*)attributes);
+            NativeMemory.Free((void*)defaultSignals);
+            NativeMemory.Free((void*)mask);
         }
     }
 
@@ -115,6 +132,34 @@ internal static unsafe partial class PosixSpawn
         return block;
     }
 
+    /// <summary>The absolute path with every symbolic link, "." and ".." resolved, as /proc/&lt;pid&gt;/exe shows it; null when it cannot be resolved (for example, it does not exist).</summary>
+    public static string? CanonicalPath(string path)
+    {
+        var resolved = RealPath(path, 0);
+        if (resolved == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Marshal.PtrToStringUTF8(resolved);
+        }
+        finally
+        {
+            Free(resolved);
+        }
+    }
+
+    // For the calls that return -1 and set errno.
+    private static void CheckErrno(int result)
+    {
+        if (result != 0)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
+    }
+
     private static void Check(int error)
     {
         if (error != 0)
@@ -149,6 +194,24 @@ internal static unsafe partial class PosixSpawn
 
     [LibraryImport("libc", EntryPoint = "posix_spawnattr_setflags")]
     private static partial int SetFlags(nint attributes, short flags);
+
+    [LibraryImport("libc", EntryPoint = "posix_spawnattr_setsigdefault")]
+    private static partial int SetSigDefaultSet(nint attributes, nint signals);
+
+    [LibraryImport("libc", EntryPoint = "posix_spawnattr_setsigmask")]
+    private static partial int SetSigMaskSet(nint attributes, nint signals);
+
+    [LibraryImport("libc", EntryPoint = "sigemptyset", SetLastError = true)]
+    private static partial int SigEmptySet(nint signals);
+
+    [LibraryImport("libc", EntryPoint = "sigaddset", SetLastError = true)]
+    private static partial int SigAddSet(nint signals, int signal);
+
+    [LibraryImport("libc", EntryPoint = "realpath", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint RealPath(string path, nint resolved);
+
+    [LibraryImport("libc", EntryPoint = "free")]
+    private static partial void Free(nint pointer);
 
     [LibraryImport("libc", EntryPoint = "waitpid", SetLastError = true)]
     private static partial int WaitPid(int pid, out int status, int options);
