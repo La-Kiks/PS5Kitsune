@@ -37,6 +37,10 @@ public static class PlatformServices
             services.AddSingleton<SystemPython>();
             services.AddSingleton<IPythonRuntime>(provider => provider.GetRequiredService<SystemPython>());
             services.AddSingleton<ILavapipe, SystemLavapipe>();
+            if (OperatingSystem.IsLinux())
+            {
+                services.AddSingleton<IGameLauncher, LinuxGameLauncher>();
+            }
         }
         else if (OperatingSystem.IsWindows())
         {
