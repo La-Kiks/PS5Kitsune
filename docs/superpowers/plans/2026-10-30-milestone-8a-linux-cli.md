@@ -75,7 +75,7 @@
 
 The spec was corrected after its first commit (SDL, confirmed facts, hashes). Commit it with this plan.
 
-- [ ] **Step 1: Commit**
+- [x] **Step 1: Commit** (done: 6dc1b44)
 
 ```bash
 git add docs/superpowers/specs/2026-10-30-milestone-8a-linux-cli-design.md docs/superpowers/plans/2026-10-30-milestone-8a-linux-cli.md
