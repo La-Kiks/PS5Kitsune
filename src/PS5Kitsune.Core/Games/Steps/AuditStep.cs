@@ -10,7 +10,7 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// <summary>
 /// Runs import_audit.py on every registry the relinker wrote, reads audit.json and stores the summary in the context.
 /// </summary>
-public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, PythonEmbeddableTool python, IProcessRunner processRunner) : IStep
+public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, IPythonRuntime python, IProcessRunner processRunner) : IStep
 {
     public const string StepName = "Audit the imports";
 

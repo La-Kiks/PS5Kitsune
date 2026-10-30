@@ -13,24 +13,18 @@ public sealed class PythonEmbeddableTool(
     IPlatform platform,
     IDownloader downloader,
     IProcessRunner processRunner)
-    : ArchiveTool(ToolId, definition, layout, downloader)
+    : ArchiveTool(ToolId, definition, layout, downloader), IPythonRuntime
 {
     public const string ToolId = "python";
 
-    // The ._pth file of the embeddable distribution keeps the script's folder off sys.path and makes
-    // Python ignore PYTHONPATH, so a script importing its siblings (import_audit.py imports nid_names
-    // and progress) fails when run directly. This bootstrap puts the folder back first, then runs the
-    // script as __main__; its SystemExit code becomes the process exit code.
-    private const string ScriptBootstrap =
-        "import os,runpy,sys;sys.argv=sys.argv[1:];sys.path.insert(0,os.path.dirname(os.path.abspath(sys.argv[0])));runpy.run_path(sys.argv[0],run_name='__main__')";
+    public string StepName => "Install Python";
 
     public string Executable => Path.Combine(InstallDirectory, "python" + platform.ExecutableSuffix);
 
     protected override IEnumerable<string> RequiredFiles => [Executable];
 
     /// <summary>A command running <paramref name="script"/> with <paramref name="arguments"/>; the script's exit code is the process exit code.</summary>
-    public ProcessSpec CreateScriptSpec(string script, IEnumerable<string> arguments) =>
-        new(Executable, ["-c", ScriptBootstrap, script, .. arguments]);
+    public ProcessSpec CreateScriptSpec(string script, IEnumerable<string> arguments) => PythonScripts.CreateSpec(Executable, script, arguments);
 
     public override async Task<string> GetVersionAsync(CancellationToken cancellationToken = default)
     {

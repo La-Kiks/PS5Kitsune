@@ -22,7 +22,7 @@ public sealed partial class GameImporter(
     AnyPS5Installer installer,
     GameSourceResolver resolver,
     GameValidator validator,
-    PythonEmbeddableTool python,
+    IPythonRuntime python,
     IProcessRunner processRunner,
     StepRunner stepRunner,
     IVulkanProbeRunner probe,

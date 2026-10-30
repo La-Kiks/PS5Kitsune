@@ -2,6 +2,7 @@ using System.Text.Json;
 using PS5Kitsune.Core.AnyPS5.Steps;
 using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Pipeline;
+using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tools;
 
 namespace PS5Kitsune.Core.AnyPS5;
@@ -9,10 +10,11 @@ namespace PS5Kitsune.Core.AnyPS5;
 /// <summary>Installs AnyPS5 into anyps5\installs\&lt;mode&gt;: Python, then the steps of the mode's source, then install.json; then makes it active.</summary>
 public sealed class AnyPS5Installer(
     IEnumerable<IAnyPS5Source> sources,
-    PythonEmbeddableTool python,
+    IPythonRuntime python,
     AnyPS5Paths paths,
     StepRunner stepRunner,
-    TimeProvider time) : IAnyPS5Installer
+    TimeProvider time,
+    AnyPS5Profile? profile = null) : IAnyPS5Installer
 {
     public AnyPS5Mode? RequestedMode => paths.RequestedMode;
 
@@ -24,12 +26,16 @@ public sealed class AnyPS5Installer(
 
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode)
     {
-        var source = Source(mode)
-            ?? throw new InvalidOperationException(mode == AnyPS5Mode.Build
-                ? "Mode build is not available: the active profile has no build section or no build tools."
-                : "Mode release is not available.");
-        return [new InstallToolStep("Install Python", python), .. source.CreateSteps(), new WriteInstallRecordStep(source, paths.For(mode), time)];
+        var source = Source(mode) ?? throw new InvalidOperationException(UnavailableMessage(mode));
+        return [new PreparePythonStep(python), .. source.CreateSteps(), new WriteInstallRecordStep(source, paths.For(mode), time)];
     }
+
+    internal string UnavailableMessage(AnyPS5Mode mode) => mode switch
+    {
+        AnyPS5Mode.Build when profile?.Os == ProfileOs.Linux => "Build mode is not available on Linux yet; use release mode.",
+        AnyPS5Mode.Build => "Mode build is not available: the active profile has no build section or no build tools.",
+        _ => "Mode release is not available.",
+    };
 
     /// <summary>True when there is an active install and every one of its steps is done.</summary>
     public bool IsInstalled() => ActiveMode is { } active && GetState(active).Status == AnyPS5InstallStatus.Installed;
@@ -69,6 +75,11 @@ public sealed class AnyPS5Installer(
 
     public void Use(AnyPS5Mode mode)
     {
+        if (!Supports(mode))
+        {
+            throw new InvalidOperationException(UnavailableMessage(mode));
+        }
+
         var name = InstallModes.Name(mode);
         if (RequestedMode == mode)
         {

@@ -78,6 +78,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGameReconverter>(provider => provider.GetRequiredService<GameReconverter>());
 
         AddTool<PythonEmbeddableTool>(services, profile, PythonEmbeddableTool.ToolId);
+        // The platform registers the system Python first where it has one (Linux); TryAdd keeps it.
+        if (profile.Tools.ContainsKey(PythonEmbeddableTool.ToolId))
+        {
+            services.TryAddSingleton<IPythonRuntime>(provider => provider.GetRequiredService<PythonEmbeddableTool>());
+        }
+
         AddTool<MinGitTool>(services, profile, MinGitTool.ToolId);
         AddTool<WinLibsTool>(services, profile, WinLibsTool.ToolId);
         AddTool<MesaTool>(services, profile, MesaTool.ToolId);

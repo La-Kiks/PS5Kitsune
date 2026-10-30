@@ -12,7 +12,7 @@ namespace PS5Kitsune.Core.Games.Steps;
 /// module with only a warning. Each original goes to .ps5kitsune/originals first, outside app0, because the
 /// relinker may skip files whose name extends another module's.
 /// </summary>
-public sealed class UnwrapSelfStep(GameImportContext context, AnyPS5Paths paths, PythonEmbeddableTool python, IProcessRunner processRunner) : IStep
+public sealed class UnwrapSelfStep(GameImportContext context, AnyPS5Paths paths, IPythonRuntime python, IProcessRunner processRunner) : IStep
 {
     public const string StepName = "Unwrap SELF files";
 
