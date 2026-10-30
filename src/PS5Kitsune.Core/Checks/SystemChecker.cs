@@ -64,7 +64,8 @@ public sealed partial class SystemChecker(SystemFactsCollector collector, IEnume
     public async Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default)
     {
         var facts = await collector.CollectAsync(mode, cancellationToken).ConfigureAwait(false);
-        var results = checks.Select(check => check.Evaluate(facts)).ToList();
+        // Core's checks first, in their order; then those the platform added (registered before Core's, so first in the sequence).
+        var results = checks.OrderBy(check => SystemChecks.All.Contains(check) ? 0 : 1).Select(check => check.Evaluate(facts)).ToList();
         foreach (var result in results)
         {
             LogResult(result.Id, result.Status, result.Summary);

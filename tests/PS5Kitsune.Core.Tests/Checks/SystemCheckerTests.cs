@@ -124,4 +124,25 @@ public sealed class SystemCheckerTests : IDisposable
 
         public Task<VulkanProbeOutcome> RunAsync(CancellationToken cancellationToken = default) => Task.FromResult(Outcome);
     }
+
+    [Fact]
+    public async Task Checks_a_platform_adds_come_after_the_core_checks()
+    {
+        var added = new AddedCheck();
+        var checker = new SystemChecker(CreateCollector(), [added, .. SystemChecks.All], NullLogger<SystemChecker>.Instance);
+
+        var report = await checker.RunAsync(AnyPS5Mode.Release, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SystemChecks.All[0].Id, report.Results[0].Id);
+        Assert.Equal("added", report.Results[^1].Id);
+    }
+
+    private sealed class AddedCheck : SystemCheck
+    {
+        public override string Id => "added";
+
+        public override string Title => "Added";
+
+        public override CheckResult Evaluate(SystemFacts facts) => Result(CheckStatus.Ok, "Fine.");
+    }
 }

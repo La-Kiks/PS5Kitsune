@@ -53,5 +53,16 @@ public sealed class LinuxServicesTests : IDisposable
         Assert.IsType<LinuxGameLauncher>(provider.GetRequiredService<IGameLauncher>());
     }
 
+    [Fact]
+    public void The_linux_platform_adds_the_python_and_udmabuf_checks()
+    {
+        using var provider = Build();
+
+        var ids = provider.GetServices<PS5Kitsune.Core.Checks.ISystemCheck>().Select(check => check.Id).ToList();
+
+        Assert.Contains("python", ids);
+        Assert.Contains("udmabuf", ids);
+    }
+
     public void Dispose() => _temp.Dispose();
 }

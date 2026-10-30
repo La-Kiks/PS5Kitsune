@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Tools;
 using PS5Kitsune.Platform.Linux;
@@ -37,6 +38,8 @@ public static class PlatformServices
             services.AddSingleton<SystemPython>();
             services.AddSingleton<IPythonRuntime>(provider => provider.GetRequiredService<SystemPython>());
             services.AddSingleton<ILavapipe, SystemLavapipe>();
+            services.AddSingleton<ISystemCheck, PythonCheck>();
+            services.AddSingleton<ISystemCheck, UdmabufCheck>();
             if (OperatingSystem.IsLinux())
             {
                 services.AddSingleton<IGameLauncher, LinuxGameLauncher>();
