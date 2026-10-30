@@ -77,4 +77,13 @@ public sealed class StorageChecksTests
 
         Assert.Equal(CheckStatus.Info, result.Status);
     }
+
+    [Fact]
+    public void A_path_with_a_space_suggests_the_platform_default()
+    {
+        var result = new InstallPathCheck().Evaluate(TestFacts.Healthy() with { DataRoot = "/home/a b/ps5kitsune", DefaultDataRoot = "/home/ab/.local/share/ps5kitsune" });
+
+        Assert.Equal(CheckStatus.Blocking, result.Status);
+        Assert.Equal("Choose a data folder without spaces or accents, for example /home/ab/.local/share/ps5kitsune (command line: --root).", result.Action);
+    }
 }

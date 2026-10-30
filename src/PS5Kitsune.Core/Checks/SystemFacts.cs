@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Profiles;
@@ -29,4 +30,13 @@ public sealed record SystemFacts
 
     /// <summary>The install mode the check is for: build mode needs more disk space.</summary>
     public AnyPS5Mode Mode { get; init; } = AnyPS5Mode.Release;
+
+    /// <summary>See <see cref="IPlatform.VulkanLoaderName"/>.</summary>
+    public string VulkanLoaderName { get; init; } = "vulkan-1.dll";
+
+    /// <summary>See <see cref="IPlatform.VulkanInstallAction"/>.</summary>
+    public string VulkanInstallAction { get; init; } = "Install or update the graphics driver from your GPU maker's website (AMD, Intel or NVIDIA).";
+
+    /// <summary>The platform's default data root, suggested when the data root is unusable.</summary>
+    public string DefaultDataRoot { get; init; } = @"C:\PS5Kitsune";
 }

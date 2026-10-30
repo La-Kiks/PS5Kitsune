@@ -19,6 +19,18 @@ public interface IPlatform
     /// <summary>Suffix of native executables: ".exe" on Windows, empty on Linux.</summary>
     string ExecutableSuffix { get; }
 
+    /// <summary>The <see cref="Profiles.ProfileOs"/> value of this OS: picks the embedded profile and checks an override's "os".</summary>
+    string Os { get; }
+
+    /// <summary>Suffix of a converted game: ".exe" on Windows, ".elf" on Linux.</summary>
+    string GameExecutableSuffix { get; }
+
+    /// <summary>The Vulkan loader's file name, for the Vulkan check: "vulkan-1.dll", "libvulkan.so.1".</summary>
+    string VulkanLoaderName { get; }
+
+    /// <summary>What to do when Vulkan is missing or broken, shown by the Vulkan check.</summary>
+    string VulkanInstallAction { get; }
+
     /// <summary>Memory the OS can commit (RAM + page file), in bytes; null where the OS has no such limit.</summary>
     ulong? GetCommitLimitBytes();
 

@@ -21,6 +21,9 @@ public sealed class SystemFactsCollector(IPlatform platform, ICpuInfo cpu, IVulk
         FreeDiskBytes = FreeSpace(layout.Root),
         Limits = profile.Checks,
         Mode = mode,
+        VulkanLoaderName = platform.VulkanLoaderName,
+        VulkanInstallAction = platform.VulkanInstallAction,
+        DefaultDataRoot = platform.DefaultDataRoot,
     };
 
     // The data root may not exist yet: its drive is what matters.

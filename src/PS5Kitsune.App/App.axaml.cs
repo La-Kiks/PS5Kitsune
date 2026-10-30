@@ -25,7 +25,7 @@ public sealed partial class App : Application
         var settings = new AppSettingsStore(platform.SettingsDirectory);
         var loaded = settings.Load();
         var sessions = new SessionHost(
-            root => RootSession.Create(root, platform, ProfileLoader.LoadActive(new DataLayout(root)).Profile),
+            root => RootSession.Create(root, platform, ProfileLoader.LoadActive(new DataLayout(root), platform.Os).Profile),
             DataRoots.Resolve(null, loaded.Settings, platform.DefaultDataRoot));
         var theme = new ThemeService(settings, choice => RequestedThemeVariant = ThemeService.VariantOf(choice), () => sessions.Current.Get<ILogger<App>>());
         theme.Apply(loaded.Settings.Theme);

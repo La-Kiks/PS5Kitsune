@@ -91,4 +91,13 @@ public sealed class HardwareChecksTests
 
         Assert.Equal(CheckStatus.Info, result.Status);
     }
+
+    [Fact]
+    public void Without_a_commit_limit_the_check_is_not_applicable()
+    {
+        var result = new CommitLimitCheck().Evaluate(TestFacts.Healthy() with { CommitLimitBytes = null });
+
+        Assert.Equal(CheckStatus.Info, result.Status);
+        Assert.Equal("Not applicable on this system.", result.Summary);
+    }
 }

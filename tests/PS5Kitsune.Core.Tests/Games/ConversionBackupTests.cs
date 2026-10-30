@@ -227,4 +227,12 @@ public sealed class ConversionBackupTests : IDisposable
     }
 
     public void Dispose() => _temp.Dispose();
+
+    [Fact]
+    public void The_game_executable_takes_the_game_suffix()
+    {
+        var layout = new GameLayout(Path.GetTempPath(), "PPSA99666", new FakePlatform { GameExecutableSuffix = ".elf" });
+
+        Assert.Equal("PPSA99666.elf", layout.ExecutableName);
+    }
 }

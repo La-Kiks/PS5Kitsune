@@ -21,7 +21,7 @@ internal static class CommandHost
         var layout = new DataLayout(DataRoots.Resolve(rootOverride?.FullName, settings.Settings, platform.DefaultDataRoot));
         var services = new ServiceCollection();
         var logFile = services.AddPS5KitsuneLogging(layout.Logs, runName, console: true);
-        var active = ProfileLoader.LoadActive(layout);
+        var active = ProfileLoader.LoadActive(layout, platform.Os);
         services.AddPlatform(platform).AddPS5KitsuneCore(layout, active.Profile);
         services.AddSingleton(new CommandContext(DataRoots.Describe(rootOverride?.FullName, settings.Settings), active.Origin));
 

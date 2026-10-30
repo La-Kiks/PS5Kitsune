@@ -65,7 +65,7 @@ public sealed class CommitLimitCheck : SystemCheck
         ArgumentNullException.ThrowIfNull(facts);
         if (facts.CommitLimitBytes is not { } bytes)
         {
-            return Result(CheckStatus.Info, "Not checked on this system.");
+            return Result(CheckStatus.Info, "Not applicable on this system.");
         }
 
         var available = bytes / MiB;
