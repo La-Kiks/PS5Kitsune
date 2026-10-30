@@ -1,5 +1,6 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "os": "windows",
   "id": "doom-validated-2026-10",
   "validated": true,
   "source": { "kind": "release", "tag": "v0.1.3", "publishedAt": "2026-10-20T09:31:13Z" },
@@ -79,7 +80,7 @@
     { "name": "NotoSansCJK-Bold.ttc", "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTC/NotoSansCJK-Bold.ttc", "sha256": "faa5f3656a78b2e2d450d27fe8382c778bc2b6bb5ea29c986664a6a435056ceb", "size": 20050760 }
   ],
   "relinker": {
-    "windowsArgs": [ "--windows", "--registry" ],
+    "args": [ "--windows", "--registry" ],
     "intelArg": "--to-intel"
   },
   "checks": {

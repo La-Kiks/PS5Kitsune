@@ -76,7 +76,8 @@ internal sealed class AnyPS5TestSetup
                 [MinGitTool.ToolId] = new("2.56.0.2", MinGitUrl, TestFiles.Sha256(MinGitArchive)),
                 [WinLibsTool.ToolId] = new("15.2.0-r7", WinLibsUrl, TestFiles.Sha256(WinLibsArchive)),
             },
-            Relinker = new RelinkerOptions { WindowsArgs = ["--windows", "--registry"], IntelArg = "--to-intel" },
+            Os = ProfileOs.Windows,
+            Relinker = new RelinkerOptions { Args = ["--windows", "--registry"], IntelArg = "--to-intel" },
         };
 
         Downloader.Serve(Profile.AssetUrl(ProfileAssetKeys.Relinker), RelinkerContent);

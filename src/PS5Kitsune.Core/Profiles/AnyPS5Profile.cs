@@ -6,13 +6,17 @@ namespace PS5Kitsune.Core.Profiles;
 /// </summary>
 public sealed record AnyPS5Profile
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public const string RepositoryUrl = "https://github.com/boykopovar/AnyPS5";
 
     public required int SchemaVersion { get; init; }
 
     public required string Id { get; init; }
+
+    /// <summary>The OS this profile is for: <see cref="ProfileOs.Windows"/> or <see cref="ProfileOs.Linux"/>. Validated, not required by the JSON reader,
+    /// so a schema 1 file is refused for its schema version rather than for a missing field.</summary>
+    public string Os { get; init; } = "";
 
     /// <summary>True once the profile has been run end to end with DOOM for PS5.</summary>
     public bool Validated { get; init; }
@@ -92,7 +96,8 @@ public sealed record FontFile(string Name, Uri Url, string Sha256, long Size);
 
 public sealed record RelinkerOptions
 {
-    public IReadOnlyList<string> WindowsArgs { get; init; } = [];
+    /// <summary>Arguments before the input and output paths: --windows --registry on Windows, --registry on Linux.</summary>
+    public IReadOnlyList<string> Args { get; init; } = [];
 
     public string? IntelArg { get; init; }
 }

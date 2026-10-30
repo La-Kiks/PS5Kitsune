@@ -201,7 +201,7 @@ public sealed class CrashDiagnoserTests : IDisposable
     {
         var profile = ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes("""
             {
-              "schemaVersion": 1, "id": "future", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "future", "source": { "kind": "release", "tag": "v1" },
               "diagnostics": { "rules": [ { "id": "future-thing", "log": [ "boom" ] }, { "id": "gpu-features", "log": [ "boom" ] } ] }
             }
             """)));
