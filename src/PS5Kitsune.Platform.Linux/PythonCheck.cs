@@ -9,8 +9,11 @@ public sealed class PythonCheck(SystemPython python, DistroPackages packages) : 
 
     public override string Title => "Python 3";
 
-    public override CheckResult Evaluate(SystemFacts facts) =>
-        python.Executable is { } path
+    public override CheckResult Evaluate(SystemFacts facts)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        return python.Executable is { } path
             ? Result(CheckStatus.Ok, $"{path}.")
             : Result(CheckStatus.Blocking, "python3 was not found.", packages.CommandFor(LinuxPackage.Python));
+    }
 }

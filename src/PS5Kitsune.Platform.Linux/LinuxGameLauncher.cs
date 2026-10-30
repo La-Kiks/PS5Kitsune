@@ -176,7 +176,8 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
 
         public async Task<int> WaitForExitAsync(CancellationToken cancellationToken = default)
         {
-            while (IsRunning())
+            // Gone, a zombie, or a later process reusing the PID (another start time or executable): the game has exited.
+            while (IsRecorded(record))
             {
                 await Task.Delay(poll, cancellationToken).ConfigureAwait(false);
             }
@@ -190,21 +191,6 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
 
         public void Dispose()
         {
-        }
-
-        // Gone, a zombie, or a later process reusing the PID: the game has exited.
-        private bool IsRunning()
-        {
-            try
-            {
-                return ProcStat.Read(record.ProcessId) is { State: not 'Z' }
-                    && ProcStat.StartTimeOf(record.ProcessId) is { } started
-                    && ProcStat.SameStart(started, record.StartedAt);
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidDataException)
-            {
-                return false;
-            }
         }
     }
 }

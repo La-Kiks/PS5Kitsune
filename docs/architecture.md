@@ -42,13 +42,13 @@ The stack is .NET LTS + Avalonia with MVVM, published as a self-contained execut
 | Process execution | CliWrap for tools (git, cmake, python, relinker); native `Process` with inherited file handles for the game | Tools are followed line by line; the game must not depend on the launcher staying alive (see V3) |
 | Logging | NLog via `Microsoft.Extensions.Logging` (file + view in the UI) | One log per operation, attachable to a report; BSD-3 license, GPLv2-compatible (Serilog, under Apache 2.0, is not) |
 | Downloads | `HttpClient` + GitHub REST API | Releases, WinLibs, MinGit, Python, Mesa; resume, progress, SHA-256 check |
-| Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z`: only Lavapipe's manifest and driver are extracted, with SharpCompress's sequential reader; Linux `tar.gz` via `System.Formats.Tar` |
+| Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z`: only Lavapipe's manifest and driver are extracted, with SharpCompress's sequential reader; Linux uses a zip too (`prx-linux-<version>.zip`), extracted with the same zip code |
 | Tests | xUnit + fake test folders | Validate detection and folder validation without a real game |
 | Publishing | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true` | A single `.exe` (~80–100 MB), no .NET to install; Avalonia's native libraries are included |
 
 **Administrator rights:** never required. The page file is never changed automatically: the app explains and opens the right settings panel.
 
-**Python:** the repository's scripts (`import_audit.py`, `unwrap_self.py`) are called as-is rather than rewritten in C#. They only use the standard library ("needs Python 3 and nothing else", per `USAGE.md`), so the official **embeddable Python** (zip) is enough. It is needed **in both modes**, release and build. The build itself does not need Python (only its tests do).
+**Python:** the repository's scripts (`import_audit.py`, `unwrap_self.py`) are called as-is rather than rewritten in C#. They only use the standard library ("needs Python 3 and nothing else", per `USAGE.md`), so the official **embeddable Python** (zip) is enough on Windows; Linux uses the system `python3` instead. It is needed **in both modes**, release and build. The build itself does not need Python (only its tests do).
 
 **Signing:** the app executable is unsigned at first; SmartScreen will warn on first launch. To be documented, and reconsidered (certificate) if the app is widely distributed.
 
@@ -99,7 +99,7 @@ Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the
 
 Vulkan enumeration can crash the process (Dozen driver, some D3D12 drivers, see `USAGE.md`). So it **never runs in the UI process**: the app relaunches itself as `PS5Kitsune.exe --probe-vulkan`, which queries Vulkan via Silk.NET and writes JSON (GPUs, `shaderInt64`, `bufferDeviceAddress`, driver version). A probe crash becomes a result ("Vulkan enumeration failed") and triggers a second attempt with `VK_LOADER_DRIVERS_DISABLE='*dzn*'`. `vulkaninfo` is not used: it ships with the Vulkan SDK and is missing on most PCs. Both executables handle `--probe-vulkan` before anything else starts (`PS5Kitsune.exe` and `ps5kitsune.exe`); the parent waits 15 seconds at most per attempt. The thresholds (commit limit, disk space, NVIDIA drivers) live in the profile's `checks` section.
 
-The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and will be the first Linux deliverable.
+The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and is the first Linux deliverable (milestone 8a).
 
 The theme lives in `Styles/AppTheme.axaml`, as token brushes for Light and Dark over Fluent, and views use only token keys (a test enforces it). Fluent's ComboBox, TextBox, Expander and accent-button resources are re-pointed at the tokens per variant, because Fluent derives them from translucent palette colors. The sidebar is locked while a page runs work, and otherwise leaves every page in the stack through `ILeavable` before `GoHome`. The theme choice is `settings.json`'s `theme`.
 
@@ -336,7 +336,7 @@ Report copies a text (PC, AnyPS5, game, settings, exit, matched line, last 30 lo
 
 ## Linux compatibility
 
-Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linux ELF by default and releases already publish `prx-linux-<version>.tar.gz`. The work is mostly about installing prerequisites and a few different checks.
+Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linux ELF by default and releases already publish `prx-linux-<version>.zip`, extracted like the Windows zip. The work is mostly about installing prerequisites and a few different checks.
 
 ### What changes
 
@@ -350,8 +350,7 @@ Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linu
 | Conversion | `--windows`, `.exe` output | `--registry`, `.elf` output; execute bits ensured before each launch |
 | Python | Portable embeddable Python | System `python3`, found on `PATH` |
 | Lavapipe | Downloaded Mesa | System Mesa (`lvp_icd*.json` in `/usr/share/vulkan/icd.d` or `/etc/vulkan/icd.d`); nothing downloaded |
-| Memory | Commit limit check | No commit limit ("Not applicable on this system."); instead, read-write access to `/dev/udmabuf`: a Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver |
-| `/dev/udmabuf` | Not applicable | A Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver; if denied, the fix is `sudo usermod -aG kvm $USER` then logging in again |
+| Memory | Commit limit check | No commit limit ("Not applicable on this system."); instead, read-write access to `/dev/udmabuf`: a Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver; if denied, the fix is `sudo usermod -aG kvm $USER` then logging in again |
 | Launch | Inherited handles, breakaway from the parent job, exit detected by handle | `posix_spawn` in its own session. `running.json` identifies the game by its executable, compared after resolving symlinks, and its start time, compared with a 5-second tolerance. A game found again after the launcher restarted is not its child, so its exit code is unknown (-1) |
 | Display | Not applicable | `SDL_VIDEODRIVER` if a game needs it; SDL picks Wayland, then X11, and the game inherits the environment |
 | Desktop shortcut | `.lnk` (optional) | The relinker already writes a `.desktop` file and an icon when `icon0.png` exists |

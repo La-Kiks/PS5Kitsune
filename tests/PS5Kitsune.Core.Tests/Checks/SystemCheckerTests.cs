@@ -137,6 +137,20 @@ public sealed class SystemCheckerTests : IDisposable
         Assert.Equal("added", report.Results[^1].Id);
     }
 
+    [Fact]
+    public void The_free_space_is_read_on_the_nearest_existing_folder_of_the_data_root()
+    {
+        var root = _temp.Combine("not", "yet", "created");
+
+        Assert.Equal(_temp.Path, SystemFactsCollector.ExistingAncestor(root));
+    }
+
+    [Fact]
+    public void An_existing_data_root_is_its_own_nearest_existing_folder()
+    {
+        Assert.Equal(_temp.Path, SystemFactsCollector.ExistingAncestor(_temp.Path));
+    }
+
     private sealed class AddedCheck : SystemCheck
     {
         public override string Id => "added";

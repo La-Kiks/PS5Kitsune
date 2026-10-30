@@ -268,7 +268,7 @@
       {
         "id": "udmabuf-access",
         "log": [
-          "open /dev/udmabuf: "
+          "open /dev/udmabuf: (Permission denied|Operation not permitted)"
         ]
       }
     ]

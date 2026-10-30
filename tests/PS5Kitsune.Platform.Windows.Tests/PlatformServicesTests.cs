@@ -6,7 +6,6 @@ using PS5Kitsune.Core.Processes;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tests;
-using PS5Kitsune.Platform;
 
 namespace PS5Kitsune.Platform.Windows.Tests;
 

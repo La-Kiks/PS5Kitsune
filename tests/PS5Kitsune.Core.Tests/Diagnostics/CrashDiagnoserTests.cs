@@ -29,6 +29,10 @@ public sealed class CrashDiagnoserTests : IDisposable
         { "./PPSA99666.elf: error while loading shared libraries: libpulse.so.0: cannot open shared object file: No such file or directory\n", DiagnosisIds.SharedLibraryMissing, "libpulse.so.0" },
         { "[gpu] open /dev/udmabuf: Permission denied; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\nBDA access failed: address=0x7f0012345678\n", DiagnosisIds.BdaAccess, null },
         { "[gpu] open /dev/udmabuf: Permission denied; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\n", DiagnosisIds.UdmabufAccess, null },
+        { "[gpu] open /dev/udmabuf: Operation not permitted; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\n", DiagnosisIds.UdmabufAccess, null },
+        // A kernel without the device (WSL, no CONFIG_UDMABUF): joining the kvm group cannot help.
+        { "[gpu] open /dev/udmabuf: No such file or directory; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\n", DiagnosisIds.Unexplained, null },
+        { "[gpu] open /dev/udmabuf: No such file or directory; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\nBDA access failed: address=0x7f0012345678\n", DiagnosisIds.BdaAccess, null },
         { "[gpu] open /dev/udmabuf: Permission denied; shared direct memory is copied instead of imported\nNgs2: reverb at 96000 Hz is not implemented\n", DiagnosisIds.NotImplemented, null },
         { "Vulkan: buffer device address and shaderInt64 are required\n", DiagnosisIds.GpuFeatures, null },
     };

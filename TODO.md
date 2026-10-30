@@ -17,3 +17,27 @@ A game found again from `running.json` is not PS5Kitsune's child on Linux, so it
 ## A clock-proof identity for a running game on Linux
 
 On Linux the launcher recognises a running game by its executable and its start time, computed from the boot time in `/proc/stat`. That boot time moves when the wall clock is stepped, so the start times are compared with a 5-second tolerance. A big clock jump (WSL resyncing after the host slept) still loses the game. A robust fix records an identity that ignores the clock in `running.json`: `/proc/sys/kernel/random/boot_id` plus the process's start ticks (`/proc/<pid>/stat` field 22). Worth doing with the app (8b), which follows games for longer.
+
+## Lavapipe text on Linux
+
+On Linux `settings` prints `VK_DRIVER_FILES= (downloaded on first launch)` and `GamePlayer` says "Launch again to download it.", but there Lavapipe comes from the system Mesa and is never downloaded. Give `ILavapipe` a "how to get it" text (the install command on Linux, the download on Windows) and use it in both places.
+
+## Exit codes on Linux
+
+Exit codes are shown Windows-style on Linux: 139 (SIGSEGV) shows as `0x0000008B` and -1 as `0xFFFFFFFF`. On Linux, show the decimal code, or "signal N" for a process killed by a signal.
+
+## The Dozen check on Linux
+
+The Dozen check prints "Not installed" on Linux, where Dozen does not exist. Show it as not applicable there, like the commit limit.
+
+## Stop the whole process group on Linux
+
+Stop sends SIGTERM to the game's process group and SIGKILL after the grace period, but only while the leader lives. Children that ignore SIGTERM survive a leader that exits on it. Stop could SIGKILL the whole group after the leader exits.
+
+## Required OS in profiles and system facts
+
+`ProfileLoader.LoadEmbedded` and `LoadActive` default `os` to Windows, and `SystemFacts` defaults to the Windows texts. A caller that forgets them gets Windows behaviour on Linux silently; make them required.
+
+## "Exit 0 = normal quit" on Linux
+
+In WSL AnyPS5 exited with code 0 when DOOM failed (`I_AllocLow: cannot allocate`). `CrashDiagnoser` treats exit 0 as a normal quit; check on real Linux whether that still holds, or diagnose from the log even after exit 0.
