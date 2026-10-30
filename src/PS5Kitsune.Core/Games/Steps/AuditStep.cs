@@ -14,6 +14,8 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, IPyt
 {
     public const string StepName = "Audit the imports";
 
+    private const string GuestSuffix = ".guest.prx";
+
     public string Name => StepName;
 
     // Always runs again: it is quick, and its result feeds the game record.
@@ -29,8 +31,9 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, IPyt
         }
 
         List<string> arguments = [.. registries, "--libs", "libs"];
-        // Relinker v0.1.2 writes PE <module>.guest.prx files beside the original modules, and import_audit.py
-        // reads every file of a --modules folder as an ELF. So the audit gets a copy of the ELF modules only.
+        // The relinker writes <module>.guest.prx files beside the original modules: PE on Windows, which
+        // import_audit.py cannot read, and ELF on Linux, whose host imports (ld-linux-x86-64.so.2) are not the
+        // game's. So the audit gets a copy of the game's own ELF modules only.
         if (Directory.Exists(game.AuditModules))
         {
             Directory.Delete(game.AuditModules, recursive: true);
@@ -41,7 +44,8 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, IPyt
             var source = Path.Combine(game.App0, directory);
             var staged = Path.Combine(game.AuditModules, directory);
             Directory.CreateDirectory(staged);
-            foreach (var relative in FileTree.RelativeFiles(source).Where(relative => BinaryKinds.Detect(Path.Combine(source, relative)) == BinaryKind.Elf))
+            foreach (var relative in FileTree.RelativeFiles(source).Where(relative =>
+                !relative.EndsWith(GuestSuffix, StringComparison.Ordinal) && BinaryKinds.Detect(Path.Combine(source, relative)) == BinaryKind.Elf))
             {
                 var target = Path.Combine(staged, relative);
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
