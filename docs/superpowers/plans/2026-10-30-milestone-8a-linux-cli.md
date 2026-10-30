@@ -3014,6 +3014,10 @@ Milestone 8a supports release mode only on Linux. Build mode needs the system GC
 ## Exit code of a reattached game on Linux
 
 A game found again from `running.json` is not PS5Kitsune's child on Linux, so its exit code cannot be read: `WaitForExitAsync` returns -1. The app (milestone 8b) should show "exited" without a code, and skip the diagnosis by exit code, for such a game.
+
+## A clock-proof identity for a running game on Linux
+
+On Linux the launcher recognises a running game by its executable and its start time, computed from the boot time in `/proc/stat`. That boot time moves when the wall clock is stepped, so the start times are compared with a 5-second tolerance. A big clock jump (WSL resyncing after the host slept) still loses the game. A robust fix records an identity that ignores the clock in `running.json`: `/proc/sys/kernel/random/boot_id` plus the process's start ticks (`/proc/<pid>/stat` field 22). Worth doing with the app (8b), which follows games for longer.
 ```
 
 - [ ] **Step 3: WSL run before the criterion**
