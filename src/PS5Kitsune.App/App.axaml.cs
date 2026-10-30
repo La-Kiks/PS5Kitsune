@@ -10,7 +10,7 @@ using PS5Kitsune.App.Views;
 using PS5Kitsune.Core;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
-using PS5Kitsune.Platform.Windows;
+using PS5Kitsune.Platform;
 
 namespace PS5Kitsune.App;
 

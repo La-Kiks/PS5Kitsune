@@ -26,7 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PS5Kitsune.Core\PS5Kitsune.Core.csproj" />
-    <ProjectReference Include="..\PS5Kitsune.Platform.Windows\PS5Kitsune.Platform.Windows.csproj" />
+    <ProjectReference Include="..\PS5Kitsune.Platform\PS5Kitsune.Platform.csproj" />
   </ItemGroup>
 
 </Project>

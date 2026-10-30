@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PS5Kitsune.Platform.Windows\PS5Kitsune.Platform.Windows.csproj" />
+    <ProjectReference Include="..\..\src\PS5Kitsune.Platform\PS5Kitsune.Platform.csproj" />
   </ItemGroup>
 
   <ItemGroup>
