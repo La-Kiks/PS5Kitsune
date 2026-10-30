@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design; the next one is Linux). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is in progress. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -27,7 +27,7 @@ Early development — milestone 7 of 8 done (the library and launch, per-game se
 - [x] **5. Build mode** — AnyPS5 built from source with portable tools (5a CLI, 5b screens), release and build installs side by side (5c)
 - [x] **6. Add-a-game screens** — choose, summary, add and verdict (6a), Reconvert (6b)
 - [x] **7. Launcher** — library and launch (7a), per-game settings with CPU rendering and fonts (7b), crash diagnosis (7c), visual design with light and dark themes and full keyboard use (7d)
-- [ ] **8. Linux** — native Linux support, CLI first, then the app
+- [ ] **8. Linux** — the CLI in release mode (8a), then the app and packaging (8b)
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
@@ -48,6 +48,10 @@ ps5kitsune diagnose <title ID>       # look for a known AnyPS5 error in the game
 In the app, the Library lists the added games and opens first once a game is added: one click launches a game and follows its log, and closing the app leaves the game running (reopening finds it again). Each game's menu opens its folder or its last log, reconverts it, clears its shader cache or removes it. Home's "Add a game" takes a folder or a .zip (picked or dropped), shows its summary, adds it and shows the audit verdict. After an AnyPS5 update, `ps5kitsune reconvert <titleId>` (or Reconvert in the app) converts a game again without copying it, keeping its saves; a failure puts the previous conversion back. After a game stops with an error AnyPS5 is known to print, the Game page explains it and offers its fix (Repair libs, Turn on CPU rendering, Reset a setting, …), or Report for an error nobody explains yet. The sidebar's theme switch (System, Light, Dark) is saved in `settings.json`.
 
 Every command takes `--root <data root>`; without it, the CLI uses the data folder chosen in the app, else `C:\PS5Kitsune`. `check` and `install` exit with code 2 when a check is blocking.
+
+### Linux
+
+The command-line tool runs on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver): add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
 
 ### Build mode
 

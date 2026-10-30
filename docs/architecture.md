@@ -56,7 +56,7 @@ The stack is .NET LTS + Avalonia with MVVM, published as a self-contained execut
 
 The logic lives in `Core`, with no reference to Avalonia or Windows. The UI only displays steps and their progress, and each OS provides its own implementation of `Core`'s interfaces.
 
-Dependencies go one way only: the UI and the CLI only call Core, and only the Platform projects talk to Windows or Linux. The Linux project is planned, but not before V3.
+Dependencies go one way only: the UI and the CLI only call Core, and only the Platform projects talk to Windows or Linux.
 
 ```text
 PS5Kitsune/
@@ -71,11 +71,13 @@ PS5Kitsune/
 │   │   ├── Pipeline/                   IStep, StepRunner, progress, resume
 │   │   └── Abstractions/               IPlatform, IProcessRunner, IDownloader, IGameLauncher
 │   ├── PS5Kitsune.Platform.Windows/    commit limit, Windows paths, Job Objects, P/Invoke
-│   ├── PS5Kitsune.Platform.Linux/      (later) packages, XDG paths, udmabuf
+│   ├── PS5Kitsune.Platform.Linux/      XDG paths, package commands, posix_spawn launcher, udmabuf check
+│   ├── PS5Kitsune.Platform/            picks the platform at startup
 │   ├── PS5Kitsune.App/                 Avalonia: Views, ViewModels, navigation
 │   └── PS5Kitsune.Cli/                 same logic on the command line; isolated Vulkan probe
 └── tests/
-    └── PS5Kitsune.Core.Tests/          fake game folders, fake IProcessRunner
+    ├── PS5Kitsune.Core.Tests/          fake game folders, fake IProcessRunner
+    └── PS5Kitsune.Platform.Linux.Tests/ XDG paths, os-release, launcher (Linux-only tests)
 ```
 
 | Abstraction | Role | Example implementation |
@@ -107,8 +109,9 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "doom-validated-2026-10",
+  "os": "windows",
   "source": { "kind": "release", "tag": "v0.1.3" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
@@ -123,11 +126,12 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
     "mingit":  { "url": "…", "sha256": "…" },
     "python":  { "url": "…/python-3.14.8-embed-amd64.zip", "sha256": "…" }
   },
-  "relinker": { "windowsArgs": ["--windows", "--registry"], "intelArg": "--to-intel" },
+  "relinker": { "args": ["--windows", "--registry"], "intelArg": "--to-intel" },
   "errorPatterns": "patterns-v1.json"
 }
 ```
 
+- **One profile per OS:** the app embeds `default-profile.windows.json` and `default-profile.linux.json` and uses the one for the OS it runs on. Schema 2 adds `os` (`windows` or `linux`) and `relinker.args`, the relinker options for that OS (`["--windows", "--registry"]` on Windows, `["--registry"]` on Linux). An override written for the other OS is ignored, with a warning in the log.
 - **`build` section:** `repository` uses HTTPS and `commit` is 40 lowercase hex characters. Build mode installs that commit.
 - **Source archive hash:** The source archive's hash is computed from the downloaded `archive/refs/tags/<tag>.zip`, since GitHub publishes no digest for it and does not guarantee these archives stay byte-identical; if GitHub regenerates it, the install fails its hash check and the profile needs a new hash.
 - **Resolution order:** the profile embedded in the app, or a valid local override `<root>\profiles\override.json`, which replaces it for both the CLI and the app. An override that cannot be read or is invalid is ignored, with a warning in the log. The profile downloaded from the PS5Kitsune repository (checked on demand) is still to come; the most recent valid one will then win, and the user will see which one is active.
@@ -338,17 +342,18 @@ Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linu
 
 | Topic | Windows | Linux |
 | --- | --- | --- |
-| Tool installation | Portable archives in `tools\` | Distribution packages (`apt`, `dnf`), read from `/etc/os-release`; commands shown for copying or run via `pkexec` |
+| Tool installation | Portable archives in `tools\` | Distribution packages (`apt`, `dnf`, `pacman`), read from `/etc/os-release`; PS5Kitsune shows the command to copy and never runs anything as root |
 | Compiler | WinLibs GCC 15.2.0 r7, mandatory | System GCC and G++ |
 | Build dependencies | None extra | X11, Xext, XRandR, Wayland, xkbcommon, EGL, libdecor, PipeWire, PulseAudio, ALSA headers (list in `BUILD.md`); on Fedora `glibc-static` and `libstdc++-static` |
 | FFmpeg SSL error | Worked around with `SSL_CERT_FILE` | Not applicable |
 | Libs | `.prx` + 3 DLLs | `.prx` only |
-| Conversion | `--windows`, `.exe` output | No option, `.elf` output; restore the execute bit after a copy, on the exe and every listed `Executable file:` |
-| Python | Portable embeddable Python | System `python3` |
-| Lavapipe | Downloaded Mesa | System Mesa package; manifest in `/usr/share/vulkan/icd.d/` |
-| Memory | Commit limit check | No equivalent check; instead, read-write access to `/dev/udmabuf` |
-| `/dev/udmabuf` | Not applicable | If denied: suggest `sudo usermod -aG kvm $USER` then logging in again |
-| Display | Not applicable | `SDL_VIDEODRIVER` setting (Wayland or X11) in game settings |
+| Conversion | `--windows`, `.exe` output | `--registry`, `.elf` output; execute bits ensured before each launch |
+| Python | Portable embeddable Python | System `python3`, found on `PATH` |
+| Lavapipe | Downloaded Mesa | System Mesa (`lvp_icd*.json` in `/usr/share/vulkan/icd.d` or `/etc/vulkan/icd.d`); nothing downloaded |
+| Memory | Commit limit check | No commit limit ("Not applicable on this system."); instead, read-write access to `/dev/udmabuf`: a Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver |
+| `/dev/udmabuf` | Not applicable | A Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver; if denied, the fix is `sudo usermod -aG kvm $USER` then logging in again |
+| Launch | Inherited handles, breakaway from the parent job, exit detected by handle | `posix_spawn` in its own session. `running.json` identifies the game by its executable, compared after resolving symlinks, and its start time, compared with a 5-second tolerance. A game found again after the launcher restarted is not its child, so its exit code is unknown (-1) |
+| Display | Not applicable | `SDL_VIDEODRIVER` if a game needs it; SDL picks Wayland, then X11, and the game inherits the environment |
 | Desktop shortcut | `.lnk` (optional) | The relinker already writes a `.desktop` file and an icon when `icon0.png` exists |
 
 ### Rules from V1 onwards
@@ -356,7 +361,7 @@ Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linu
 - No hard-coded paths with `\`: always `Path.Combine` and folders provided by `IPlatform`.
 - No direct call to a tool or Windows API outside `Platform.Windows`. Windows code (P/Invoke, registry) stays in that project.
 - CPU and Vulkan checks live in `Core`: .NET intrinsics and Silk.NET work on both OSes.
-- CI builds `Core` and the CLI for `win-x64` **and** `linux-x64` from the start: a Windows dependency slipping into `Core` breaks the build immediately. The `Platform.Linux` project is only created at the Linux milestone.
+- CI builds `Core` and the CLI for `win-x64` **and** `linux-x64` from the start: a Windows dependency slipping into `Core` breaks the build immediately. `PS5Kitsune.Platform` picks `Platform.Windows` or `Platform.Linux` at startup; the CLI and the app reference only it.
 
 ## Data and configuration
 
@@ -547,7 +552,9 @@ The order follows "end to end first, screens second": each milestone ends with a
      - Criterion: a deliberately provoked error 126 is recognized and repaired.
    - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation). Spec: [milestone 7d](superpowers/specs/2026-10-25-milestone-7d-visual-design-design.md).
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
-8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
-   - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.
+8. **Linux**, in two parts. Build mode on Linux comes later (see `TODO.md`).
+   - **8a — The CLI on Linux, release mode.** `Platform` picks the OS at startup; `Platform.Linux`: XDG paths, per-distribution package commands, system Python and Lavapipe, the posix_spawn launcher, the Python and `/dev/udmabuf` checks; one profile per OS (schema 2). Spec: [milestone 8a](superpowers/specs/2026-10-30-milestone-8a-linux-cli-design.md).
+     - Criterion: the CLI path in WSL Ubuntu (DOOM added with the Windows verdict), then DOOM played on a real Ubuntu install.
+   - **8b — The app on Linux.** The Avalonia app on Linux and `linux-x64` packaging.
 
 From milestone 2 the tool is usable from the command line; milestone 4 gives a first graphical installer with no C++ build on the user's side.

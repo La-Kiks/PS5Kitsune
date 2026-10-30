@@ -41,6 +41,10 @@ jobs:
           echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
       - run: dotnet build PS5Kitsune.slnx -c Release
       - run: dotnet test --solution PS5Kitsune.slnx -c Release --no-build
+      # What Linux ships: a self-contained CLI. A Windows-only dependency in it fails here.
+      - name: Publish the Linux CLI
+        if: runner.os == 'Linux'
+        run: dotnet publish src/PS5Kitsune.Cli -c Release -r linux-x64 --self-contained -o "$RUNNER_TEMP/cli-linux"
 
   licenses:
     name: License check (shipped packages)
