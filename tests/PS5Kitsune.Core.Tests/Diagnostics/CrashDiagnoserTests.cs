@@ -10,6 +10,8 @@ public sealed class CrashDiagnoserTests : IDisposable
     private readonly TempDirectory _temp = new();
     private readonly CrashDiagnoser _diagnoser = new(ProfileLoader.LoadEmbedded(), NullLogger<CrashDiagnoser>.Instance);
 
+    private readonly CrashDiagnoser _linux = new(ProfileLoader.LoadEmbedded(ProfileOs.Linux), NullLogger<CrashDiagnoser>.Instance);
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private string Log(string text)
@@ -18,6 +20,37 @@ public sealed class CrashDiagnoserTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, text);
         return path;
+    }
+
+    /// <summary>Linux log text from AnyPS5 v0.1.3 and the dynamic loader, the rule id it must give, and its "library" capture.</summary>
+    public static TheoryData<string, string, string?> LinuxSamples => new()
+    {
+        { "[gpu] Vulkan loader: libvulkan.so.1: cannot open shared object file: No such file or directory\n", DiagnosisIds.VulkanMissing, null },
+        { "./PPSA99666.elf: error while loading shared libraries: libpulse.so.0: cannot open shared object file: No such file or directory\n", DiagnosisIds.SharedLibraryMissing, "libpulse.so.0" },
+        { "[gpu] open /dev/udmabuf: Permission denied; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\nBDA access failed: address=0x7f0012345678\n", DiagnosisIds.BdaAccess, null },
+        { "[gpu] open /dev/udmabuf: Permission denied; shared direct memory is copied instead of imported, and GPU stores through FLAT/GLOBAL addresses do not reach it\n", DiagnosisIds.UdmabufAccess, null },
+        { "[gpu] open /dev/udmabuf: Permission denied; shared direct memory is copied instead of imported\nNgs2: reverb at 96000 Hz is not implemented\n", DiagnosisIds.NotImplemented, null },
+        { "Vulkan: buffer device address and shaderInt64 are required\n", DiagnosisIds.GpuFeatures, null },
+    };
+
+    [Theory]
+    [MemberData(nameof(LinuxSamples))]
+    public async Task Each_linux_error_gives_its_rule(string log, string id, string? library)
+    {
+        var diagnosis = await _linux.DiagnoseAsync(Log("[debug:0] launcher: start\n" + log), 1, Token);
+
+        Assert.NotNull(diagnosis);
+        Assert.Equal(id, diagnosis.Id);
+        Assert.Equal(library, diagnosis.Capture("library"));
+    }
+
+    [Fact]
+    public async Task The_windows_dll_rules_are_not_in_the_linux_profile()
+    {
+        var diagnosis = await _linux.DiagnoseAsync(
+            Log("Failed to load module: /g/libs/libSceAudioOut.prx\nGetLastError: 126 - The specified module could not be found.\n"), 1, Token);
+
+        Assert.Equal(DiagnosisIds.Unexplained, diagnosis!.Id);
     }
 
     /// <summary>Log text built from AnyPS5 v0.1.2's messages, the rule id it must give, and its capture ("module" or "variable") when it has one.</summary>

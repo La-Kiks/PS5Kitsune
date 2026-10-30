@@ -246,6 +246,30 @@
         "log": [
           "(is|are) not implemented"
         ]
+      },
+      {
+        "id": "vulkan-missing",
+        "log": [
+          "Vulkan loader: "
+        ]
+      },
+      {
+        "id": "shared-library-missing",
+        "log": [
+          "error while loading shared libraries: (?<library>[^:\\s]+)"
+        ]
+      },
+      {
+        "id": "bda-access",
+        "log": [
+          "BDA access failed"
+        ]
+      },
+      {
+        "id": "udmabuf-access",
+        "log": [
+          "open /dev/udmabuf: "
+        ]
       }
     ]
   }

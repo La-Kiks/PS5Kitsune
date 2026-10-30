@@ -62,6 +62,26 @@ public static class DiagnosisTexts
             DiagnosisIds.InvalidSetting => Setting(diagnosis.Capture("variable"), settings),
             DiagnosisIds.NotImplemented => new(
                 "AnyPS5 does not handle this game yet", "The game uses a feature AnyPS5 has not implemented.", DiagnosisAction.Report, "Report"),
+            DiagnosisIds.VulkanMissing => new(
+                "Vulkan could not be loaded",
+                "AnyPS5 could not load the Vulkan loader or a Vulkan driver. Run ps5kitsune check: it shows the command that installs them.",
+                DiagnosisAction.None,
+                null),
+            DiagnosisIds.SharedLibraryMissing => new(
+                "A system library is missing",
+                $"{diagnosis.Capture("library") ?? "A library"} is not installed. Install the package that provides it with your distribution's package manager.",
+                DiagnosisAction.None,
+                null),
+            DiagnosisIds.BdaAccess => new(
+                "The GPU could not reach some memory",
+                "GPU stores failed (BDA access failed), usually because /dev/udmabuf could not be used. Run ps5kitsune check: it tells whether this kernel provides /dev/udmabuf and whether you can open it.",
+                DiagnosisAction.None,
+                null),
+            DiagnosisIds.UdmabufAccess => new(
+                "No access to /dev/udmabuf",
+                "AnyPS5 could not open /dev/udmabuf, so it copied shared memory instead of importing it. Give your user access: sudo usermod -aG kvm $USER, then log out and in again.",
+                DiagnosisAction.None,
+                null),
             _ => new(
                 "The game stopped with an error",
                 $"AnyPS5 stopped with an error it does not explain yet (exit code {Code(diagnosis.ExitCode)}).",
