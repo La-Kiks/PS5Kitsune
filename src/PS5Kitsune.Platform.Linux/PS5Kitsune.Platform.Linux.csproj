@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Targets plain net10.0 (not a Linux-only TFM) so the Windows build still compiles it;
+       Linux-only APIs are guarded by [SupportedOSPlatform("linux")]. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\PS5Kitsune.Core\PS5Kitsune.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- Required by the LibraryImport source generator (P/Invoke for the game launcher). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PS5Kitsune.Platform.Linux.Tests" />
+  </ItemGroup>
+
+</Project>
