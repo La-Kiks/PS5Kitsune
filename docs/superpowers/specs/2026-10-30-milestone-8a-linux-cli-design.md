@@ -15,21 +15,21 @@ Milestone 8 is split in two: **8a** (this spec) is the Linux CLI in release mode
 - **8b:** the app on Linux, `linux-x64` packages, a desktop shortcut. The relinker already writes a `.desktop` file when `icon0.png` exists.
 - **Build mode on Linux** (system GCC, the build dependency packages). `install --mode build` and `use build` refuse on Linux. Recorded in `TODO.md`.
 - **Running anything as root**, `pkexec` included. A missing package shows the command to copy.
-- **A `SDL_VIDEODRIVER` setting.** AnyPS5 opens its window through Wayland or X11 directly and does not use SDL (see [Facts](#facts-checked-on-2026-10-30)). The line is removed from the architecture.
+- **A display setting (`SDL_VIDEODRIVER`).** SDL chooses Wayland, then X11, on its own (see [Facts](#facts-checked-on-2026-10-30)); the game inherits the environment, so `SDL_VIDEODRIVER=x11 ps5kitsune run …` works without one. The architecture keeps the row, marked "if a game needs it".
 - **Distributions other than** the Debian, Fedora and Arch families for package commands. Others get the package names only.
 
 ## Facts checked on 2026-10-30
 
 From the AnyPS5 v0.1.3 release (the release the embedded profile pins), inspected in WSL Ubuntu 24.04:
 
-- **Release assets:** `relinker-v0.1.3` (Linux) next to `relinker-v0.1.3.exe`, and `prx-linux-v0.1.3.zip` / `.tar.gz` next to the Windows ones. Their SHA-256 hashes are taken while writing the plan.
+- **Release assets:** `relinker-v0.1.3` (Linux, SHA-256 `bd2a959885830e14f091477edf297fc4c3f45b83a29171c47f5719d721fedb45`) next to `relinker-v0.1.3.exe`, and `prx-linux-v0.1.3.zip` (SHA-256 `017bdb0e931fa0cdb17f0cea805a824180b88205f5c50f4473550c63a4e811f3`, 352 entries under `libs/`) next to the Windows ones. Both hashes match the digests GitHub publishes.
 - **The Linux relinker is statically linked** (`ldd`: "not a dynamic executable"): it needs nothing installed.
-- **The 352 Linux libraries** (`libs/*.prx`) link only against `libc`, `libm`, `libstdc++` and `libgcc_s`. They load at run time `libvulkan.so.1`, Wayland (`libwayland-client`, `-cursor`, `-egl`, `libdecor-0`, `libxkbcommon`), X11 (`libX11`, `libX11-xcb`, `libXext`, `libXrandr`), `libpulse`, `libasound` and `libdbus-1`. A desktop distribution has all of them except, possibly, the Vulkan loader and a driver. No SDL.
+- **The 352 Linux libraries** (`libs/*.prx`) link only against `libc`, `libm`, `libstdc++` and `libgcc_s`. They load at run time `libvulkan.so.1`, Wayland (`libwayland-client`, `-cursor`, `-egl`, `libdecor-0`, `libxkbcommon`), X11 (`libX11`, `libX11-xcb`, `libXext`, `libXrandr`), `libpulse`, `libasound` and `libdbus-1`. A desktop distribution has all of them except, possibly, the Vulkan loader and a driver. SDL2 is linked into `libSceAgcDriver.prx` and the audio libraries; it reads `SDL_VIDEODRIVER` and defaults to `wayland,x11`. When Vulkan cannot be loaded, the game logs a line starting with `Vulkan loader: `.
 - **Python:** the scripts need Python 3 and only the standard library (`USAGE.md`); Ubuntu ships `python3`.
 - **`/dev/udmabuf`** (`USAGE.md`): used when the Vulkan driver imports dma-buf memory, which is every driver but NVIDIA's proprietary one. The user needs read-write access, usually through the `kvm` group (`root:kvm`, `0660`). Without it the game prints `[gpu] open /dev/udmabuf: <reason>; shared direct memory is copied instead of imported, …` and can later fail with `BDA access failed: address=0x…`.
 - **Output** (`USAGE.md`): without `--windows` the relinker writes a Linux ELF; `app.elf` is the documented name. It writes the executable and each `Executable file:` it lists with execute permission; a copy that lost the file mode needs `chmod +x`. On Linux, `app0/` must not contain symbolic links.
 - **WSL2** (Ubuntu 24.04, kernel 5.15.167.4): Vulkan sees only `llvmpipe` (with `shaderInt64` and `bufferDeviceAddress`); the kernel is built without `CONFIG_UDMABUF` and has no `/dev/kvm`. Good for everything but playing a game.
-- **To confirm while writing the plan:** whether .NET's own child-process reaping (its `SIGCHLD` handling) can collect the exit status of a process started with `posix_spawn` before the launcher's `waitpid`; the exact `/proc/<pid>/stat` start-time conversion; the loader's message when `libvulkan.so.1` is missing.
+- **`posix_spawn` with `POSIX_SPAWN_SETSID`** (tested in WSL with a throwaway program): the child gets its own session, the file actions send stdout and stderr to the log, and `waitpid` returns its exit code even while .NET starts and reaps its own `Process` children (.NET only reaps the PIDs it started).
 
 ## Structure
 
@@ -94,7 +94,7 @@ The data root keeps its "no spaces" rule on both OSes.
     | `udmabuf-access` | `open /dev/udmabuf: ` | No access to `/dev/udmabuf`: `sudo usermod -aG kvm $USER`, then log out and in. |
     | `bda-access` | `BDA access failed` | GPU stores failed, usually after the udmabuf message: same fix; if `/dev/udmabuf` is absent, the kernel lacks it. |
     | `shared-library-missing` | `error while loading shared libraries: (?<library>\S+)` | A system library is missing: names it. |
-    | `vulkan-missing` | the loader's message, confirmed in the plan | The Vulkan loader is missing: the distribution's command. |
+    | `vulkan-missing` | `Vulkan loader: ` | Vulkan could not be loaded: the distribution's command for the loader and Mesa. |
 
     The Windows-only rules (DLL errors 126 and 193, the NVIDIA shader compiler, the commit limit) stay in the Windows profile only.
 - **A test** checks that the shared parts of both profiles stay identical: `id`, `source`, `build`, the `scripts` and `unwrapScript` assets, `fonts` and `checks`.
@@ -117,7 +117,7 @@ The data root keeps its "no spaces" rule on both OSes.
 - **Execute bits:** before each launch, `run` makes sure the game executable and every `Executable file:` the relinker listed (kept from the relink output) have the user execute bit, adding it if needed.
 - **Starting** (`LinuxGameLauncher.Launch`): `posix_spawn` through P/Invoke with `POSIX_SPAWN_SETSID`, so the game has its own session and outlives the CLI and the terminal. File actions open the log file on stdout and stderr and `/dev/null` on stdin. The environment is the inherited one plus `GameLaunchRequest.Environment` (`ANYPS5_SYSTEM_FONTS`, `VK_DRIVER_FILES` for Lavapipe, per-game settings), as on Windows. Old logs are trimmed as on Windows.
 - **Start time and executable:** `StartedAt` comes from `/proc/<pid>/stat` (start time in clock ticks since boot, plus the boot time from `/proc/stat`'s `btime`). The executable is `/proc/<pid>/exe`.
-- **Waiting:** a game started here is waited for with `waitpid` on a dedicated thread. A game found again with `Attach` is not our child: `pidfd_open` plus a poll, else a `/proc/<pid>` check every 500 ms.
+- **Waiting:** a game started here is waited for with `waitpid` on a dedicated thread. A game found again with `Attach` is not our child: a `/proc/<pid>` check every 500 ms (gone, a zombie, or another start time means it exited; its exit code is unknown, reported as -1 as on Windows when it cannot be read).
 - **`Attach`:** null when `/proc/<pid>` is gone, the process is a zombie, or its start time or executable differ from `running.json`.
 - **`Stop`:** `SIGTERM` to the game's process group, wait the grace period (5 seconds, as on Windows), then `SIGKILL`.
 
@@ -178,7 +178,7 @@ The PR is opened after step 1 and merged after step 2.
 ## Docs
 
 - **`docs/architecture.md`, "Linux compatibility":**
-  - Remove the `SDL_VIDEODRIVER` row.
+  - The `SDL_VIDEODRIVER` row says "if a game needs it; SDL picks Wayland, then X11".
   - Python: the system `python3`. Lavapipe: the system Mesa manifest. udmabuf: a warning, skipped for NVIDIA's proprietary driver.
   - Note the profile per OS (schema 2) and `GameExecutableSuffix`.
   - The roadmap gets 8a (this spec) and 8b (the app, packaging); build mode on Linux is listed as later.
