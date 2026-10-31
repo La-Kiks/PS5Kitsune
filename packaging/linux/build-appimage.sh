@@ -1,5 +1,6 @@
 #!/bin/sh
 # Builds PS5Kitsune-<version>-x86_64.AppImage: the app and the CLI published self-contained into one folder. See the 8b spec, "Packaging".
+# PS5K_APPIMAGE_OUT overrides the output folder (default artifacts/appimage): a case-insensitive filesystem such as /mnt/c in WSL merges PS5Kitsune and ps5kitsune, so build on ext4 there.
 set -eu
 
 version=${1:?usage: build-appimage.sh <version>}
@@ -29,7 +30,7 @@ for project in App Cli; do
 done
 
 # The two outputs share the runtime and every common library: a file in both must be identical.
-(cd "$out/app" && find . -type f) | while read -r file; do
+(cd "$out/app" && find . -type f) | while IFS= read -r file; do
     if [ -f "$out/cli/$file" ] && ! cmp -s "$out/app/$file" "$out/cli/$file"; then
         echo "The app and the CLI publish different $file" >&2
         exit 1
