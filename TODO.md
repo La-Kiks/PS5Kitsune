@@ -41,3 +41,7 @@ Stop sends SIGTERM to the game's process group and SIGKILL after the grace perio
 ## "Exit 0 = normal quit" on Linux
 
 In WSL AnyPS5 exited with code 0 when DOOM failed (`I_AllocLow: cannot allocate`). `CrashDiagnoser` treats exit 0 as a normal quit; check on real Linux whether that still holds, or diagnose from the log even after exit 0.
+
+## Known issue: DOOM crashes at the quit prompt in build mode on Windows
+
+With AnyPS5 built from `7fcab08` (v0.1.4) on Windows, DOOM plays, but choosing Quit ends it with `0xC0000005` before the confirm screen shows: a string function in `ucrtbase.dll` reads a bad address while DOOM writes the quit message. The release download of the same tag shows the confirm screen and exits with 0, on Windows and on Linux. It is an AnyPS5 issue (the locally built libraries), seen on 2026-10-31 on the AMD laptop. Report it upstream with `ps5kitsune diagnose PPSA99666 --report`, and drop this entry once a build-mode commit quits cleanly.

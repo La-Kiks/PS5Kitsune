@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4; it waits for a re-check of Windows on v0.1.4 before it is merged. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. Windows was re-checked on v0.1.4: release plays and quits cleanly; build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
