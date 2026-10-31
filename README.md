@@ -51,7 +51,7 @@ Every command takes `--root <data root>`; without it, the CLI uses the data fold
 
 ### Linux
 
-The command-line tool runs on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver): add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
+The command-line tool runs on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
 
 There is no Linux package yet. To run it from source, install the .NET 10 SDK (for example with Microsoft's `dotnet-install.sh --channel 10.0`), clone the repository, then:
 
