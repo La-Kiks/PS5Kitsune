@@ -12,7 +12,13 @@ internal sealed class FakeLavapipe : ILavapipe
 {
     public const long Total = 70L << 20;
 
+    public const string HowToGetText = "Mesa is fetched by the test.";
+
     public string Manifest { get; set; } = @"C:\root\tools\mesa\lvp_icd.x86_64.json";
+
+    public string HowToGet { get; set; } = HowToGetText;
+
+    public string WhenMissing { get; set; } = "launch the test again";
 
     public bool Installed { get; set; }
 

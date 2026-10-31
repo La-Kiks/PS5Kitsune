@@ -56,7 +56,10 @@ internal static partial class CliLog
     public static partial void GameStarted(this ILogger logger, string name, int processId, string logFile);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "{Name} exited with code {ExitCode}.")]
-    public static partial void GameExited(this ILogger logger, string name, int exitCode);
+    public static partial void GameExited(this ILogger logger, string name, string exitCode);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "{Name} exited.")]
+    public static partial void GameExitedUnknown(this ILogger logger, string name);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Stopped following the log. {Name} is still running (PID {ProcessId}). Log: {LogFile}")]
     public static partial void StoppedFollowing(this ILogger logger, string name, int processId, string logFile);

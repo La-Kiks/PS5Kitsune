@@ -15,6 +15,9 @@ internal sealed class FakeGameLauncher : IGameLauncher
     /// <summary>Thrown by Launch when set.</summary>
     public Exception? LaunchFailure { get; set; }
 
+    /// <summary>The boot ID and start ticks every launched game reports; null like a Windows game.</summary>
+    public (string BootId, ulong StartTicks)? Identity { get; set; }
+
     public DateTimeOffset Now { get; set; } = new(2026, 10, 24, 18, 3, 11, TimeSpan.Zero);
 
     public ILaunchedGame Launch(GameLaunchRequest request)
@@ -28,7 +31,7 @@ internal sealed class FakeGameLauncher : IGameLauncher
         Directory.CreateDirectory(request.LogDirectory);
         var logFile = Path.Combine(request.LogDirectory, $"{Launches.Count:000}.log");
         File.WriteAllText(logFile, "");
-        var game = new FakeLaunchedGame(_nextProcessId++, logFile, Now);
+        var game = new FakeLaunchedGame(_nextProcessId++, logFile, Now, Identity);
         Games[game.ProcessId] = game;
         return game;
     }
@@ -37,9 +40,9 @@ internal sealed class FakeGameLauncher : IGameLauncher
         Games.TryGetValue(record.ProcessId, out var game) && game.StartedAt == record.StartedAt && !game.HasExited ? game : null;
 }
 
-internal sealed class FakeLaunchedGame(int processId, string logFile, DateTimeOffset startedAt) : ILaunchedGame
+internal sealed class FakeLaunchedGame(int processId, string logFile, DateTimeOffset startedAt, (string BootId, ulong StartTicks)? identity = null) : ILaunchedGame
 {
-    private readonly TaskCompletionSource<int> _exit = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<int?> _exit = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public int ProcessId { get; } = processId;
 
@@ -47,14 +50,18 @@ internal sealed class FakeLaunchedGame(int processId, string logFile, DateTimeOf
 
     public DateTimeOffset StartedAt { get; } = startedAt;
 
+    public string? BootId { get; } = identity?.BootId;
+
+    public ulong? StartTicks { get; } = identity?.StartTicks;
+
     public bool HasExited => _exit.Task.IsCompleted;
 
     /// <summary>Thrown by StopAsync when set; the game then keeps running.</summary>
     public Exception? StopFailure { get; set; }
 
-    public void Exit(int exitCode) => _exit.TrySetResult(exitCode);
+    public void Exit(int? exitCode) => _exit.TrySetResult(exitCode);
 
-    public Task<int> WaitForExitAsync(CancellationToken cancellationToken = default) => _exit.Task.WaitAsync(cancellationToken);
+    public Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default) => _exit.Task.WaitAsync(cancellationToken);
 
     public Task StopAsync(CancellationToken cancellationToken = default)
     {

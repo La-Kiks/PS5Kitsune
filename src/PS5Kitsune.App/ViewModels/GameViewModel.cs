@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Abstractions;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
@@ -107,7 +108,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
 
     public bool CanLaunchAgain => !IsRunning && !IsPreparing;
 
-    /// <summary>"Starting…", a download, "Running (PID n)", "Exited with code n", "Launch cancelled" or "Not running".</summary>
+    /// <summary>"Starting…", a download, "Running (PID n)", "Exited with code n", "Exited" (code unknown), "Launch cancelled" or "Not running".</summary>
     [ObservableProperty]
     public partial string StatusText { get; private set; } = "Starting…";
 
@@ -274,7 +275,7 @@ public sealed partial class GameViewModel : ObservableObject, INavigationAware, 
             var exitCode = await exit.ConfigureAwait(true);
             _player.Forget(playing);
             IsRunning = false;
-            StatusText = string.Create(CultureInfo.InvariantCulture, $"Exited with code {exitCode}");
+            StatusText = exitCode is { } code ? $"Exited with code {ExitCodes.Describe((uint)code)}" : "Exited";
             if (_diagnosis is { } services)
             {
                 var launch = _launches;

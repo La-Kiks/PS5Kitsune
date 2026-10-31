@@ -43,7 +43,16 @@ internal static class RunCommand
                 await LogTail.FollowAsync(launched.LogFile, Console.WriteLine, exit, cancellationToken);
                 var exitCode = await exit;
                 player.Forget(playing);
-                logger.GameExited(record.Name, exitCode);
+                if (exitCode is { } code)
+                {
+                    var exitText = ExitCodes.Describe((uint)code);
+                    logger.GameExited(record.Name, exitText);
+                }
+                else
+                {
+                    logger.GameExitedUnknown(record.Name);
+                }
+
                 // The exit is seen: it goes to the log, then the log is searched. Ctrl+C below saw no exit and writes nothing.
                 var diagnosis = await services.GetRequiredService<CrashDiagnoser>().FinishAsync(launched.LogFile, exitCode, stopped: false, CancellationToken.None);
                 if (diagnosis is not null)
@@ -54,7 +63,7 @@ internal static class RunCommand
                     }
                 }
 
-                return exitCode;
+                return exitCode ?? 0;
             }
             catch (OperationCanceledException)
             {

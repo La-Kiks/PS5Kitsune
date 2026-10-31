@@ -210,9 +210,28 @@ public sealed class GamePlayerTests : IDisposable
 
         var exception = await Assert.ThrowsAsync<LavapipeUnavailableException>(() => launching);
 
-        Assert.Equal("Lavapipe is not installed. Launch again to download it.", exception.Message);
+        Assert.Equal("Lavapipe is not installed: launch the test again", exception.Message);
         Assert.Empty(_launcher.Launches);
         Assert.False(GameLock.IsHeld(Game));
+    }
+
+    [Fact]
+    public async Task Without_a_mesa_download_the_refusal_says_the_profile_has_none()
+    {
+        await AddDoomAsync();
+        var player = new GamePlayer(
+            _library, _setup.Installer, _launcher, _running,
+            new LaunchPreparation(null, _fonts, NullLogger<LaunchPreparation>.Instance), NullLogger<GamePlayer>.Instance);
+        _fonts.Installed = false;
+        _fonts.Gate = new TaskCompletionSource();
+        var launching = player.LaunchAsync(TestGames.TitleId, null, TestContext.Current.CancellationToken);
+        await player.SaveSettingsAsync(TestGames.TitleId, new GameSettings { Lavapipe = true }, TestContext.Current.CancellationToken);
+        _fonts.Gate.SetResult();
+
+        var exception = await Assert.ThrowsAsync<LavapipeUnavailableException>(() => launching);
+
+        Assert.Null(player.LavapipeHowToGet);
+        Assert.Equal("Lavapipe is not installed: this profile has no Mesa download", exception.Message);
     }
 
     [Fact]

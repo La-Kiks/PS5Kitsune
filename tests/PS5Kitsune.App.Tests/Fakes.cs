@@ -91,6 +91,8 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public bool Supports(AnyPS5Mode mode) => mode == AnyPS5Mode.Release || BuildSupported;
 
+    public string BuildUnavailableReason { get; set; } = "This profile does not define a build.";
+
     public AnyPS5Mode? InstalledMode { get; private set; }
 
     /// <summary>When set, ReadRecord() blocks on it (at most 5 s, so a broken test cannot hang): the library read stays pending.</summary>
@@ -430,14 +432,14 @@ internal sealed class TestLibrary : IDisposable
 
     private readonly TempDirectory _temp = new();
 
-    public TestLibrary()
+    public TestLibrary(bool withoutLavapipe = false)
     {
         Layout = new DataLayout(_temp.Combine("root"));
         Lock = new PreparationLock(Layout) { RetryDelay = TimeSpan.FromMilliseconds(20) };
         Library = new GameLibrary(Layout, Platform, TimeProvider.System, NullLogger<GameLibrary>.Instance);
         Running = new RunningGames(Launcher, NullLogger<RunningGames>.Instance);
         Installer.State = new AnyPS5InstallState(AnyPS5InstallStatus.Installed, Release);
-        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance, Lock), NullLogger<GamePlayer>.Instance);
+        Player = new GamePlayer(Library, Installer, Launcher, Running, new LaunchPreparation(withoutLavapipe ? null : Lavapipe, Fonts, NullLogger<LaunchPreparation>.Instance, Lock), NullLogger<GamePlayer>.Instance);
         Cleaner = new GameCleaner(Library, Running, NullLogger<GameCleaner>.Instance);
     }
 

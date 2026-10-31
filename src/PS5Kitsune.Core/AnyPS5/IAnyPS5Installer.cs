@@ -17,6 +17,9 @@ public interface IAnyPS5Installer
     /// <summary>True when the active profile can install <paramref name="mode"/>; build needs a build section and the build tools.</summary>
     bool Supports(AnyPS5Mode mode);
 
+    /// <summary>Why build mode cannot be installed here, for the Mode page's build card.</summary>
+    string BuildUnavailableReason { get; }
+
     /// <summary>The install in use (anyps5\state\active); null when there is none, or the file is unreadable or unknown. Never throws.</summary>
     AnyPS5Mode? ActiveMode { get; }
 

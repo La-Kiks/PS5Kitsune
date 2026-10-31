@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. Windows was re-checked on v0.1.4: release plays and quits cleanly; build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8b, the app on Linux shipped as one AppImage with the CLI, is implemented and awaits its run on a real Ubuntu install; milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. Windows was re-checked on v0.1.4: release plays and quits cleanly; build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -51,9 +51,21 @@ Every command takes `--root <data root>`; without it, the CLI uses the data fold
 
 ### Linux
 
-The command-line tool runs on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
+The app and the command-line tool run on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
 
-There is no Linux package yet. To run it from source, install the .NET 10 SDK (for example with Microsoft's `dotnet-install.sh --channel 10.0`), clone the repository, then:
+The app and the command-line tool ship together as one AppImage. Download `PS5Kitsune-linux-x64-AppImage` from the latest CI run (Actions, then CI, then Artifacts), unzip it, then:
+
+```bash
+chmod +x PS5Kitsune-*-x86_64.AppImage
+./PS5Kitsune-*-x86_64.AppImage            # the app
+./PS5Kitsune-*-x86_64.AppImage check      # any argument runs the command-line tool
+```
+
+If it does not start because FUSE is missing, add `--appimage-extract-and-run` before the other arguments. To add it to your app menu, open it with Gear Lever or AppImageLauncher.
+
+The app needs the X11 session libraries `libsm6` and `libice6`. Desktop Ubuntu has them; on a minimal install, run `sudo apt install libsm6 libice6`. Avalonia 12.1.4 loads them at startup even with session management off. The self-contained .NET runtime also needs the ICU library (libicu): desktop Ubuntu has it; on a minimal install, install your distribution's libicu package (on Ubuntu, `sudo apt install libicu74` on 24.04).
+
+To run it from source instead, install the .NET 10 SDK (for example with Microsoft's `dotnet-install.sh --channel 10.0`), clone the repository, then:
 
 ```bash
 dotnet build src/PS5Kitsune.Cli -c Release

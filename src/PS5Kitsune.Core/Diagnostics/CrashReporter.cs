@@ -82,7 +82,7 @@ public sealed class CrashReporter(GameLibrary library, AnyPS5Profile profile, IC
             .ToList();
         text.AppendLine(CultureInfo.InvariantCulture, $"Settings: {(variables.Count == 0 ? "defaults" : string.Join(", ", variables))}");
         var exitCode = diagnosis?.ExitCode ?? loggedExitCode;
-        text.AppendLine(CultureInfo.InvariantCulture, $"Exit code: {(exitCode is { } code ? string.Create(CultureInfo.InvariantCulture, $"0x{code:X8}") : "unknown")}");
+        text.AppendLine(CultureInfo.InvariantCulture, $"Exit code: {(exitCode is { } code ? ExitCodes.Describe(code) : "unknown")}");
         text.AppendLine(CultureInfo.InvariantCulture, $"Diagnosis: {diagnosis?.Id ?? "none"}");
         if (diagnosis?.Line is { } line)
         {

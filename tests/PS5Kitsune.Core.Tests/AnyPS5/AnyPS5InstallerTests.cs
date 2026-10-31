@@ -155,6 +155,22 @@ public sealed class AnyPS5InstallerTests : IDisposable
     }
 
     [Fact]
+    public void The_build_reason_names_linux_on_linux()
+    {
+        var installer = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time, _setup.Profile with { Os = ProfileOs.Linux });
+
+        Assert.Equal("Build mode is not available on Linux yet.", installer.BuildUnavailableReason);
+    }
+
+    [Fact]
+    public void The_build_reason_on_windows_names_the_profile()
+    {
+        var installer = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time, _setup.Profile with { Os = ProfileOs.Windows });
+
+        Assert.Equal("This profile does not define a build.", installer.BuildUnavailableReason);
+    }
+
+    [Fact]
     public async Task On_linux_the_downloaded_relinker_is_executable()
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");

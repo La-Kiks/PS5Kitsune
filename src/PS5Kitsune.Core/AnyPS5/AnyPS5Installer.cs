@@ -16,6 +16,9 @@ public sealed class AnyPS5Installer(
     TimeProvider time,
     AnyPS5Profile? profile = null) : IAnyPS5Installer
 {
+    /// <summary>Why build mode is not available on Linux; the CLI's refusal derives from it.</summary>
+    public const string LinuxBuildUnavailable = "Build mode is not available on Linux yet.";
+
     public AnyPS5Mode? RequestedMode => paths.RequestedMode;
 
     public AnyPS5Mode? ActiveMode => paths.ActiveMode;
@@ -23,6 +26,8 @@ public sealed class AnyPS5Installer(
     public AnyPS5Mode CurrentMode => RequestedMode ?? ActiveMode ?? AnyPS5Mode.Release;
 
     public bool Supports(AnyPS5Mode mode) => Source(mode) is not null;
+
+    public string BuildUnavailableReason => profile?.Os == ProfileOs.Linux ? LinuxBuildUnavailable : "This profile does not define a build.";
 
     public IReadOnlyList<IStep> CreateSteps(AnyPS5Mode mode)
     {
@@ -32,7 +37,7 @@ public sealed class AnyPS5Installer(
 
     internal string UnavailableMessage(AnyPS5Mode mode) => mode switch
     {
-        AnyPS5Mode.Build when profile?.Os == ProfileOs.Linux => "Build mode is not available on Linux yet; use release mode.",
+        AnyPS5Mode.Build when profile?.Os == ProfileOs.Linux => $"{LinuxBuildUnavailable[..^1]}; use release mode.",
         AnyPS5Mode.Build => "Mode build is not available: the active profile has no build section or no build tools.",
         _ => "Mode release is not available.",
     };

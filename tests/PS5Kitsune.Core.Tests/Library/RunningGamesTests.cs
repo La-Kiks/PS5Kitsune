@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Library;
 using PS5Kitsune.Core.Tests.Fakes;
 using PS5Kitsune.Core.Tests.Games;
@@ -35,8 +36,39 @@ public sealed class RunningGamesTests : IDisposable
 
         Assert.Same(process, _running.Attach(_game));
         Assert.Equal(
-            new RunningGame(RunningGame.CurrentSchemaVersion, process.ProcessId, process.StartedAt, _game.Executable, process.LogFile),
+            new RunningGame(1, process.ProcessId, process.StartedAt, _game.Executable, process.LogFile),
             _running.Check(_game));
+    }
+
+    [Fact]
+    public async Task The_record_keeps_the_boot_identity_of_the_process()
+    {
+        _launcher.Identity = ("b7c1d0b4-0000-4000-8000-000000000001", 123_456UL);
+        await LaunchAsync();
+
+        var found = _running.Check(_game);
+
+        Assert.Equal(2, found?.SchemaVersion);
+        Assert.Equal("b7c1d0b4-0000-4000-8000-000000000001", found?.BootId);
+        Assert.Equal(123_456UL, found?.StartTicks);
+    }
+
+    [Fact]
+    public async Task A_record_without_boot_identity_keeps_schema_1_for_older_apps()
+    {
+        await LaunchAsync();
+
+        Assert.Equal(1, _running.Check(_game)?.SchemaVersion);
+    }
+
+    [Fact]
+    public async Task A_schema_1_record_is_still_read()
+    {
+        var process = await LaunchAsync();
+        var old = new RunningGame(1, process.ProcessId, process.StartedAt, _game.Executable, process.LogFile);
+        await JsonFiles.WriteAsync(_game.RunningRecord, old, TestContext.Current.CancellationToken);
+
+        Assert.Same(process, _running.Attach(_game));
     }
 
     [Fact]

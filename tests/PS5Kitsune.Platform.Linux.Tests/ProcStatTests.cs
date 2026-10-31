@@ -38,6 +38,21 @@ public sealed class ProcStatTests
     }
 
     [Fact]
+    public void The_boot_id_is_read_on_linux_and_absent_elsewhere()
+    {
+        var id = ProcStat.BootId();
+
+        if (OperatingSystem.IsLinux())
+        {
+            Assert.True(Guid.TryParse(id, out _));
+        }
+        else
+        {
+            Assert.Null(id);
+        }
+    }
+
+    [Fact]
     public void Start_times_up_to_five_seconds_apart_are_the_same_start()
     {
         var recorded = DateTimeOffset.FromUnixTimeSeconds(1761800000);

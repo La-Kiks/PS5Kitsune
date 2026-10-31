@@ -361,7 +361,7 @@ public sealed partial class WindowsGameLauncher(ILogger<WindowsGameLauncher> log
             }
         }
 
-        public async Task<int> WaitForExitAsync(CancellationToken cancellationToken = default)
+        public async Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default)
         {
             using var waitHandle = new ProcessWaitHandle(process);
             var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

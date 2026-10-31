@@ -1,4 +1,5 @@
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Checks.Vulkan;
 
 namespace PS5Kitsune.Core.Tests.Checks;
@@ -107,6 +108,15 @@ public sealed class VulkanChecksTests
     public void No_nvidia_gpu_is_ok()
     {
         Assert.Equal(CheckStatus.Ok, new NvidiaDriverCheck().Evaluate(TestFacts.Healthy()).Status);
+    }
+
+    [Fact]
+    public void Dozen_is_not_applicable_on_linux()
+    {
+        var result = new DozenCheck().Evaluate(TestFacts.Healthy() with { Os = ProfileOs.Linux });
+
+        Assert.Equal(CheckStatus.Info, result.Status);
+        Assert.Equal("Not applicable on this system.", result.Summary);
     }
 
     [Fact]

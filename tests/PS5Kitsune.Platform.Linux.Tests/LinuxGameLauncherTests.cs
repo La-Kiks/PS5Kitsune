@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
@@ -27,13 +28,13 @@ public sealed class LinuxGameLauncherTests : IDisposable
 
     /// <summary>/usr/bin/sleep itself (not through sh), so /proc/&lt;pid&gt;/exe is /usr/bin/sleep from the start.</summary>
     private ILaunchedGame Sleep(int seconds) =>
-        _launcher.Launch(new GameLaunchRequest("/usr/bin/sleep", _temp.Path, Logs) { Arguments = [seconds.ToString(System.Globalization.CultureInfo.InvariantCulture)] });
+        _launcher.Launch(new GameLaunchRequest("/usr/bin/sleep", _temp.Path, Logs) { Arguments = [seconds.ToString(CultureInfo.InvariantCulture)] });
 
-    private static async Task<int> ExitOf(ILaunchedGame game) =>
+    private static async Task<int?> ExitOf(ILaunchedGame game) =>
         await game.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
     private static RunningGame RecordOf(ILaunchedGame game, string executable) =>
-        new(RunningGame.CurrentSchemaVersion, game.ProcessId, game.StartedAt, executable, game.LogFile);
+        new(RunningGame.CurrentSchemaVersion, game.ProcessId, game.StartedAt, executable, game.LogFile) { BootId = game.BootId, StartTicks = game.StartTicks };
 
     private static async Task LogContains(ILaunchedGame game, string text)
     {
@@ -119,6 +120,70 @@ public sealed class LinuxGameLauncherTests : IDisposable
         Assert.Equal(128 + 9, await ExitOf(game));
     }
 
+    private static int ChildPid(string log) =>
+        int.Parse(log.Split('\n').First(line => line.StartsWith("child ", StringComparison.Ordinal))["child ".Length..].Trim(), CultureInfo.InvariantCulture);
+
+    private static async Task<bool> GoneAsync(int pid)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (ProcStat.Read(pid) is null or { State: 'Z' })
+            {
+                return true;
+            }
+
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+
+        return false;
+    }
+
+    [Fact]
+    public async Task Stop_kills_a_child_that_outlives_the_leader()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        // The leader exits on SIGTERM; its child ignores it (an ignored signal stays ignored across exec).
+        using var game = Shell("(trap '' TERM; echo ready; exec sleep 30) & echo \"child $!\"; wait");
+        await LogContains(game, "ready");
+        await LogContains(game, "child ");
+        var child = ChildPid(await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken));
+
+        await game.StopAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        Assert.True(await GoneAsync(child), "The child survived Stop.");
+    }
+
+    [Fact]
+    public async Task A_game_that_exits_on_its_own_leaves_its_group_alone()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        using var game = Shell("(trap '' TERM; echo ready; exec sleep 30) & echo \"child $!\"");
+        await LogContains(game, "ready");
+        await LogContains(game, "child ");
+        var child = ChildPid(await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken));
+        try
+        {
+            Assert.Equal(0, await ExitOf(game));
+
+            var stat = ProcStat.Read(child);
+            Assert.NotNull(stat);
+            Assert.NotEqual('Z', stat.Value.State);
+        }
+        finally
+        {
+            try
+            {
+                using var leftover = System.Diagnostics.Process.GetProcessById(child);
+                leftover.Kill();
+            }
+            catch (ArgumentException)
+            {
+                // Already gone.
+            }
+        }
+    }
+
     [Fact]
     public async Task Attach_finds_a_running_game_and_follows_it_until_it_exits()
     {
@@ -129,7 +194,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
 
         Assert.NotNull(attached);
         Assert.Equal(game.ProcessId, attached.ProcessId);
-        Assert.Equal(-1, await ExitOf(attached));
+        Assert.Null(await ExitOf(attached));
     }
 
     [Fact]
@@ -139,8 +204,44 @@ public sealed class LinuxGameLauncherTests : IDisposable
         using var game = Sleep(30);
         try
         {
-            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartedAt = game.StartedAt.AddSeconds(-60) }));
-            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/true")));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { BootId = null, StartTicks = null, StartedAt = game.StartedAt.AddSeconds(-60) }));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/true") with { BootId = null, StartTicks = null }));
+        }
+        finally
+        {
+            await game.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task A_launched_game_carries_its_boot_identity()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        using var game = Sleep(30);
+        try
+        {
+            Assert.Equal((await File.ReadAllTextAsync("/proc/sys/kernel/random/boot_id", TestContext.Current.CancellationToken)).Trim(), game.BootId);
+            Assert.NotNull(game.StartTicks);
+        }
+        finally
+        {
+            await game.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task Attach_with_a_boot_identity_ignores_the_wall_clock()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        using var game = Sleep(30);
+        try
+        {
+            // A clock stepped by a minute after the launch: the identity still matches.
+            using var attached = _launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartedAt = game.StartedAt.AddMinutes(1) });
+            Assert.NotNull(attached);
+
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { BootId = "00000000-0000-0000-0000-000000000000" }));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartTicks = game.StartTicks + 1 }));
         }
         finally
         {
@@ -188,7 +289,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
 
         Assert.Equal(0, await ExitOf(game));
         var line = (await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken)).Trim();
-        var ignored = ulong.Parse(line["SigIgn:".Length..].Trim(), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+        var ignored = ulong.Parse(line["SigIgn:".Length..].Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         Assert.Equal(0UL, ignored & 0x1000); // SIGPIPE is 13: bit 12.
     }
 
