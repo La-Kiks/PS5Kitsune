@@ -102,7 +102,7 @@ public sealed class DiagnosisTextsTests
     {
         var text = DiagnosisTexts.For(Of(DiagnosisIds.Unexplained, exitCode: 0xC0000005, line: null), new GameSettings());
 
-        Assert.Equal("AnyPS5 stopped with an error it does not explain yet (exit code 0xC0000005).", text.Explanation);
+        Assert.Equal($"AnyPS5 stopped with an error it does not explain yet (exit code {ExitCodes.Describe(0xC0000005)}).", text.Explanation);
         Assert.Equal(DiagnosisAction.Report, text.Action);
     }
 

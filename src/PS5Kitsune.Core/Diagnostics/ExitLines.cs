@@ -11,8 +11,19 @@ public static class ExitLines
 
     private const string StoppedStart = "stopped by the user (exit code ";
 
-    public static string Exited(int exitCode) =>
-        string.Create(CultureInfo.InvariantCulture, $"{Prefix}{ExitedStart}{(uint)exitCode} (0x{(uint)exitCode:X8})");
+    private const string UnknownLine = "exited (exit code unknown)";
+
+    /// <summary>The exit line of a game that ran on this OS.</summary>
+    public static string Exited(int exitCode) => Exited(exitCode, OperatingSystem.IsLinux());
+
+    // The decimal code comes first on both OSes, so Parse reads every line ever written.
+    internal static string Exited(int exitCode, bool linux) =>
+        linux
+            ? $"{Prefix}{ExitedStart}{ExitCodes.Describe((uint)exitCode, linux: true)}"
+            : string.Create(CultureInfo.InvariantCulture, $"{Prefix}{ExitedStart}{(uint)exitCode} ({ExitCodes.Describe((uint)exitCode, linux: false)})");
+
+    /// <summary>The exit line of a game whose exit code cannot be read: a game found again on Linux, which is not PS5Kitsune's child.</summary>
+    public static string Unknown() => Prefix + UnknownLine;
 
     public static string Stopped(int exitCode) =>
         string.Create(CultureInfo.InvariantCulture, $"{Prefix}{StoppedStart}{(uint)exitCode})");
@@ -26,6 +37,11 @@ public static class ExitLines
         }
 
         var rest = line.AsSpan(Prefix.Length);
+        if (rest.SequenceEqual(UnknownLine))
+        {
+            return new ExitRecord(null, Stopped: false);
+        }
+
         if (TryCode(rest, ExitedStart, out var code))
         {
             return new ExitRecord(code, Stopped: false);
@@ -49,4 +65,4 @@ public static class ExitLines
 }
 
 /// <param name="Stopped">True when the user ended the game with Stop.</param>
-internal readonly record struct ExitRecord(uint Code, bool Stopped);
+internal readonly record struct ExitRecord(uint? Code, bool Stopped);

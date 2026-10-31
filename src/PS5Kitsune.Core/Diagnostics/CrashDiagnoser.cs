@@ -39,17 +39,24 @@ public sealed partial class CrashDiagnoser
     }
 
     /// <summary>Appends the exit line to the log, then diagnoses it unless the user stopped the game (`stopped`, or a stopped line already in the log).</summary>
-    public async Task<Diagnosis?> FinishAsync(string logPath, int exitCode, bool stopped, CancellationToken cancellationToken)
+    /// <param name="exitCode">Null when the exit code cannot be read: only the log rules can then match.</param>
+    public async Task<Diagnosis?> FinishAsync(string logPath, int? exitCode, bool stopped, CancellationToken cancellationToken)
     {
         await AppendExitLineAsync(logPath, exitCode, stopped).ConfigureAwait(false);
-        return stopped ? null : await DiagnoseAsync(logPath, (uint)exitCode, cancellationToken).ConfigureAwait(false);
+        return stopped ? null : await DiagnoseAsync(logPath, (uint?)exitCode, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Appends the exit line on a line of its own; a failed write is logged and changes nothing else.</summary>
-    public async Task AppendExitLineAsync(string logPath, int exitCode, bool stopped)
+    public async Task AppendExitLineAsync(string logPath, int? exitCode, bool stopped)
     {
         ArgumentNullException.ThrowIfNull(logPath);
-        var line = stopped ? ExitLines.Stopped(exitCode) : ExitLines.Exited(exitCode);
+        var line = (stopped, exitCode) switch
+        {
+            (true, { } code) => ExitLines.Stopped(code),
+            (true, null) => ExitLines.Stopped(-1),
+            (false, { } code) => ExitLines.Exited(code),
+            (false, null) => ExitLines.Unknown(),
+        };
         try
         {
             var separator = "";

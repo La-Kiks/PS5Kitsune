@@ -213,9 +213,44 @@ public sealed class CrashDiagnoserTests : IDisposable
     }
 
     [Fact]
-    public void Exit_lines_print_the_code_unsigned_and_in_hex()
+    public void Exit_lines_print_the_code_unsigned_and_in_hex_on_windows() =>
+        Assert.Equal("[ps5kitsune] exited with code 3221225477 (0xC0000005)", ExitLines.Exited(unchecked((int)0xC0000005), linux: false));
+
+    [Theory]
+    [InlineData(139, "[ps5kitsune] exited with code 139 (signal 11, SIGSEGV)")]
+    [InlineData(1, "[ps5kitsune] exited with code 1")]
+    public void Exit_lines_name_the_signal_on_linux(int code, string line) => Assert.Equal(line, ExitLines.Exited(code, linux: true));
+
+    [Fact]
+    public async Task Linux_and_windows_exit_lines_both_give_their_code_back()
     {
-        Assert.Equal("[ps5kitsune] exited with code 3221225477 (0xC0000005)", ExitLines.Exited(unchecked((int)0xC0000005)));
+        var log = Log("all good\n" + ExitLines.Exited(139, linux: true) + "\n");
+
+        var diagnosis = await _diagnoser.DiagnoseAsync(log, null, Token);
+
+        Assert.Equal(139u, diagnosis?.ExitCode);
+    }
+
+    [Fact]
+    public async Task An_unknown_exit_code_is_written_and_only_log_rules_are_applied()
+    {
+        var log = Log("all good\n");
+
+        var diagnosis = await _diagnoser.FinishAsync(log, null, stopped: false, Token);
+
+        Assert.Null(diagnosis);
+        Assert.EndsWith("[ps5kitsune] exited (exit code unknown)" + Environment.NewLine, await File.ReadAllTextAsync(log, Token));
+    }
+
+    [Fact]
+    public async Task A_known_error_is_found_after_an_unknown_exit_code()
+    {
+        var log = Log("Vulkan: buffer device address and shaderInt64 are required\n");
+
+        var diagnosis = await _diagnoser.FinishAsync(log, null, stopped: false, Token);
+
+        Assert.Equal(DiagnosisIds.GpuFeatures, diagnosis?.Id);
+        Assert.Null(diagnosis?.ExitCode);
     }
 
     [Fact]
