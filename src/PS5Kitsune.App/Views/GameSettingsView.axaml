@@ -63,6 +63,19 @@
           </ComboBox>
         </StackPanel>
 
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="ResolutionLabel" Text="Resolution" FontWeight="SemiBold" />
+          <ComboBox ItemsSource="{Binding Resolutions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding CanEdit}" MinWidth="320"
+                    AutomationProperties.LabeledBy="{Binding #ResolutionLabel}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SettingChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="{Binding ResolutionHelp}" Classes="caption" TextWrapping="Wrap" />
+        </StackPanel>
+
         <StackPanel Spacing="4" IsVisible="{Binding ShowDisableDozen}">
           <CheckBox Content="Disable Dozen" IsChecked="{Binding DisableDozen}" IsEnabled="{Binding CanChooseGpu}" />
           <TextBlock Text="{Binding DozenHelp}" Classes="caption" TextWrapping="Wrap" />
@@ -80,19 +93,6 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-        </StackPanel>
-
-        <StackPanel Spacing="4">
-          <TextBlock x:Name="ResolutionLabel" Text="Resolution" FontWeight="SemiBold" />
-          <ComboBox ItemsSource="{Binding Resolutions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding CanEdit}" MinWidth="320"
-                    AutomationProperties.LabeledBy="{Binding #ResolutionLabel}">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:SettingChoice">
-                <TextBlock Text="{Binding Label}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-          <TextBlock Text="{Binding ResolutionHelp}" Classes="caption" TextWrapping="Wrap" />
         </StackPanel>
 
         <Expander Header="Advanced" IsExpanded="{Binding IsAdvancedOpen, Mode=TwoWay}">

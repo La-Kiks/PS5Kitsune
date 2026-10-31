@@ -382,6 +382,14 @@ public sealed class GameSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Unlisted_chunks_alone_open_advanced()
+    {
+        var page = await OpenAsync(new GameSettings { PlayGoUnlistedChunks = "installed" });
+
+        Assert.True(page.IsAdvancedOpen);
+    }
+
+    [Fact]
     public async Task A_bad_line_shows_its_error_and_blocks_save_until_fixed()
     {
         var page = await OpenAsync();
