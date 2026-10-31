@@ -10,6 +10,10 @@ public sealed class LaunchEnvironmentTests
     private const string Fonts = @"C:\PS5Kitsune\fonts";
 
     [Fact]
+    public void Every_resolution_the_validator_accepts_has_a_video_out_size() =>
+        Assert.All(GameSettingsValidator.Resolutions, resolution => Assert.NotNull(LaunchEnvironment.ResolutionValue(resolution)));
+
+    [Fact]
     public void Default_settings_without_fonts_pass_nothing() =>
         Assert.Empty(LaunchEnvironment.For(new GameSettings(), null, null));
 
@@ -27,6 +31,8 @@ public sealed class LaunchEnvironmentTests
         { new GameSettings { PresentMode = "mailbox" }, "ANYPS5_PRESENT_MODE", "mailbox" },
         { new GameSettings { Overlay = true }, "ANYPS5_OVERLAY", "1" },
         { new GameSettings { PlayGoUnlistedChunks = "installed" }, "APS5_PLAYGO_UNLISTED_CHUNKS", "installed" },
+        { new GameSettings { Resolution = "1080p" }, "APS5_OUTPUT_RESOLUTION", "1920x1080" },
+        { new GameSettings { Resolution = "2160p" }, "APS5_OUTPUT_RESOLUTION", "3840x2160" },
     };
 
     [Fact]
@@ -53,4 +59,24 @@ public sealed class LaunchEnvironmentTests
     [Fact]
     public void Lavapipe_without_a_manifest_is_a_programming_error() =>
         Assert.Throws<ArgumentException>(() => LaunchEnvironment.For(new GameSettings { Lavapipe = true }, null, null));
+
+    [Fact]
+    public void Extra_variables_come_last_and_never_replace_a_setting()
+    {
+        var settings = new GameSettings { Language = 5, ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144", ["ANYPS5_LANGUAGE"] = "9" } };
+
+        Assert.Equal(
+            new Dictionary<string, string> { ["ANYPS5_LANGUAGE"] = "5", ["APS5_HOST_IMPORT_MIB"] = "6144" },
+            LaunchEnvironment.For(settings, null, null));
+    }
+
+    [Fact]
+    public void Every_variable_the_settings_can_set_is_reserved()
+    {
+        var all = new GameSettings { Gpu = "Radeon", DisableDozen = true, Language = 2, PresentMode = "mailbox", Overlay = true, OverlayPosition = "br", PlayGoUnlistedChunks = "installed", Resolution = "1080p" };
+
+        var names = LaunchEnvironment.For(all, null, Fonts).Keys.Concat(LaunchEnvironment.For(all with { Lavapipe = true }, Manifest, Fonts).Keys);
+
+        Assert.All(names, name => Assert.Contains(name, LaunchEnvironment.ReservedNames));
+    }
 }

@@ -174,5 +174,19 @@ public sealed class DiagnosisViewModelTests : IDisposable
         Assert.False(panel.FixCommand.CanExecute(null));
     }
 
+    [Fact]
+    public async Task Remove_drops_only_the_refused_extra_variable()
+    {
+        var settings = new GameSettings { Overlay = true, ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "lots", ["APS5_OTHER"] = "1" } };
+        var panel = await OpenAsync(Of(DiagnosisIds.InvalidSetting, "APS5_HOST_IMPORT_MIB"), settings);
+        await _library.Player.SaveSettingsAsync("PPSA99666", settings, TestContext.Current.CancellationToken);
+
+        Assert.Equal("Remove APS5_HOST_IMPORT_MIB", panel.ActionText);
+        await panel.FixCommand.ExecuteAsync(null);
+
+        Assert.Equal(new GameSettings { Overlay = true, ExtraEnvironment = new Dictionary<string, string> { ["APS5_OTHER"] = "1" } }, Saved());
+        Assert.Equal("APS5_HOST_IMPORT_MIB removed. Launch again to check.", panel.Result);
+    }
+
     public void Dispose() => _library.Dispose();
 }

@@ -16,6 +16,7 @@ public enum DiagnosisAction
     OpenFolder,
     ResetSetting,
     Report,
+    RemoveExtraVariable,
 }
 
 /// <param name="ActionText">The button's text; null with <see cref="DiagnosisAction.None"/>.</param>
@@ -102,7 +103,7 @@ public static class DiagnosisTexts
 
         var fix = text.Action switch
         {
-            DiagnosisAction.RepairLibs or DiagnosisAction.TurnOnLavapipe or DiagnosisAction.TurnOffLavapipe or DiagnosisAction.ResetSetting or DiagnosisAction.OpenPageFileSettings =>
+            DiagnosisAction.RepairLibs or DiagnosisAction.TurnOnLavapipe or DiagnosisAction.TurnOffLavapipe or DiagnosisAction.ResetSetting or DiagnosisAction.RemoveExtraVariable or DiagnosisAction.OpenPageFileSettings =>
                 $"Fix: launch {name} from the app; when it stops, choose {text.ActionText}.",
             DiagnosisAction.OpenNvidiaDrivers => $"Fix: update the NVIDIA driver from {NvidiaDriversUrl}",
             DiagnosisAction.OpenFolder => "Fix: remove the game and add it again from its original folder.",
@@ -139,6 +140,11 @@ public static class DiagnosisTexts
                 "CPU rendering sets ANYPS5_GPU=llvmpipe, and Vulkan found no llvmpipe device.",
                 DiagnosisAction.TurnOffLavapipe,
                 "Turn off CPU rendering");
+        }
+
+        if (settings.ExtraEnvironment.Keys.FirstOrDefault(name => string.Equals(name, variable, StringComparison.OrdinalIgnoreCase)) is { } extra)
+        {
+            return new(SettingTitle, $"{extra} has a value AnyPS5 refuses.", DiagnosisAction.RemoveExtraVariable, $"Remove {extra}");
         }
 
         var explanation = $"{variable ?? "A setting"} has a value AnyPS5 refuses.";

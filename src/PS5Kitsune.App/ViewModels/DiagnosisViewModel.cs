@@ -83,6 +83,8 @@ public sealed partial class DiagnosisViewModel : ObservableObject
             case DiagnosisAction.ResetSetting when SettingVariables.Find(_diagnosis.Capture("variable")) is { } setting:
                 var label = char.ToUpperInvariant(setting.Label[0]) + setting.Label[1..];
                 return await ChangeSettingsAsync(setting.Reset, $"{label} reset. Launch again to check.").ConfigureAwait(true);
+            case DiagnosisAction.RemoveExtraVariable when _diagnosis.Capture("variable") is { } variable:
+                return await ChangeSettingsAsync(settings => WithoutExtraVariable(settings, variable), $"{variable} removed. Launch again to check.").ConfigureAwait(true);
             case DiagnosisAction.OpenPageFileSettings:
                 return Open("the page file settings", () => _platform.OpenFix(CheckFix.OpenPerformanceSettings));
             case DiagnosisAction.OpenNvidiaDrivers:
@@ -133,6 +135,13 @@ public sealed partial class DiagnosisViewModel : ObservableObject
             return $"Could not save the settings of {_name}: {exception.Message}";
         }
     }
+
+    private static GameSettings WithoutExtraVariable(GameSettings settings, string variable) => settings with
+    {
+        ExtraEnvironment = settings.ExtraEnvironment
+            .Where(pair => !string.Equals(pair.Key, variable, StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(StringComparer.Ordinal),
+    };
 
     private async Task<string> ReportAsync()
     {

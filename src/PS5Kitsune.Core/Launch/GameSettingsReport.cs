@@ -28,6 +28,11 @@ public static class GameSettingsReport
             Line("Performance overlay", OnOff(settings.Overlay), settings.Overlay == defaults.Overlay),
             Line("Overlay position", settings.OverlayPosition, settings.OverlayPosition == defaults.OverlayPosition),
             Line("PlayGo unlisted chunks", settings.PlayGoUnlistedChunks ?? "unset", settings.PlayGoUnlistedChunks == defaults.PlayGoUnlistedChunks),
+            Line("Resolution", ResolutionLabel(settings.Resolution), settings.Resolution == defaults.Resolution),
+            Line(
+                "Extra variables",
+                settings.ExtraEnvironment.Count == 0 ? "none" : settings.ExtraEnvironment.Count.ToString(CultureInfo.InvariantCulture),
+                settings.ExtraEnvironment.Count == 0),
             "Environment at launch:",
         ];
 
@@ -65,4 +70,11 @@ public static class GameSettingsReport
     private static string Line(string label, string value, bool isDefault) => $"{label}: {value}{(isDefault ? " (default)" : "")}";
 
     private static string OnOff(bool value) => value ? "on" : "off";
+
+    private static string ResolutionLabel(string? resolution) => resolution switch
+    {
+        "1080p" => "1080p",
+        "2160p" => "4K",
+        _ => "match the display",
+    };
 }

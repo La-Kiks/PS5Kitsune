@@ -49,6 +49,16 @@ public sealed class CrashDiagnoserTests : IDisposable
     }
 
     [Fact]
+    public async Task The_linux_invalid_setting_rule_captures_a_variable_name_with_digits()
+    {
+        var diagnosis = await _linux.DiagnoseAsync(Log("[debug:0] launcher: start\nwhat():  APS5_FOO2 must be a number\n"), 1, Token);
+
+        Assert.NotNull(diagnosis);
+        Assert.Equal(DiagnosisIds.InvalidSetting, diagnosis.Id);
+        Assert.Equal("APS5_FOO2", diagnosis.Capture("variable"));
+    }
+
+    [Fact]
     public async Task The_windows_dll_rules_are_not_in_the_linux_profile()
     {
         var diagnosis = await _linux.DiagnoseAsync(
@@ -74,6 +84,7 @@ public sealed class CrashDiagnoserTests : IDisposable
         { "what():  Vulkan: no usable device whose name contains ANYPS5_GPU=\"GeForce\"; devices: AMD Radeon(TM) Graphics\n", DiagnosisIds.InvalidSetting, "ANYPS5_GPU" },
         { "what():  Vulkan presentation: the surface does not support the requested present mode\n", DiagnosisIds.InvalidSetting, "ANYPS5_PRESENT_MODE" },
         { "Ngs2: reverb at 96000 Hz is not implemented\n", DiagnosisIds.NotImplemented, null },
+        { "what():  APS5_FOO2 must be a number\n", DiagnosisIds.InvalidSetting, "APS5_FOO2" },
     };
 
     [Theory]

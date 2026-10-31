@@ -300,9 +300,11 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 | CPU rendering (Lavapipe) | `lavapipe` | `VK_DRIVER_FILES` = Mesa's `lvp_icd.x86_64.json` manifest + `ANYPS5_GPU=llvmpipe` | On for a new game when Vulkan works but no GPU has `shaderInt64` and `bufferDeviceAddress`, off otherwise. It overrides the GPU and Disable Dozen |
 | Game language | `language` | `ANYPS5_LANGUAGE` | Default 1 (English, US); list of the 31 languages from the docs (0 to 30) |
 | Vertical sync | `presentMode` | `ANYPS5_PRESENT_MODE` | On (`fifo`, default), Latest frame (`fifo_latest_ready`), Mailbox (`mailbox`), Off, may tear (`immediate`) |
+| Resolution | `resolution` | `APS5_OUTPUT_RESOLUTION` (`1920x1080` or `3840x2160`) | Match the display (`null`, default: AnyPS5 uses the mode of the display the window is on), 1080p (`1080p`), 4K (`2160p`). AnyPS5 v0.1.4 has only these two modes |
 | Disable Dozen | `disableDozen` | `VK_LOADER_DRIVERS_DISABLE='*dzn*'` | Shown when Dozen and another driver are found, or the probe only worked without Dozen |
 | Performance overlay | `overlay`, `overlayPosition` | `ANYPS5_OVERLAY=1` (+ `ANYPS5_OVERLAY_POS`) | Otherwise F10 in game. Position: `tl` (default), `tr`, `bl`, `br` |
 | Advanced: PlayGo chunks | `playGoUnlistedChunks` | `APS5_PLAYGO_UNLISTED_CHUNKS` | `installed`, `absent` or empty (`null`) |
+| Advanced: extra AnyPS5 variables | `extraEnvironment` (object, sorted by name) | Each `NAME=value`, after the variables above, never replacing one | Names match `A(NY)?PS5_[A-Z0-9_]+` and are not set by PS5Kitsune; the page refuses other lines, and a hand-edited entry that breaks the rule, or whose value has a line break or NUL, is dropped on read. Empty by default |
 | Keyboard and mouse bindings | none | `anyps5-input.ini` file beside the game exe | Later milestone: until then, Open folder and edit `anyps5-input.ini` |
 
 These variables only apply to the game process, never to the system. A value equal to AnyPS5's default is not passed. A value AnyPS5 would refuse (hand-edited `game.json`) is read as its default and logged; the file is not rewritten. The Settings page only offers valid values.
@@ -324,7 +326,7 @@ The launcher searches the log and error output for known patterns, then shows an
 | `nvidia-shader-compiler` | `unhandled exception 0xc0000005` and `rip 0x… nvgpucomp64.dll+` | **Known NVIDIA driver crash.** NVIDIA's shader compiler (nvgpucomp64.dll) crashed. Driver 610.47 is known to do this. | Open NVIDIA drivers page |
 | `cpu-too-old` | `unhandled exception 0xc000001d` in the log, or exit code `0xC000001D` | **This CPU is not supported.** The CPU lacks instructions AnyPS5 needs. | None |
 | `param-json` | Any of `param.json not found`, `failed to open param.json`, `unexpected end of param.json`, `malformed param.json`, `… in param.json` | **The game's metadata is missing.** `sce_sys\param.json` is missing or damaged. Remove the game and add it again from its original folder. | Open folder |
-| `invalid-setting` | `A(NY)?PS5_…` followed by ` must `; `ANYPS5_SYSTEM_FONTS is not a directory`; `whose name contains ANYPS5_GPU=`; `the surface does not support the requested present mode` (names `ANYPS5_PRESENT_MODE`) | **A setting has a value AnyPS5 refuses.** {variable} has a value AnyPS5 refuses. | Reset {setting} for GPU, language, vertical sync, overlay or PlayGo; none for `ANYPS5_SYSTEM_FONTS` |
+| `invalid-setting` | `A(NY)?PS5_…` followed by ` must `; `ANYPS5_SYSTEM_FONTS is not a directory`; `whose name contains ANYPS5_GPU=`; `the surface does not support the requested present mode` (names `ANYPS5_PRESENT_MODE`) | **A setting has a value AnyPS5 refuses.** {variable} has a value AnyPS5 refuses. | Reset {setting} for GPU, language, vertical sync, resolution, overlay or PlayGo; Remove {variable} for an extra variable; none for `ANYPS5_SYSTEM_FONTS` |
 | `not-implemented` | `is not implemented` or `are not implemented` | **AnyPS5 does not handle this game yet.** The game uses a feature AnyPS5 has not implemented. | Report |
 | `unexplained` | None: no rule matches and the exit code is non-zero (set by the app, never by a profile rule) | **The game stopped with an error.** AnyPS5 stopped with an error it does not explain yet (exit code 0x… on Windows, decimal on Linux). | Report |
 
@@ -455,7 +457,7 @@ The data root itself is chosen on the app's home screen and saved in `%LOCALAPPD
   "icon": "app0/sce_sys/icon0.png",
   "convertedWith": { "profile": "doom-validated-2026-10", "mode": "release", "version": "v0.1.2", "commit": null, "toIntel": true },
   "audit": { "implemented": 262, "stub": 0, "absent": 0, "verdict": "green" },
-  "settings": { "gpu": null, "lavapipe": false, "language": 1, "presentMode": "fifo", "disableDozen": false, "overlay": false, "overlayPosition": "tl", "playGoUnlistedChunks": null },
+  "settings": { "gpu": null, "lavapipe": false, "language": 1, "presentMode": "fifo", "disableDozen": false, "overlay": false, "overlayPosition": "tl", "playGoUnlistedChunks": null, "resolution": null, "extraEnvironment": {} },
   "addedAt": "2026-10-18T15:00:00+02:00",
   "lastPlayedAt": null,
   "reconvertedAt": null

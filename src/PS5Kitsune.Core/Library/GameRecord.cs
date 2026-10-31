@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using PS5Kitsune.Core.Games;
 
 namespace PS5Kitsune.Core.Library;
@@ -44,6 +45,11 @@ public sealed record AuditRecord(int Implemented, int Stub, int Absent, AuditVer
 /// <summary>Per-game settings, passed to the game as environment variables at launch. See docs/architecture.md, "Per-game settings".</summary>
 public sealed record GameSettings
 {
+    private static readonly IReadOnlyDictionary<string, string> NoVariables =
+        new ReadOnlyDictionary<string, string>(new SortedDictionary<string, string>(StringComparer.Ordinal));
+
+    private readonly IReadOnlyDictionary<string, string> _extraEnvironment = NoVariables;
+
     /// <summary>Part of a GPU name (ANYPS5_GPU); null lets AnyPS5 choose.</summary>
     public string? Gpu { get; init; }
 
@@ -67,4 +73,71 @@ public sealed record GameSettings
 
     /// <summary>"installed" or "absent" for dumps without PlayGo files; null keeps AnyPS5's error.</summary>
     public string? PlayGoUnlistedChunks { get; init; }
+
+    /// <summary>One of <see cref="GameSettingsValidator.Resolutions"/>; null lets AnyPS5 follow the display.</summary>
+    public string? Resolution { get; init; }
+
+    /// <summary>
+    /// Extra AnyPS5 variables (names allowed by <see cref="Launch.ExtraVariables.Problem"/>), added last at launch.
+    /// Kept sorted by name, so game.json lists them in order; null reads as none.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> ExtraEnvironment
+    {
+        get => _extraEnvironment;
+        init => _extraEnvironment = Sorted(value);
+    }
+
+    // The record would compare the dictionary by reference: the Settings page and the diagnosis compare settings by value.
+    public bool Equals(GameSettings? other) =>
+        other is not null
+        && Gpu == other.Gpu
+        && Lavapipe == other.Lavapipe
+        && Language == other.Language
+        && PresentMode == other.PresentMode
+        && DisableDozen == other.DisableDozen
+        && Overlay == other.Overlay
+        && OverlayPosition == other.OverlayPosition
+        && PlayGoUnlistedChunks == other.PlayGoUnlistedChunks
+        && Resolution == other.Resolution
+        && ExtraEnvironment.Count == other.ExtraEnvironment.Count
+        && ExtraEnvironment.All(variable => other.ExtraEnvironment.TryGetValue(variable.Key, out var value) && value == variable.Value);
+
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Gpu);
+        hash.Add(Lavapipe);
+        hash.Add(Language);
+        hash.Add(PresentMode);
+        hash.Add(DisableDozen);
+        hash.Add(Overlay);
+        hash.Add(OverlayPosition);
+        hash.Add(PlayGoUnlistedChunks);
+        hash.Add(Resolution);
+
+        // Sorted by name, so equal contents hash the same.
+        foreach (var (name, value) in ExtraEnvironment)
+        {
+            hash.Add(name);
+            hash.Add(value);
+        }
+
+        return hash.ToHashCode();
+    }
+
+    private static IReadOnlyDictionary<string, string> Sorted(IReadOnlyDictionary<string, string>? variables)
+    {
+        if (variables is null || variables.Count == 0)
+        {
+            return NoVariables;
+        }
+
+        var sorted = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (name, value) in variables)
+        {
+            sorted[name] = value;
+        }
+
+        return new ReadOnlyDictionary<string, string>(sorted);
+    }
 }
