@@ -1,0 +1,62 @@
+name: Release
+
+# Pushing a tag vX.Y.Z builds and tests everything with ci.yml, then opens a draft GitHub Release
+# holding the Windows .exe, the Linux AppImage and their SHA-256 sums. Publishing the draft is manual.
+# See docs/releasing.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # The tag and <Version> in Directory.Build.props must agree, so local builds show the same version.
+      - id: check
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          props=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props)
+          if [ "$tag" != "$props" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match <Version>$props</Version> in Directory.Build.props."
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and test
+    needs: version
+    uses: ./.github/workflows/ci.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  release:
+    name: Draft the release
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Name the files and hash them
+        working-directory: dist
+        run: |
+          mv PS5Kitsune.exe "PS5Kitsune-$VERSION-win-x64.exe"
+          sha256sum PS5Kitsune-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --draft --verify-tag --generate-notes --title "PS5Kitsune $VERSION"

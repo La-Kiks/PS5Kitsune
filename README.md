@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — all 8 milestones of the roadmap are done. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. On Linux, the app and the command-line tool ship as one AppImage, in release mode only; DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. On Windows, the app also ships as a single `.exe`; with v0.1.4, release plays and quits cleanly, and build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). Both builds are CI artifacts for now, not GitHub Releases. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — all 8 milestones of the roadmap are done. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. On Linux, the app and the command-line tool ship as one AppImage, in release mode only; DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. On Windows, the app also ships as a single `.exe`; with v0.1.4, release plays and quits cleanly, and build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). Both are downloads on the [latest release](https://github.com/La-Kiks/PS5Kitsune/releases/latest). The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -53,7 +53,7 @@ Every command takes `--root <data root>`; without it, the CLI uses the data fold
 
 The app and the command-line tool run on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
 
-The app and the command-line tool ship together as one AppImage. Download `PS5Kitsune-linux-x64-AppImage` from the latest CI run (Actions, then CI, then Artifacts), unzip it, then:
+The app and the command-line tool ship together as one AppImage. Download `PS5Kitsune-<version>-x86_64.AppImage` from the [latest release](https://github.com/La-Kiks/PS5Kitsune/releases/latest), then:
 
 ```bash
 chmod +x PS5Kitsune-*-x86_64.AppImage
