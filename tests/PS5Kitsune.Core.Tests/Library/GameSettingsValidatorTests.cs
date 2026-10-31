@@ -75,4 +75,27 @@ public sealed class GameSettingsValidatorTests
         Assert.Equal("Arabic", GameLanguages.Name(21));
         Assert.Equal("Ukrainian", GameLanguages.Name(30));
     }
+
+    [Fact]
+    public void Extra_variables_with_a_bad_or_reserved_name_or_no_value_are_dropped()
+    {
+        var (settings, replaced) = GameSettingsValidator.Normalize(new GameSettings
+        {
+            ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144", ["ANYPS5_GPU"] = "x", ["vk_x"] = "1", ["APS5_NULL"] = null! },
+        });
+
+        Assert.Equal(new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144" }, settings.ExtraEnvironment);
+        Assert.Equal(["extraEnvironment"], replaced);
+    }
+
+    [Fact]
+    public void Valid_extra_variables_are_kept()
+    {
+        var chosen = new GameSettings { ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144" } };
+
+        var (settings, replaced) = GameSettingsValidator.Normalize(chosen);
+
+        Assert.Equal(chosen, settings);
+        Assert.Empty(replaced);
+    }
 }

@@ -39,6 +39,12 @@ public static class LaunchEnvironment
         _ => null,
     };
 
+    /// <summary>Every variable <see cref="For"/> can set: an extra variable may not use one.</summary>
+    public static IReadOnlySet<string> ReservedNames { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Gpu, DriverFiles, Language, PresentMode, DisableDrivers, Overlay, OverlayPosition, PlayGoUnlistedChunks, SystemFonts, OutputResolution,
+    };
+
     /// <summary>A value equal to AnyPS5's default is left out, so a game with default settings and no fonts gets nothing.</summary>
     /// <param name="lavapipeManifest">Mesa's Lavapipe manifest; required when <see cref="GameSettings.Lavapipe"/> is on.</param>
     /// <param name="fontsDirectory">The installed Noto fonts; null when they are not installed.</param>
@@ -97,6 +103,12 @@ public static class LaunchEnvironment
         if (fontsDirectory is not null)
         {
             variables[SystemFonts] = fontsDirectory;
+        }
+
+        // Last, and never over a setting's variable: a reserved name is refused on the page and dropped on read.
+        foreach (var (name, value) in settings.ExtraEnvironment)
+        {
+            variables.TryAdd(name, value);
         }
 
         return variables;

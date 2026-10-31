@@ -25,6 +25,7 @@ public sealed class GameSettingsReportTests
                 "Overlay position: tl (default)",
                 "PlayGo unlisted chunks: unset (default)",
                 "Resolution: match the display (default)",
+                "Extra variables: none (default)",
                 "Environment at launch:",
                 @"  ANYPS5_SYSTEM_FONTS=C:\PS5Kitsune\fonts",
             ],
@@ -36,7 +37,7 @@ public sealed class GameSettingsReportTests
     {
         var lines = GameSettingsReport.Lines(new GameSettings(), null, lavapipeInstalled: false, null, null, fontsInstalled: false);
 
-        Assert.Equal(["Environment at launch:", "  (none)"], lines.Skip(9));
+        Assert.Equal(["Environment at launch:", "  (none)"], lines.Skip(10));
     }
 
     [Fact]
@@ -60,6 +61,7 @@ public sealed class GameSettingsReportTests
                 "Overlay position: br",
                 "PlayGo unlisted chunks: absent",
                 "Resolution: match the display (default)",
+                "Extra variables: none (default)",
                 "Environment at launch:",
                 "  ANYPS5_GPU=llvmpipe",
                 "  ANYPS5_LANGUAGE=2",
@@ -86,7 +88,7 @@ public sealed class GameSettingsReportTests
     {
         var lines = GameSettingsReport.Lines(new GameSettings { Lavapipe = true }, null, lavapipeInstalled: false, null, null, fontsInstalled: false);
 
-        Assert.Equal(["Environment at launch:", "  (none)", "  Lavapipe is not available: this profile has no Mesa download."], lines.Skip(9));
+        Assert.Equal(["Environment at launch:", "  (none)", "  Lavapipe is not available: this profile has no Mesa download."], lines.Skip(10));
     }
 
     [Theory]
@@ -94,4 +96,16 @@ public sealed class GameSettingsReportTests
     [InlineData("2160p", "Resolution: 4K")]
     public void The_resolution_line_names_the_choice(string resolution, string line) =>
         Assert.Contains(line, GameSettingsReport.Lines(new GameSettings { Resolution = resolution }, null, lavapipeInstalled: false, null, null, fontsInstalled: false));
+
+    [Fact]
+    public void Extra_variables_are_counted_and_listed_at_launch()
+    {
+        var settings = new GameSettings { ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144", ["APS5_OTHER"] = "1" } };
+
+        var lines = GameSettingsReport.Lines(settings, null, lavapipeInstalled: false, null, null, fontsInstalled: false);
+
+        Assert.Contains("Extra variables: 2", lines);
+        Assert.Contains("  APS5_HOST_IMPORT_MIB=6144", lines);
+        Assert.Contains("  APS5_OTHER=1", lines);
+    }
 }

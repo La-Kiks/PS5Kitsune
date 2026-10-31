@@ -1,3 +1,5 @@
+using PS5Kitsune.Core.Launch;
+
 namespace PS5Kitsune.Core.Library;
 
 /// <summary>The values AnyPS5 accepts for each setting. AnyPS5 stops on an invalid value, so a hand-edited game.json is normalized on read.</summary>
@@ -57,6 +59,15 @@ public static class GameSettingsValidator
         {
             normalized = normalized with { Resolution = null };
             replaced.Add("resolution");
+        }
+
+        var kept = settings.ExtraEnvironment
+            .Where(variable => variable.Value is not null && ExtraVariables.Problem(variable.Key) is null)
+            .ToDictionary(StringComparer.Ordinal);
+        if (kept.Count != settings.ExtraEnvironment.Count)
+        {
+            normalized = normalized with { ExtraEnvironment = kept };
+            replaced.Add("extraEnvironment");
         }
 
         return (normalized, replaced);

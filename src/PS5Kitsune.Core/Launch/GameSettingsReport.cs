@@ -29,6 +29,10 @@ public static class GameSettingsReport
             Line("Overlay position", settings.OverlayPosition, settings.OverlayPosition == defaults.OverlayPosition),
             Line("PlayGo unlisted chunks", settings.PlayGoUnlistedChunks ?? "unset", settings.PlayGoUnlistedChunks == defaults.PlayGoUnlistedChunks),
             Line("Resolution", ResolutionLabel(settings.Resolution), settings.Resolution == defaults.Resolution),
+            Line(
+                "Extra variables",
+                settings.ExtraEnvironment.Count == 0 ? "none" : settings.ExtraEnvironment.Count.ToString(CultureInfo.InvariantCulture),
+                settings.ExtraEnvironment.Count == 0),
             "Environment at launch:",
         ];
 

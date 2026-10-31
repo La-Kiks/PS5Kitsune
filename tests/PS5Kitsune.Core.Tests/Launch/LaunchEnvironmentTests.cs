@@ -55,4 +55,24 @@ public sealed class LaunchEnvironmentTests
     [Fact]
     public void Lavapipe_without_a_manifest_is_a_programming_error() =>
         Assert.Throws<ArgumentException>(() => LaunchEnvironment.For(new GameSettings { Lavapipe = true }, null, null));
+
+    [Fact]
+    public void Extra_variables_come_last_and_never_replace_a_setting()
+    {
+        var settings = new GameSettings { Language = 5, ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144", ["ANYPS5_LANGUAGE"] = "9" } };
+
+        Assert.Equal(
+            new Dictionary<string, string> { ["ANYPS5_LANGUAGE"] = "5", ["APS5_HOST_IMPORT_MIB"] = "6144" },
+            LaunchEnvironment.For(settings, null, null));
+    }
+
+    [Fact]
+    public void Every_variable_the_settings_can_set_is_reserved()
+    {
+        var all = new GameSettings { Gpu = "Radeon", DisableDozen = true, Language = 2, PresentMode = "mailbox", Overlay = true, OverlayPosition = "br", PlayGoUnlistedChunks = "installed", Resolution = "1080p" };
+
+        var names = LaunchEnvironment.For(all, null, Fonts).Keys.Concat(LaunchEnvironment.For(all with { Lavapipe = true }, Manifest, Fonts).Keys);
+
+        Assert.All(names, name => Assert.Contains(name, LaunchEnvironment.ReservedNames));
+    }
 }
