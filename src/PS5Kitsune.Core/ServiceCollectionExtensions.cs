@@ -16,6 +16,7 @@ using PS5Kitsune.Core.Pipeline;
 using PS5Kitsune.Core.Processes;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Tools;
+using PS5Kitsune.Core.Updates;
 
 namespace PS5Kitsune.Core;
 
@@ -35,6 +36,7 @@ public static class ServiceCollectionExtensions
             return client;
         });
         services.AddSingleton<IDownloader, HttpDownloader>();
+        services.AddSingleton<UpdateChecker>();
         services.TryAddSingleton<IChildProcessJob, NoChildProcessJob>();
         services.AddSingleton<IProcessRunner, CliWrapProcessRunner>();
         services.AddSingleton(TimeProvider.System);

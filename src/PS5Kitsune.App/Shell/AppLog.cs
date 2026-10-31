@@ -24,4 +24,7 @@ internal static partial class AppLog
 
     [LoggerMessage(Level = LogLevel.Error, Message = "A page failed after its steps finished.")]
     public static partial void StepRunHookFailed(this ILogger logger, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The update check failed unexpectedly.")]
+    public static partial void UpdateCheckFailed(this ILogger logger, Exception exception);
 }

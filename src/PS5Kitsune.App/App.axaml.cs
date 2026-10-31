@@ -10,6 +10,7 @@ using PS5Kitsune.App.Views;
 using PS5Kitsune.Core;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
+using PS5Kitsune.Core.Updates;
 using PS5Kitsune.Platform;
 
 namespace PS5Kitsune.App;
@@ -40,7 +41,26 @@ public sealed partial class App : Application
             var navigator = new Navigator();
             var dialogs = new AvaloniaDialogService(() => window);
             var pages = new PageFactory(sessions, navigator, dialogs, settings, new AvaloniaUiDispatcher(), platform);
-            window.DataContext = new MainWindowViewModel(navigator, dialogs, pages, theme, () => sessions.Current.Get<ILogger<MainWindowViewModel>>());
+            var updateNotice = new UpdateNoticeViewModel(platform.OpenPath);
+            window.DataContext = new MainWindowViewModel(navigator, dialogs, pages, theme, () => sessions.Current.Get<ILogger<MainWindowViewModel>>(), updateNotice);
+            if (loaded.Settings.CheckForUpdates)
+            {
+                // In the background once the window is up: startup never waits for GitHub, and a failure only logs a line.
+                window.Opened += async (_, _) => await CheckForUpdateAsync().ConfigureAwait(true);
+            }
+            async Task CheckForUpdateAsync()
+            {
+                try
+                {
+                    await updateNotice.CheckAsync(sessions.Current.Get<UpdateChecker>(), AppVersion.Current).ConfigureAwait(true);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    // This runs as an event handler: an escaping exception would end the app over an optional notice.
+                    sessions.Current.Get<ILogger<App>>().UpdateCheckFailed(exception);
+                }
+            }
+
             navigator.GoHome(pages.Start());
             desktop.MainWindow = window;
             desktop.Exit += (_, _) => sessions.Dispose();

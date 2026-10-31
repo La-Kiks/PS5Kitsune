@@ -4,7 +4,8 @@ namespace PS5Kitsune.Core.Settings;
 /// <param name="SchemaVersion">Version of the file format.</param>
 /// <param name="DataRoot">The data root chosen in the app; null for the platform's default.</param>
 /// <param name="Theme">The app's theme; absent in older files, which means <see cref="AppTheme.System"/>.</param>
-public sealed record AppSettings(int SchemaVersion, string? DataRoot, AppTheme Theme = AppTheme.System)
+/// <param name="CheckForUpdates">Whether the app asks GitHub for a newer release at startup; absent in older files, which means true.</param>
+public sealed record AppSettings(int SchemaVersion, string? DataRoot, AppTheme Theme = AppTheme.System, bool CheckForUpdates = true)
 {
     public const int CurrentSchemaVersion = 1;
 
