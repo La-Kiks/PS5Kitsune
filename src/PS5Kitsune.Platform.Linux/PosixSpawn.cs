@@ -114,7 +114,9 @@ internal static unsafe partial class PosixSpawn
     /// Waits until the child exits without reaping it: as a zombie it keeps its PID, and so its process group ID, from being reused,
     /// so the group can still be signalled safely. False when waitid fails (the caller then reaps as before).
     /// </summary>
-    public static bool WaitForExitWithoutReaping(int pid)
+    /// <param name="pid">The child.</param>
+    /// <param name="error">The errno of the failure; 0 when the child exited.</param>
+    public static bool TryWaitForExitWithoutReaping(int pid, out int error)
     {
         var info = (nint)NativeMemory.AllocZeroed(SigInfoSize);
         try
@@ -124,6 +126,7 @@ internal static unsafe partial class PosixSpawn
             {
             }
 
+            error = result == 0 ? 0 : Marshal.GetLastPInvokeError();
             return result == 0;
         }
         finally

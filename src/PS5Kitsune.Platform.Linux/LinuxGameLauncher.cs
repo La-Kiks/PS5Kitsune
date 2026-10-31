@@ -31,7 +31,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         var pid = PosixSpawn.Start(request.Executable, request.Arguments, request.WorkingDirectory, logFile, EnvironmentOf(request.Environment));
 
         // The child cannot be reaped before the waiting thread starts, so its stat is readable (at worst as a zombie).
-        var game = new SpawnedGame(pid, logFile, StartTimeOrNow(pid), ProcStat.BootId(), ProcStat.Read(pid)?.StartTicks, StopGrace);
+        var game = new SpawnedGame(this, pid, logFile, StartTimeOrNow(pid), ProcStat.BootId(), ProcStat.Read(pid)?.StartTicks, StopGrace);
         var executable = request.Executable;
         LogLaunched(executable, pid, logFile);
         return game;
@@ -119,6 +119,12 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
     [LoggerMessage(Level = LogLevel.Information, Message = "Found {Executable} running again (PID {ProcessId})")]
     private partial void LogAttached(string executable, int processId);
 
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not watch PID {ProcessId} exit without reaping it (errno {Error}); a stopped game's leftover processes may survive.")]
+    private partial void LogWatchFailed(int processId, int error);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not kill the process group of PID {ProcessId} after its leader exited")]
+    private partial void LogGroupKillFailed(Exception exception, int processId);
+
     /// <summary>Stop for both kinds: SIGTERM to the group, the grace period, then SIGKILL; completes once the game has exited.</summary>
     private static async Task StopAsync(ILaunchedGame game, TimeSpan grace, CancellationToken cancellationToken)
     {
@@ -143,10 +149,12 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
     {
         private readonly TaskCompletionSource<int?> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TimeSpan _stopGrace;
+        private readonly LinuxGameLauncher _launcher;
         private volatile bool _stopRequested;
 
-        public SpawnedGame(int processId, string logFile, DateTimeOffset startedAt, string? bootId, ulong? startTicks, TimeSpan stopGrace)
+        public SpawnedGame(LinuxGameLauncher launcher, int processId, string logFile, DateTimeOffset startedAt, string? bootId, ulong? startTicks, TimeSpan stopGrace)
         {
+            _launcher = launcher;
             BootId = bootId;
             StartTicks = startTicks;
             ProcessId = processId;
@@ -159,15 +167,20 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         // The leader is seen exiting before it is reaped: after a Stop, its whole group is killed while the group ID cannot be reused.
         private int WaitAndReap(int processId)
         {
-            if (PosixSpawn.WaitForExitWithoutReaping(processId) && _stopRequested)
+            if (!PosixSpawn.TryWaitForExitWithoutReaping(processId, out var error))
+            {
+                _launcher.LogWatchFailed(processId, error);
+            }
+            else if (_stopRequested)
             {
                 try
                 {
                     PosixSpawn.SignalGroup(processId, PosixSpawn.SigKill);
                 }
-                catch (Win32Exception)
+                catch (Win32Exception exception)
                 {
                     // The reap below must not be skipped.
+                    _launcher.LogGroupKillFailed(exception, processId);
                 }
             }
 
@@ -187,6 +200,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         public Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default) => _exited.Task.WaitAsync(cancellationToken);
 
         // Once reaped, the PID (and so the group) may belong to another process: never signal it.
+        // The flag is set before any signal, so the waiting thread sees it by the time the leader exits because of Stop.
         public Task StopAsync(CancellationToken cancellationToken = default)
         {
             if (_exited.Task.IsCompleted)

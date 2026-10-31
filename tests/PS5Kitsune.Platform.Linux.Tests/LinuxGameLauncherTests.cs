@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.Core.Abstractions;
@@ -27,7 +28,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
 
     /// <summary>/usr/bin/sleep itself (not through sh), so /proc/&lt;pid&gt;/exe is /usr/bin/sleep from the start.</summary>
     private ILaunchedGame Sleep(int seconds) =>
-        _launcher.Launch(new GameLaunchRequest("/usr/bin/sleep", _temp.Path, Logs) { Arguments = [seconds.ToString(System.Globalization.CultureInfo.InvariantCulture)] });
+        _launcher.Launch(new GameLaunchRequest("/usr/bin/sleep", _temp.Path, Logs) { Arguments = [seconds.ToString(CultureInfo.InvariantCulture)] });
 
     private static async Task<int?> ExitOf(ILaunchedGame game) =>
         await game.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
@@ -120,7 +121,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
     }
 
     private static int ChildPid(string log) =>
-        int.Parse(log.Split('\n').First(line => line.StartsWith("child ", StringComparison.Ordinal))["child ".Length..].Trim(), System.Globalization.CultureInfo.InvariantCulture);
+        int.Parse(log.Split('\n').First(line => line.StartsWith("child ", StringComparison.Ordinal))["child ".Length..].Trim(), CultureInfo.InvariantCulture);
 
     private static async Task<bool> GoneAsync(int pid)
     {
@@ -286,7 +287,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
 
         Assert.Equal(0, await ExitOf(game));
         var line = (await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken)).Trim();
-        var ignored = ulong.Parse(line["SigIgn:".Length..].Trim(), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+        var ignored = ulong.Parse(line["SigIgn:".Length..].Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         Assert.Equal(0UL, ignored & 0x1000); // SIGPIPE is 13: bit 12.
     }
 
