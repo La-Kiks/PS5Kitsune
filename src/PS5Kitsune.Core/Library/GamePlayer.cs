@@ -70,7 +70,7 @@ public sealed partial class GamePlayer(
         // The settings may have turned Lavapipe on since the preparation.
         var manifest = !record.Settings.Lavapipe
             ? null
-            : resources.LavapipeManifest ?? preparation.InstalledLavapipe() ?? throw new LavapipeUnavailableException($"Lavapipe is not installed: {preparation.LavapipeWhenMissing ?? "this profile has no Mesa download"}.");
+            : resources.LavapipeManifest ?? preparation.InstalledLavapipe() ?? throw new LavapipeUnavailableException($"Lavapipe is not installed: {preparation.LavapipeWhenMissing ?? "this profile has no Mesa download"}");
         var environment = LaunchEnvironment.For(record.Settings, manifest, resources.FontsDirectory);
         var process = launcher.Launch(new GameLaunchRequest(executable, game.Root, game.Logs) { Environment = environment });
         GameRecord played;

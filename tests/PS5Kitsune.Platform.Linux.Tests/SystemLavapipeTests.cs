@@ -31,6 +31,17 @@ public sealed class SystemLavapipeTests : IDisposable
     }
 
     [Fact]
+    public void The_texts_compose_into_sentences_that_end_with_the_command()
+    {
+        var lavapipe = new SystemLavapipe(new DistroPackages(OsRelease.Parse("ID=ubuntu\nID_LIKE=debian\n")));
+
+        Assert.Equal("Lavapipe is not installed: install it with: sudo apt install mesa-vulkan-drivers", $"Lavapipe is not installed: {lavapipe.WhenMissing}");
+        Assert.Equal(
+            "Slow but works on any PC. It comes from the system's Mesa; if it is missing, install it with: sudo apt install mesa-vulkan-drivers",
+            $"Slow but works on any PC. {lavapipe.HowToGet}");
+    }
+
+    [Fact]
     public async Task Without_a_manifest_install_names_the_mesa_command()
     {
         var lavapipe = new SystemLavapipe(Fedora) { ManifestDirectories = [_temp.Path] };

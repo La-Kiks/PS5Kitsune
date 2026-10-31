@@ -49,7 +49,19 @@ public sealed class DiagnosisViewModelTests : IDisposable
         await panel.FixCommand.ExecuteAsync(null);
 
         Assert.True(Saved().Lavapipe);
-        Assert.Equal("CPU rendering is on. " + FakeLavapipe.HowToGetText + " Launch again to start the game.", panel.Result);
+        Assert.Equal("CPU rendering is on. Launch again to start the game. " + FakeLavapipe.HowToGetText, panel.Result);
+    }
+
+    [Fact]
+    public async Task Turn_on_cpu_rendering_without_lavapipe_has_no_how_to_get()
+    {
+        using var library = new TestLibrary(withoutLavapipe: true);
+        var game = await library.AddAsync("PPSA99666", "DOOM");
+        var panel = new DiagnosisViewModel(Of(DiagnosisIds.GpuFeatures), game, "DOOM", new GameSettings(), library.Player, library.Platform, library.Diagnosis(ReportUrl));
+
+        await panel.FixCommand.ExecuteAsync(null);
+
+        Assert.Equal("CPU rendering is on. Launch again to start the game.", panel.Result);
     }
 
     [Fact]

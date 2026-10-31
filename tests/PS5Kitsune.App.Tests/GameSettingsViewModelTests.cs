@@ -50,6 +50,16 @@ public sealed class GameSettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task The_lavapipe_help_has_no_how_to_get_without_lavapipe()
+    {
+        using var library = new TestLibrary(withoutLavapipe: true);
+        await library.AddAsync("PPSA99666", "DOOM");
+        var page = new GameSettingsViewModel("PPSA99666", library.Player, library.Library, library.Running, _probe, _dialogs, _navigator);
+
+        Assert.Equal("Slow but works on any PC.", page.LavapipeHelp);
+    }
+
+    [Fact]
     public async Task Shows_the_saved_settings_and_the_detected_gpus()
     {
         _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Radeon, IrisXe);

@@ -13,6 +13,12 @@ namespace PS5Kitsune.Core.Launch;
 /// <param name="preparationLock">Null in tests that do not need it: downloads are then not serialized.</param>
 public sealed partial class LaunchPreparation(ILavapipe? lavapipe, IFontPack? fonts, ILogger<LaunchPreparation> logger, PreparationLock? preparationLock = null)
 {
+    /// <summary>How the platform gets Lavapipe, as a sentence; null when the profile has no Mesa download.</summary>
+    public string? LavapipeHowToGet => lavapipe?.HowToGet;
+
+    /// <summary>What to do when Lavapipe is missing; null when the profile has no Mesa download.</summary>
+    public string? LavapipeWhenMissing => lavapipe?.WhenMissing;
+
     /// <exception cref="LavapipeUnavailableException">The settings use Lavapipe and Mesa cannot be installed.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     public async Task<LaunchResources> PrepareAsync(GameSettings settings, IProgress<LaunchProgress>? progress, CancellationToken cancellationToken)
@@ -68,12 +74,6 @@ public sealed partial class LaunchPreparation(ILavapipe? lavapipe, IFontPack? fo
 
         return new LaunchResources(manifest, fonts.Folder, null);
     }
-
-    /// <summary>How the platform gets Lavapipe, as a sentence; null when the profile has no Mesa download.</summary>
-    public string? LavapipeHowToGet => lavapipe?.HowToGet;
-
-    /// <summary>What to do when Lavapipe is missing; null when the profile has no Mesa download.</summary>
-    public string? LavapipeWhenMissing => lavapipe?.WhenMissing;
 
     /// <summary>Mesa's manifest when it is installed; null otherwise. For settings that turned Lavapipe on after the preparation.</summary>
     public string? InstalledLavapipe() => lavapipe is not null && lavapipe.IsInstalled() ? lavapipe.Manifest : null;
