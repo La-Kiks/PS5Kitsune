@@ -76,6 +76,8 @@
             <TextBlock Text="{Binding UpdateNotice.Text}" TextWrapping="Wrap" />
             <Button Classes="accent" Content="Download" Command="{Binding UpdateNotice.OpenCommand}" HorizontalAlignment="Left"
                     AutomationProperties.Name="{Binding UpdateNotice.ButtonName}" ToolTip.Tip="Opens the release page in your browser" />
+            <TextBlock Text="{Binding UpdateNotice.OpenError}" Classes="error" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
+                       IsVisible="{Binding UpdateNotice.OpenError, Converter={x:Static ObjectConverters.IsNotNull}}" />
           </StackPanel>
 
           <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"

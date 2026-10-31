@@ -35,10 +35,13 @@ It has to ship in 0.2.0 itself: a build can only announce versions newer than it
 
 ```
   Update available
-  PS5Kitsune 0.2.0   [Download]
+  PS5Kitsune 0.2.0
+  [Download]
 ```
 
-- [Download] opens the release page in the default browser with `IPlatform.OpenPath`, which already opens https URLs on Windows and Linux.
+The block stacks three lines (a caption, the version, then the accent Download button) to fit the 168 px sidebar.
+
+- [Download] opens the release page in the default browser with `IPlatform.OpenPath`, which already opens https URLs on Windows and Linux. When the browser cannot be opened (no handler for https, no `xdg-open`), a short message under the button says so and gives the address to open by hand; the app does not crash.
 - The block is hidden until a newer version is found. It uses the existing sidebar styles in both themes. The button is reached with Tab like the other sidebar controls, and its accessible name is "Download PS5Kitsune 0.2.0".
 - The button works while the page is busy (an install, an add): it only opens the browser.
 
@@ -83,12 +86,13 @@ A file without the field reads as `true`, so the schema version stays 1. Saving 
 
 ### App
 
-- **`MainWindowViewModel`**:
-  - `UpdateInfo? Update` (observable), `bool HasUpdate`, `string? UpdateText` ("PS5Kitsune 0.2.0") and `string? UpdateButtonName` ("Download PS5Kitsune 0.2.0");
-  - `OpenUpdateCommand`: `IPlatform.OpenPath(Update.ReleasePage.ToString())`, enabled only when `HasUpdate`;
-  - `Task CheckForUpdatesAsync(UpdateChecker checker, AppVersion? current)`: does nothing when `current` is null; otherwise awaits the check and sets `Update`. The constructor takes `IPlatform`.
-- **`App.axaml.cs`**: after the window is set, when `loaded.Settings.CheckForUpdates` is true, starts `CheckForUpdatesAsync` on the window's `Opened` event without awaiting it. It reads the setting once at startup: changing it takes effect at the next start.
-- **`MainWindow.axaml`**: a new block in the sidebar's bottom row, above the theme switch, bound to `HasUpdate`, `UpdateText`, `UpdateButtonName` and `OpenUpdateCommand`.
+- **`UpdateNoticeViewModel(Action<string> open)`**:
+  - `UpdateInfo? Update` (observable), `bool HasUpdate`, `string? Text` ("PS5Kitsune 0.2.0") and `string? ButtonName` ("Download PS5Kitsune 0.2.0");
+  - `OpenCommand`: calls `open(Update.ReleasePage.ToString())` through `PathOpener.TryRun`, enabled only when `HasUpdate`; a failure sets `string? OpenError` (the reason and the address), shown under the button;
+  - `Task CheckAsync(UpdateChecker checker, AppVersion? current)`: does nothing when `current` is null; otherwise awaits the check and sets `Update`.
+- **`MainWindowViewModel`** exposes it as `UpdateNotice`, an optional last constructor parameter.
+- **`App.axaml.cs`**: creates the view model with `platform.OpenPath`. When `loaded.Settings.CheckForUpdates` is true, the window's `Opened` event runs `CheckAsync` without awaiting it, inside a `try`/`catch` that logs one Warning line, so a bug in the check cannot end the app. It reads the setting once at startup: changing it takes effect at the next start.
+- **`MainWindow.axaml`**: a new block in the sidebar's bottom row, above the theme switch, bound to `UpdateNotice.HasUpdate`, `Text`, `ButtonName`, `OpenCommand` and `OpenError`.
 
 ## Tests
 
@@ -98,9 +102,10 @@ A file without the field reads as `true`, so the schema version stays 1. Saving 
   - 404, 403, 500, a body that is not JSON, JSON without `tag_name`, a tag that is not a version, and a timeout each give null and log once;
   - a pre-release current version sends no request;
   - the request goes to the right URL with the `Accept` header;
+  - an answer with an unknown `charset=` in its Content-Type is still read;
   - `html_url` pointing elsewhere is ignored: the page address is still the built one.
 - **Settings** (Core.Tests): a file without `checkForUpdates` loads as `true`; `false` round-trips; saving the theme keeps `false`.
-- **`MainWindowViewModel`** (App.Tests): no update means hidden and the command disabled; a found update sets the texts and enables the command, which opens the page through a fake `IPlatform`; a null current version makes no check.
+- **`UpdateNoticeViewModel`** (App.Tests): no update means hidden and the command disabled; a found update sets the texts and enables the command, which passes the page address to the `open` delegate; a null current version makes no check; a failing checker keeps the notice hidden; an `open` delegate that throws sets `OpenError` and nothing escapes.
 - **Visual:** a headless screenshot of the window with the notice, in light and dark, attached to the PR.
 
 ## Criterion

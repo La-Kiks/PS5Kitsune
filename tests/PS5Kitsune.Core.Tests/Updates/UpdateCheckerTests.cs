@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Tests.Fakes;
 using PS5Kitsune.Core.Updates;
@@ -133,5 +134,20 @@ public sealed class UpdateCheckerTests
         });
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Checker(handler).CheckAsync(Running, cancelled.Token));
+    }
+
+    [Fact]
+    public async Task An_unknown_charset_in_the_answer_does_not_throw()
+    {
+        var handler = new StubHttpHandler((_, _) =>
+        {
+            var content = new StringContent("""{ "tag_name": "v0.2.0" }""");
+            content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json; charset=nonsense-charset");
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        });
+
+        var update = await Checker(handler).CheckAsync(Running, TestContext.Current.CancellationToken);
+
+        Assert.Equal(new AppVersion(0, 2, 0, false), update!.Version);
     }
 }

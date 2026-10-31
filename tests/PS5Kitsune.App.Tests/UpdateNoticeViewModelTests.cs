@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Net;
 using Microsoft.Extensions.Logging.Abstractions;
 using PS5Kitsune.App.ViewModels;
 using PS5Kitsune.Core.Tests.Fakes;
@@ -59,5 +61,27 @@ public sealed class UpdateNoticeViewModelTests
         await notice.CheckAsync(Checker(StubHttpHandler.Json("""{ "tag_name": "v0.1.0" }""")), new AppVersion(0, 1, 0, false));
 
         Assert.False(notice.HasUpdate);
+    }
+
+    [Fact]
+    public async Task A_failing_checker_keeps_the_notice_hidden()
+    {
+        var notice = new UpdateNoticeViewModel(_opened.Add);
+
+        await notice.CheckAsync(Checker(StubHttpHandler.Json("{}", HttpStatusCode.InternalServerError)), new AppVersion(0, 1, 0, false));
+
+        Assert.False(notice.HasUpdate);
+    }
+
+    [Fact]
+    public async Task A_browser_that_cannot_be_opened_shows_a_message_with_the_address()
+    {
+        var notice = new UpdateNoticeViewModel(_ => throw new Win32Exception("No application is associated."));
+        await notice.CheckAsync(Checker(StubHttpHandler.Json("""{ "tag_name": "v0.2.0" }""")), new AppVersion(0, 1, 0, false));
+
+        notice.OpenCommand.Execute(null);
+
+        Assert.Contains("No application is associated.", notice.OpenError, StringComparison.Ordinal);
+        Assert.Contains("https://github.com/La-Kiks/PS5Kitsune/releases/tag/v0.2.0", notice.OpenError, StringComparison.Ordinal);
     }
 }

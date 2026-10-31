@@ -47,7 +47,7 @@ public sealed partial class UpdateChecker
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeout.CancelAfter(_timeout);
-        string body;
+        byte[] body;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, LatestReleaseUrl);
@@ -59,7 +59,8 @@ public sealed partial class UpdateChecker
                 return null;
             }
 
-            body = await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false);
+            // Bytes, not text: a proxy's unknown charset= would make ReadAsStringAsync throw.
+            body = await response.Content.ReadAsByteArrayAsync(timeout.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -89,7 +90,7 @@ public sealed partial class UpdateChecker
     }
 
     /// <returns>The <c>tag_name</c> string; null when the body is not JSON, not an object, or has no string <c>tag_name</c>.</returns>
-    private static string? ReadTag(string body)
+    private static string? ReadTag(byte[] body)
     {
         try
         {

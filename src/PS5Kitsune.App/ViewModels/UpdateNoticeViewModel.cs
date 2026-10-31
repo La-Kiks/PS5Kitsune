@@ -13,6 +13,10 @@ public sealed partial class UpdateNoticeViewModel(Action<string> open) : Observa
     [NotifyCanExecuteChangedFor(nameof(OpenCommand))]
     public partial UpdateInfo? Update { get; set; }
 
+    /// <summary>Why the browser could not be opened, with the address to open by hand; null otherwise.</summary>
+    [ObservableProperty]
+    public partial string? OpenError { get; set; }
+
     public bool HasUpdate => Update is not null;
 
     public string? Text => Update is { } update ? "PS5Kitsune " + update.Version : null;
@@ -35,7 +39,9 @@ public sealed partial class UpdateNoticeViewModel(Action<string> open) : Observa
     {
         if (Update is { } update)
         {
-            open(update.ReleasePage.ToString());
+            var address = update.ReleasePage.ToString();
+            var problem = PathOpener.TryRun(() => open(address));
+            OpenError = problem is null ? null : $"{problem} Open {address} in your browser.";
         }
     }
 }
