@@ -1,0 +1,7 @@
+#!/bin/sh
+# PS5Kitsune AppImage entry point: no argument opens the app, any argument runs the command-line tool.
+HERE=$(dirname "$(readlink -f "$0")")
+if [ "$#" -eq 0 ]; then
+    exec "$HERE/usr/bin/PS5Kitsune"
+fi
+exec "$HERE/usr/bin/ps5kitsune" "$@"

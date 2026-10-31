@@ -36,7 +36,11 @@ public sealed partial class RunningGames(IGameLauncher launcher, ILogger<Running
     {
         ArgumentNullException.ThrowIfNull(game);
         ArgumentNullException.ThrowIfNull(process);
-        var record = new RunningGame(RunningGame.CurrentSchemaVersion, process.ProcessId, process.StartedAt, Path.GetFullPath(executable), process.LogFile);
+        var record = new RunningGame(process.BootId is null && process.StartTicks is null ? 1 : RunningGame.CurrentSchemaVersion, process.ProcessId, process.StartedAt, Path.GetFullPath(executable), process.LogFile)
+        {
+            BootId = process.BootId,
+            StartTicks = process.StartTicks,
+        };
         LogRecorded(record.ProcessId, game.TitleId);
         return JsonFiles.WriteAsync(game.RunningRecord, record, CancellationToken.None);
     }
@@ -99,9 +103,9 @@ public sealed partial class RunningGames(IGameLauncher launcher, ILogger<Running
             return null;
         }
 
-        if (record.SchemaVersion != RunningGame.CurrentSchemaVersion)
+        if (record.SchemaVersion is not (1 or RunningGame.CurrentSchemaVersion))
         {
-            throw new JsonException($"Schema version {record.SchemaVersion}; this app reads version {RunningGame.CurrentSchemaVersion}.");
+            throw new JsonException($"Schema version {record.SchemaVersion}; this app reads versions 1 and {RunningGame.CurrentSchemaVersion}.");
         }
 
         return record.ProcessId > 0 && !string.IsNullOrEmpty(record.Executable) && !string.IsNullOrEmpty(record.LogFile)

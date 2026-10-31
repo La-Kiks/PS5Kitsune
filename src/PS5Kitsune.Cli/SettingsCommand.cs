@@ -17,7 +17,7 @@ internal static class SettingsCommand
             var (_, record) = services.GetRequiredService<GameLibrary>().Find(parseResult.GetRequiredValue(titleIdArgument));
             var lavapipe = services.GetService<ILavapipe>();
             var fonts = services.GetService<IFontPack>();
-            var lines = GameSettingsReport.Lines(record.Settings, lavapipe?.Manifest, lavapipe?.IsInstalled() == true, fonts?.Folder, fonts?.IsInstalled() == true);
+            var lines = GameSettingsReport.Lines(record.Settings, lavapipe?.Manifest, lavapipe?.IsInstalled() == true, lavapipe?.WhenMissing, fonts?.Folder, fonts?.IsInstalled() == true);
             foreach (var line in lines)
             {
                 logger.SettingsLine(line);

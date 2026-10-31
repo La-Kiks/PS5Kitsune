@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
@@ -56,11 +57,24 @@ public sealed class GameViewModelTests : IDisposable
         await FinishedAsync(page);
 
         Assert.Equal(["line 1", "line 2"], page.Log);
-        Assert.Equal("Exited with code 3", page.StatusText);
+        Assert.Equal($"Exited with code {ExitCodes.Describe(3)}", page.StatusText);
         Assert.False(page.IsRunning);
         Assert.True(page.CanLaunchAgain);
         Assert.False(File.Exists(_library.Game("PPSA99666").RunningRecord));
         Assert.True(page.LaunchAgainCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_game_whose_exit_code_is_unknown_shows_exited_without_a_code()
+    {
+        var (page, process) = await LaunchAsync();
+        process.Exit(null);
+
+        page.OnNavigatedTo();
+        await FinishedAsync(page);
+
+        Assert.Equal("Exited", page.StatusText);
+        Assert.False(page.IsRunning);
     }
 
     [Fact]
@@ -87,7 +101,7 @@ public sealed class GameViewModelTests : IDisposable
         await page.StopCommand.ExecuteAsync(null);
         await FinishedAsync(page);
 
-        Assert.Equal("Exited with code 1", page.StatusText);
+        Assert.Equal($"Exited with code {ExitCodes.Describe(1)}", page.StatusText);
     }
 
     [Fact]
@@ -149,7 +163,7 @@ public sealed class GameViewModelTests : IDisposable
         }
 
         Assert.Equal("Another PS5Kitsune action is using DOOM. Try again when it finishes.", page.Message);
-        Assert.Equal("Exited with code 0", page.StatusText);
+        Assert.Equal($"Exited with code {ExitCodes.Describe(0)}", page.StatusText);
     }
 
     [Fact]
@@ -334,7 +348,7 @@ public sealed class GameViewModelTests : IDisposable
         Assert.Single(_library.Launcher.Launches);
         ((FakeLaunchedGame)started.Process).Exit(0);
         await FinishedAsync(page);
-        Assert.Equal("Exited with code 0", page.StatusText);
+        Assert.Equal($"Exited with code {ExitCodes.Describe(0)}", page.StatusText);
     }
 
     [Fact]
@@ -376,7 +390,7 @@ public sealed class GameViewModelTests : IDisposable
         await page.LaunchAgainCommand.ExecuteAsync(null);
 
         Assert.Equal("Could not launch DOOM: boom", page.Message);
-        Assert.Equal("Exited with code 0", page.StatusText);
+        Assert.Equal($"Exited with code {ExitCodes.Describe(0)}", page.StatusText);
         Assert.True(page.CanLaunchAgain);
     }
 
@@ -408,8 +422,8 @@ public sealed class GameViewModelTests : IDisposable
         await FinishedAsync(page);
 
         Assert.Equal("No GPU here supports AnyPS5", page.Diagnosis?.Title);
-        Assert.Equal("Exited with code 1", page.StatusText);
-        Assert.Equal("[ps5kitsune] exited with code 1 (0x00000001)", (await File.ReadAllLinesAsync(process.LogFile, TestContext.Current.CancellationToken))[^1]);
+        Assert.Equal($"Exited with code {ExitCodes.Describe(1)}", page.StatusText);
+        Assert.Equal(ExitLines.Exited(1), (await File.ReadAllLinesAsync(process.LogFile, TestContext.Current.CancellationToken))[^1]);
     }
 
     [Fact]

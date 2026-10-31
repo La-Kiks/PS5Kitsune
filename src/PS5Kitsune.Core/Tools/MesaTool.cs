@@ -24,6 +24,12 @@ public sealed class MesaTool(ToolDefinition definition, DataLayout layout, IDown
 
     public string Manifest => Path.Combine(InstallDirectory, ManifestName);
 
+    /// <inheritdoc />
+    public string HowToGet => "Mesa (~70 MB) is downloaded on the first launch.";
+
+    /// <inheritdoc />
+    public string WhenMissing => "launch the game again to download it";
+
     protected override IEnumerable<string> RequiredFiles => [Manifest, Path.Combine(InstallDirectory, DriverName)];
 
     // 70 MB that nothing reads once Lavapipe is extracted.

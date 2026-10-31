@@ -26,6 +26,7 @@ public sealed partial class ModeViewModel : ObservableObject
         _navigator = navigator;
         _pages = pages;
         _installer = installer;
+        BuildUnavailableText = installer.BuildUnavailableReason;
         _releaseRecord = installer.ReadRecord(AnyPS5Mode.Release);
         _buildRecord = installer.ReadRecord(AnyPS5Mode.Build);
         _activeMode = installer.ActiveMode;
@@ -51,7 +52,7 @@ public sealed partial class ModeViewModel : ObservableObject
 
     public string BuildDiskText => string.Create(CultureInfo.InvariantCulture, $"Needs about {_profile.Checks.BuildMinFreeDiskGiB} GiB of free disk space.");
 
-    public string BuildUnavailableText { get; } = "This profile does not define a build.";
+    public string BuildUnavailableText { get; }
 
     /// <summary>"Installed: {version}" on the release card when the release install is finished; null otherwise.</summary>
     public string? ReleaseInstalledText => _releaseRecord is { } record ? $"Installed: {record.Version}" : null;

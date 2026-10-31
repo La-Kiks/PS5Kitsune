@@ -1,4 +1,5 @@
 using PS5Kitsune.Core.Checks.Vulkan;
+using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Core.Checks;
 
@@ -76,6 +77,12 @@ public sealed class DozenCheck : SystemCheck
     public override CheckResult Evaluate(SystemFacts facts)
     {
         ArgumentNullException.ThrowIfNull(facts);
+        if (facts.Os == ProfileOs.Linux)
+        {
+            // Dozen is Mesa's Vulkan over Direct3D 12: Windows only.
+            return Result(CheckStatus.Info, "Not applicable on this system.");
+        }
+
         if (facts.Vulkan.Status == VulkanProbeStatus.SucceededWithoutDozen)
         {
             return Result(CheckStatus.Info, "The first Vulkan probe failed and the second, with Dozen disabled, succeeded; the launcher will disable Dozen when it starts a game.");

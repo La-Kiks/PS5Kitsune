@@ -46,6 +46,19 @@ internal readonly partial record struct ProcStat(char State, int Session, ulong 
         }
     }
 
+    /// <summary>This boot's ID; null when it cannot be read. Unlike btime, it never moves with the wall clock.</summary>
+    public static string? BootId()
+    {
+        try
+        {
+            return File.ReadAllText("/proc/sys/kernel/random/boot_id").Trim() is { Length: > 0 } id ? id : null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>The "btime" line of /proc/stat: the boot time in seconds since the epoch.</summary>
     /// <exception cref="InvalidDataException">No btime line.</exception>
     public static long BootTime(string procStatText)

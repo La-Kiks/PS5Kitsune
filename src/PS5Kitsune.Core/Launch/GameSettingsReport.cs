@@ -9,8 +9,9 @@ public static class GameSettingsReport
     private const string FirstLaunch = " (downloaded on first launch)";
 
     /// <param name="lavapipeManifest">Where Mesa's manifest is or will be; null when the profile has no Mesa download.</param>
+    /// <param name="lavapipeWhenMissing">What to do when Mesa is missing; null when the profile has no Mesa download.</param>
     /// <param name="fontsDirectory">Where the fonts are or will be; null when the profile has no fonts.</param>
-    public static IReadOnlyList<string> Lines(GameSettings settings, string? lavapipeManifest, bool lavapipeInstalled, string? fontsDirectory, bool fontsInstalled)
+    public static IReadOnlyList<string> Lines(GameSettings settings, string? lavapipeManifest, bool lavapipeInstalled, string? lavapipeWhenMissing, string? fontsDirectory, bool fontsInstalled)
     {
         ArgumentNullException.ThrowIfNull(settings);
         var defaults = new GameSettings();
@@ -40,8 +41,17 @@ public static class GameSettingsReport
 
         foreach (var (name, value) in variables.OrderBy(variable => variable.Key, StringComparer.Ordinal))
         {
-            var pending = (name == LaunchEnvironment.DriverFiles && !lavapipeInstalled) || (name == LaunchEnvironment.SystemFonts && !fontsInstalled);
-            lines.Add($"  {name}={value}{(pending ? FirstLaunch : "")}");
+            var suffix = "";
+            if (name == LaunchEnvironment.DriverFiles && !lavapipeInstalled)
+            {
+                suffix = lavapipeWhenMissing is null ? FirstLaunch : $" (not installed yet: {lavapipeWhenMissing})";
+            }
+            else if (name == LaunchEnvironment.SystemFonts && !fontsInstalled)
+            {
+                suffix = FirstLaunch;
+            }
+
+            lines.Add($"  {name}={value}{suffix}");
         }
 
         if (lavapipeMissing)

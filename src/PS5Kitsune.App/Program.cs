@@ -23,6 +23,8 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            // Matches StartupWMClass in packaging/linux/ps5kitsune.desktop, so the dock shows the app's icon. Ignored on Windows.
+            .With(new X11PlatformOptions { WmClass = "PS5Kitsune" })
             .UseAppFonts()
             .LogToTrace();
 }

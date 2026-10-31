@@ -36,7 +36,7 @@ public sealed partial class WindowsGameLauncherTests : IDisposable
             Environment = environment ?? new Dictionary<string, string>(),
         });
         var exitCode = await game.WaitForExitAsync(cancellationToken).WaitAsync(TimeSpan.FromSeconds(30), cancellationToken);
-        return (exitCode, await File.ReadAllTextAsync(game.LogFile, cancellationToken), game.LogFile);
+        return (exitCode!.Value, await File.ReadAllTextAsync(game.LogFile, cancellationToken), game.LogFile);
     }
 
     private Task<(int ExitCode, string Log, string LogFile)> RunCmdAsync(params string[] arguments) => RunCmdAsync(null, arguments);

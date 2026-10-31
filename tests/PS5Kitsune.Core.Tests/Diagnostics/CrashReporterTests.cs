@@ -50,7 +50,7 @@ public sealed class CrashReporterTests : IDisposable
         Assert.Contains("AnyPS5: release v0.1.2, profile doom-validated-2026-10", report, StringComparison.Ordinal);
         Assert.Contains("Game: PPSA99666 DOOM, audit 262 implemented, 3 stubs, 0 absent", report, StringComparison.Ordinal);
         Assert.Contains("Settings: ANYPS5_LANGUAGE=5", report, StringComparison.Ordinal);
-        Assert.Contains("Exit code: 0xC0000005", report, StringComparison.Ordinal);
+        Assert.Contains($"Exit code: {ExitCodes.Describe(0xC0000005)}", report, StringComparison.Ordinal);
         Assert.Contains("Diagnosis: unexplained", report, StringComparison.Ordinal);
         Assert.Contains("Log: " + LogPath, report, StringComparison.Ordinal);
         Assert.EndsWith("```text" + Environment.NewLine + "line a" + Environment.NewLine + "line b" + Environment.NewLine + "```" + Environment.NewLine, report, StringComparison.Ordinal);
@@ -79,7 +79,7 @@ public sealed class CrashReporterTests : IDisposable
     {
         var report = CrashReporter.Format(Facts, "doom-validated-2026-10", TestRecords.Sample(), null, LogPath, ["line a"], 3);
 
-        Assert.Contains("Exit code: 0x00000003", report, StringComparison.Ordinal);
+        Assert.Contains($"Exit code: {ExitCodes.Describe(3)}", report, StringComparison.Ordinal);
     }
 
     [Fact]

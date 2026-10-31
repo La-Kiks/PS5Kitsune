@@ -150,5 +150,5 @@ public static class DiagnosisTexts
     // The log names Windows paths; Path.GetFileName would not split them on Linux, where the tests also run.
     private static string? FileName(string? path) => path?[(path.LastIndexOfAny(['\\', '/']) + 1)..];
 
-    private static string Code(uint? code) => code is { } value ? string.Create(CultureInfo.InvariantCulture, $"0x{value:X8}") : "unknown";
+    private static string Code(uint? code) => code is { } value ? ExitCodes.Describe(value) : "unknown";
 }

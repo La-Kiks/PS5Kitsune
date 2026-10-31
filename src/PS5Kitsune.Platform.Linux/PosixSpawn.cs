@@ -22,6 +22,10 @@ internal static unsafe partial class PosixSpawn
     public const int SigTerm = 15;
     private const int Interrupted = 4;       // EINTR
     public const int NoSuchProcess = 3;      // ESRCH
+    private const int IdTypePid = 1;            // P_PID
+    private const int WaitExited = 4;           // WEXITED
+    private const int WaitNoWait = 0x01000000;  // WNOWAIT
+    private const int SigInfoSize = 128;        // sizeof(siginfo_t)
 
     /// <summary>
     /// Starts <paramref name="executable"/> in a new session, stdin on /dev/null, stdout and stderr on <paramref name="logFile"/>,
@@ -104,6 +108,31 @@ internal static unsafe partial class PosixSpawn
 
         var signal = status & 0x7F;
         return signal == 0 ? (status >> 8) & 0xFF : 128 + signal;
+    }
+
+    /// <summary>
+    /// Waits until the child exits without reaping it: as a zombie it keeps its PID, and so its process group ID, from being reused,
+    /// so the group can still be signalled safely. False when waitid fails (the caller then reaps as before).
+    /// </summary>
+    /// <param name="pid">The child.</param>
+    /// <param name="error">The errno of the failure; 0 when the child exited.</param>
+    public static bool TryWaitForExitWithoutReaping(int pid, out int error)
+    {
+        var info = (nint)NativeMemory.AllocZeroed(SigInfoSize);
+        try
+        {
+            int result;
+            while ((result = WaitId(IdTypePid, pid, info, WaitExited | WaitNoWait)) == -1 && Marshal.GetLastPInvokeError() == Interrupted)
+            {
+            }
+
+            error = result == 0 ? 0 : Marshal.GetLastPInvokeError();
+            return result == 0;
+        }
+        finally
+        {
+            NativeMemory.Free((void*)info);
+        }
     }
 
     /// <summary>Sends <paramref name="signal"/> to the process group <paramref name="group"/>; false when no process is left in it.</summary>
@@ -215,6 +244,9 @@ internal static unsafe partial class PosixSpawn
 
     [LibraryImport("libc", EntryPoint = "waitpid", SetLastError = true)]
     private static partial int WaitPid(int pid, out int status, int options);
+
+    [LibraryImport("libc", EntryPoint = "waitid", SetLastError = true)]
+    private static partial int WaitId(int idType, int id, nint info, int options);
 
     [LibraryImport("libc", EntryPoint = "kill", SetLastError = true)]
     private static partial int Kill(int pid, int signal);
