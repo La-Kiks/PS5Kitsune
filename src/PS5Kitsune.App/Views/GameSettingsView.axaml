@@ -82,18 +82,43 @@
           </ComboBox>
         </StackPanel>
 
-        <Expander Header="Advanced">
-          <StackPanel Spacing="4">
-            <TextBlock x:Name="PlayGoLabel" Text="PlayGo unlisted chunks" FontWeight="SemiBold" />
-            <ComboBox ItemsSource="{Binding PlayGoChoices}" SelectedItem="{Binding SelectedPlayGo}" IsEnabled="{Binding CanEdit}" MinWidth="320"
-                      AutomationProperties.LabeledBy="{Binding #PlayGoLabel}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SettingChoice">
-                  <TextBlock Text="{Binding Label}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <TextBlock Text="{Binding PlayGoHelp}" Classes="caption" TextWrapping="Wrap" />
+        <StackPanel Spacing="4">
+          <TextBlock x:Name="ResolutionLabel" Text="Resolution" FontWeight="SemiBold" />
+          <ComboBox ItemsSource="{Binding Resolutions}" SelectedItem="{Binding SelectedResolution}" IsEnabled="{Binding CanEdit}" MinWidth="320"
+                    AutomationProperties.LabeledBy="{Binding #ResolutionLabel}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SettingChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="{Binding ResolutionHelp}" Classes="caption" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Expander Header="Advanced" IsExpanded="{Binding IsAdvancedOpen, Mode=TwoWay}">
+          <StackPanel Spacing="16">
+            <StackPanel Spacing="4">
+              <TextBlock x:Name="PlayGoLabel" Text="PlayGo unlisted chunks" FontWeight="SemiBold" />
+              <ComboBox ItemsSource="{Binding PlayGoChoices}" SelectedItem="{Binding SelectedPlayGo}" IsEnabled="{Binding CanEdit}" MinWidth="320"
+                        AutomationProperties.LabeledBy="{Binding #PlayGoLabel}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SettingChoice">
+                    <TextBlock Text="{Binding Label}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+              <TextBlock Text="{Binding PlayGoHelp}" Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+              <TextBlock x:Name="ExtraEnvironmentLabel" Text="Extra AnyPS5 variables" FontWeight="SemiBold" />
+              <TextBox Text="{Binding ExtraEnvironmentText}" IsEnabled="{Binding CanEdit}" AcceptsReturn="True" TextWrapping="NoWrap"
+                       FontFamily="Cascadia Mono,Consolas,monospace" FontSize="12" MinHeight="84" MaxWidth="560" HorizontalAlignment="Left" MinWidth="320"
+                       AutomationProperties.LabeledBy="{Binding #ExtraEnvironmentLabel}" />
+              <TextBlock Text="{Binding ExtraEnvironmentErrors}" Classes="error" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                         IsVisible="{Binding ExtraEnvironmentErrors, Converter={x:Static ObjectConverters.IsNotNull}}" />
+              <TextBlock Text="{Binding ExtraEnvironmentHelp}" Classes="caption" TextWrapping="Wrap" />
+            </StackPanel>
           </StackPanel>
         </Expander>
       </StackPanel>

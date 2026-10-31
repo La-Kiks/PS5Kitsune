@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.Core.Checks.Vulkan;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
 
 namespace PS5Kitsune.App.ViewModels;
@@ -30,6 +31,9 @@ public sealed partial class GameSettingsViewModel(
     private static readonly SettingChoice[] PlayGo =
         [new(null, "Default"), new("installed", "Installed (High on Life needs this)"), new("absent", "Absent (Sifu uses this)")];
 
+    private static readonly SettingChoice[] ResolutionChoices =
+        [new(null, "Match the display"), new("1080p", "1080p"), new("2160p", "4K")];
+
     private GameSettings _saved = new();
     private string _name = "";
     private bool _loaded;
@@ -42,12 +46,12 @@ public sealed partial class GameSettingsViewModel(
     public partial string Title { get; private set; } = "Settings";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanChooseGpu), nameof(CanChooseOverlayPosition))]
+    [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanChooseGpu), nameof(CanChooseOverlayPosition), nameof(CanSave))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(ResetCommand))]
     public partial bool IsLoading { get; private set; } = true;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanChooseGpu), nameof(CanChooseOverlayPosition))]
+    [NotifyPropertyChangedFor(nameof(CanEdit), nameof(CanChooseGpu), nameof(CanChooseOverlayPosition), nameof(CanSave))]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(ResetCommand))]
     public partial bool IsRunning { get; private set; }
 
@@ -61,6 +65,9 @@ public sealed partial class GameSettingsViewModel(
 
     public bool CanChooseOverlayPosition => CanEdit && Overlay;
 
+    /// <summary>Save also needs the extra variables to be valid.</summary>
+    public bool CanSave => CanEdit && ExtraEnvironmentErrors is null;
+
     public string RunningNotice { get; } = "Running: changes can't be saved until it stops";
 
     public string LavapipeHelp => player.LavapipeHowToGet is { } how ? $"Slow but works on any PC. {how}" : "Slow but works on any PC.";
@@ -70,6 +77,10 @@ public sealed partial class GameSettingsViewModel(
     public string OverlayHelp { get; } = "F10 toggles it in game.";
 
     public string PlayGoHelp { get; } = "Only matters for dumps without PlayGo files.";
+
+    public string ResolutionHelp { get; } = "The screen size the game is told about. A lower size can raise the frame rate on a 4K screen. It has no effect on a 1080p screen.";
+
+    public string ExtraEnvironmentHelp { get; } = "For AnyPS5 options PS5Kitsune has no setting for. One NAME=value per line; names start with APS5_ or ANYPS5_.";
 
     public ObservableCollection<GpuChoice> Gpus { get; } = [Automatic];
 
@@ -94,6 +105,11 @@ public sealed partial class GameSettingsViewModel(
     [ObservableProperty]
     public partial SettingChoice SelectedPresentMode { get; set; } = PresentModeChoices[0];
 
+    public IReadOnlyList<SettingChoice> Resolutions { get; } = ResolutionChoices;
+
+    [ObservableProperty]
+    public partial SettingChoice SelectedResolution { get; set; } = ResolutionChoices[0];
+
     [ObservableProperty]
     public partial bool ShowDisableDozen { get; private set; }
 
@@ -113,6 +129,26 @@ public sealed partial class GameSettingsViewModel(
 
     [ObservableProperty]
     public partial SettingChoice SelectedPlayGo { get; set; } = PlayGo[0];
+
+    /// <summary>NAME=value lines, as typed.</summary>
+    [ObservableProperty]
+    public partial string ExtraEnvironmentText { get; set; } = "";
+
+    /// <summary>One "Line N: …" per problem in <see cref="ExtraEnvironmentText"/>, joined with '\n'; null when it is valid.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSave))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial string? ExtraEnvironmentErrors { get; private set; }
+
+    /// <summary>Opened on load when the game has Advanced settings, so they are not hidden.</summary>
+    [ObservableProperty]
+    public partial bool IsAdvancedOpen { get; set; }
+
+    partial void OnExtraEnvironmentTextChanged(string value)
+    {
+        var errors = ExtraVariables.Parse(value).Errors;
+        ExtraEnvironmentErrors = errors.Count == 0 ? null : string.Join('\n', errors.Select(error => error.Message));
+    }
 
     /// <summary>"Saved"; null otherwise.</summary>
     [ObservableProperty]
@@ -158,6 +194,7 @@ public sealed partial class GameSettingsViewModel(
 
             _saved = record.Settings;
             Apply(record.Settings);
+            IsAdvancedOpen = record.Settings.ExtraEnvironment.Count > 0 || record.Settings.PlayGoUnlistedChunks is not null;
         }
         catch (Exception exception) when (exception is GameNotFoundException or InvalidGameRecordException or IOException or UnauthorizedAccessException)
         {
@@ -219,10 +256,12 @@ public sealed partial class GameSettingsViewModel(
         Lavapipe = settings.Lavapipe;
         SelectedLanguage = Languages.First(language => language.Number == settings.Language);
         SelectedPresentMode = PresentModes.First(choice => choice.Value == settings.PresentMode);
+        SelectedResolution = Resolutions.First(choice => choice.Value == settings.Resolution);
         DisableDozen = settings.DisableDozen;
         Overlay = settings.Overlay;
         SelectedOverlayPosition = OverlayPositions.First(choice => choice.Value == settings.OverlayPosition);
         SelectedPlayGo = PlayGoChoices.First(choice => choice.Value == settings.PlayGoUnlistedChunks);
+        ExtraEnvironmentText = ExtraVariables.Format(settings.ExtraEnvironment);
     }
 
     private const string RunningMessageEnd = " is running. Stop it to change its settings.";
@@ -286,9 +325,11 @@ public sealed partial class GameSettingsViewModel(
         Overlay = Overlay,
         OverlayPosition = SelectedOverlayPosition.Value!,
         PlayGoUnlistedChunks = SelectedPlayGo.Value,
+        Resolution = SelectedResolution.Value,
+        ExtraEnvironment = ExtraVariables.Parse(ExtraEnvironmentText).Variables,
     };
 
-    [RelayCommand(CanExecute = nameof(CanEdit))]
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
         Message = null;
@@ -327,7 +368,7 @@ public sealed partial class GameSettingsViewModel(
     /// <summary>Asks before discarding unsaved changes, then stops watching the game.</summary>
     public async Task<bool> LeaveAsync()
     {
-        if (CanEdit && Current() != _saved
+        if (CanEdit && (ExtraEnvironmentErrors is not null || Current() != _saved)
             && !await dialogs.ConfirmAsync("Discard changes?", $"Your changes to the settings of {_name} are not saved.", "Discard").ConfigureAwait(true))
         {
             return false;

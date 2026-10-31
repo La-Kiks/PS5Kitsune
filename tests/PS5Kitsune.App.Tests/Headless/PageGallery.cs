@@ -62,6 +62,7 @@ internal sealed class PageGallery : IDisposable
         ("Game-Running-Log", await GameRunningAsync(logLines: 20)),
         ("Game-Diagnosis", await GameDiagnosisAsync()),
         ("GameSettings", await GameSettingsAsync()),
+        ("GameSettings-Advanced", await GameSettingsAdvancedAsync()),
     ];
 
     // Every clean-up runs even when one throws; the failures are rethrown together.
@@ -373,6 +374,15 @@ internal sealed class PageGallery : IDisposable
         navigator.GoTo("library");
         navigator.GoTo(page);
         await page.Loading;
+        return page;
+    }
+
+    private async Task<GameSettingsViewModel> GameSettingsAdvancedAsync()
+    {
+        var page = await GameSettingsAsync();
+        page.SelectedResolution = page.Resolutions.First(choice => choice.Value == "1080p");
+        page.IsAdvancedOpen = true;
+        page.ExtraEnvironmentText = "APS5_HOST_IMPORT_MIB=6144\nAPS5-HOST=1";
         return page;
     }
 

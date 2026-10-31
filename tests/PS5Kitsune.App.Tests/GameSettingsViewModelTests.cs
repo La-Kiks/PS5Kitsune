@@ -355,5 +355,95 @@ public sealed class GameSettingsViewModelTests : IDisposable
         Assert.False(page.CanEdit);
     }
 
+    [Fact]
+    public async Task Default_settings_follow_the_display_and_keep_advanced_closed()
+    {
+        var page = await OpenAsync();
+
+        Assert.Equal(["Match the display", "1080p", "4K"], page.Resolutions.Select(choice => choice.Label));
+        Assert.Null(page.SelectedResolution.Value);
+        Assert.Equal("", page.ExtraEnvironmentText);
+        Assert.False(page.IsAdvancedOpen);
+    }
+
+    [Fact]
+    public async Task Shows_the_saved_resolution_and_extra_variables_with_advanced_open()
+    {
+        var page = await OpenAsync(new GameSettings
+        {
+            Resolution = "1080p",
+            ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144", ["ANYPS5_A"] = "1" },
+        });
+
+        Assert.Equal("1080p", page.SelectedResolution.Value);
+        Assert.Equal("ANYPS5_A=1\nAPS5_HOST_IMPORT_MIB=6144", page.ExtraEnvironmentText);
+        Assert.Null(page.ExtraEnvironmentErrors);
+        Assert.True(page.IsAdvancedOpen);
+    }
+
+    [Fact]
+    public async Task A_bad_line_shows_its_error_and_blocks_save_until_fixed()
+    {
+        var page = await OpenAsync();
+
+        page.ExtraEnvironmentText = "APS5_HOST_IMPORT_MIB=6144\nAPS5-HOST=1";
+
+        Assert.Equal("Line 2: the name must start with APS5_ or ANYPS5_ and use only capital letters, digits and _.", page.ExtraEnvironmentErrors);
+        Assert.False(page.SaveCommand.CanExecute(null));
+
+        page.ExtraEnvironmentText = "APS5_HOST_IMPORT_MIB=6144";
+
+        Assert.Null(page.ExtraEnvironmentErrors);
+        Assert.True(page.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Save_writes_the_resolution_and_the_extra_variables()
+    {
+        var page = await OpenAsync();
+        page.SelectedResolution = page.Resolutions.First(choice => choice.Value == "2160p");
+        page.ExtraEnvironmentText = " APS5_HOST_IMPORT_MIB = 6144 \n";
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(new GameSettings { Resolution = "2160p", ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144" } }, Saved());
+        Assert.Equal("Saved", page.Notice);
+    }
+
+    [Fact]
+    public async Task Reset_clears_the_resolution_and_the_extra_variables()
+    {
+        var page = await OpenAsync(new GameSettings { Resolution = "1080p", ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144" } });
+        page.ExtraEnvironmentText = "bad";
+
+        page.ResetCommand.Execute(null);
+
+        Assert.Null(page.SelectedResolution.Value);
+        Assert.Equal("", page.ExtraEnvironmentText);
+        Assert.Null(page.ExtraEnvironmentErrors);
+    }
+
+    [Fact]
+    public async Task Leaving_with_an_invalid_line_asks_first()
+    {
+        var page = await OpenAsync();
+        page.ExtraEnvironmentText = "bad";
+
+        _dialogs.Confirm = false;
+
+        Assert.False(await page.LeaveAsync());
+        Assert.Equal(["Your changes to the settings of DOOM are not saved."], _dialogs.Confirmations);
+    }
+
+    [Fact]
+    public async Task Leaving_after_reformatting_the_same_variables_does_not_ask()
+    {
+        var page = await OpenAsync(new GameSettings { ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144" } });
+        page.ExtraEnvironmentText = "  APS5_HOST_IMPORT_MIB = 6144\n\n";
+
+        Assert.True(await page.LeaveAsync());
+        Assert.Empty(_dialogs.Confirmations);
+    }
+
     public void Dispose() => _library.Dispose();
 }

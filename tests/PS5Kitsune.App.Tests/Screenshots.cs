@@ -40,7 +40,8 @@ public sealed class Screenshots(HeadlessSession session)
                         {
                             DataContext = new MainWindowViewModel(navigator, new FakeDialogs(), new FakePages(), new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { })),
                             Width = 860,
-                            Height = 680,
+                            // The Advanced section is at the bottom of the Settings page.
+                            Height = name.EndsWith("-Advanced", StringComparison.Ordinal) ? 1100 : 680,
                         };
                         try
                         {
