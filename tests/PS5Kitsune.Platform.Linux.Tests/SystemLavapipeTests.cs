@@ -22,6 +22,15 @@ public sealed class SystemLavapipeTests : IDisposable
     }
 
     [Fact]
+    public void The_texts_give_the_install_command()
+    {
+        var lavapipe = new SystemLavapipe(new DistroPackages(OsRelease.Parse("ID=ubuntu\nID_LIKE=debian\n")));
+
+        Assert.Equal("It comes from the system's Mesa; if it is missing, install it with: sudo apt install mesa-vulkan-drivers", lavapipe.HowToGet);
+        Assert.Equal("install it with: sudo apt install mesa-vulkan-drivers", lavapipe.WhenMissing);
+    }
+
+    [Fact]
     public async Task Without_a_manifest_install_names_the_mesa_command()
     {
         var lavapipe = new SystemLavapipe(Fedora) { ManifestDirectories = [_temp.Path] };
@@ -29,7 +38,7 @@ public sealed class SystemLavapipeTests : IDisposable
         Assert.False(lavapipe.IsInstalled());
         Assert.Equal("", lavapipe.Manifest);
         var exception = await Assert.ThrowsAsync<LavapipeUnavailableException>(() => lavapipe.InstallAsync(cancellationToken: TestContext.Current.CancellationToken));
-        Assert.Equal("Lavapipe is not installed: sudo dnf install mesa-vulkan-drivers", exception.Message);
+        Assert.Equal("Lavapipe is not installed: install it with: sudo dnf install mesa-vulkan-drivers", exception.Message);
     }
 
     public void Dispose() => _temp.Dispose();

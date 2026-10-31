@@ -3,6 +3,7 @@ using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Checks;
 using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Library;
+using PS5Kitsune.Core.Tests.Fakes;
 
 namespace PS5Kitsune.App.Tests;
 
@@ -48,7 +49,7 @@ public sealed class DiagnosisViewModelTests : IDisposable
         await panel.FixCommand.ExecuteAsync(null);
 
         Assert.True(Saved().Lavapipe);
-        Assert.Equal("CPU rendering is on. Launch again to download Mesa and start the game.", panel.Result);
+        Assert.Equal("CPU rendering is on. " + FakeLavapipe.HowToGetText + " Launch again to start the game.", panel.Result);
     }
 
     [Fact]

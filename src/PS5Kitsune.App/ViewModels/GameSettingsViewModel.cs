@@ -63,7 +63,7 @@ public sealed partial class GameSettingsViewModel(
 
     public string RunningNotice { get; } = "Running: changes can't be saved until it stops";
 
-    public string LavapipeHelp { get; } = "Slow but works on any PC. Mesa (~70 MB) is downloaded on the first launch.";
+    public string LavapipeHelp => player.LavapipeHowToGet is { } how ? $"Slow but works on any PC. {how}" : "Slow but works on any PC.";
 
     public string DozenHelp { get; } = "Dozen can crash while GPUs are listed. Lavapipe ignores this.";
 

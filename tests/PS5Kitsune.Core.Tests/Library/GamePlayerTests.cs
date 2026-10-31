@@ -210,7 +210,7 @@ public sealed class GamePlayerTests : IDisposable
 
         var exception = await Assert.ThrowsAsync<LavapipeUnavailableException>(() => launching);
 
-        Assert.Equal("Lavapipe is not installed. Launch again to download it.", exception.Message);
+        Assert.Equal("Lavapipe is not installed: launch the test again.", exception.Message);
         Assert.Empty(_launcher.Launches);
         Assert.False(GameLock.IsHeld(Game));
     }

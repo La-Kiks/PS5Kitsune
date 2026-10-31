@@ -76,7 +76,8 @@ public sealed partial class DiagnosisViewModel : ObservableObject
                 return await RepairLibsAsync().ConfigureAwait(true);
             case DiagnosisAction.TurnOnLavapipe:
                 return await ChangeSettingsAsync(
-                    settings => settings with { Lavapipe = true }, "CPU rendering is on. Launch again to download Mesa and start the game.").ConfigureAwait(true);
+                    settings => settings with { Lavapipe = true },
+                    _player.LavapipeHowToGet is { } how ? $"CPU rendering is on. {how} Launch again to start the game." : "CPU rendering is on. Launch again to start the game.").ConfigureAwait(true);
             case DiagnosisAction.TurnOffLavapipe:
                 return await ChangeSettingsAsync(settings => settings with { Lavapipe = false }, "CPU rendering is off. Launch again to check.").ConfigureAwait(true);
             case DiagnosisAction.ResetSetting when SettingVariables.Find(_diagnosis.Capture("variable")) is { } setting:

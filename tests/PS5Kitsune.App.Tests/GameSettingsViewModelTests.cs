@@ -42,6 +42,14 @@ public sealed class GameSettingsViewModelTests : IDisposable
     private GameSettings Saved() => _library.Library.Find("PPSA99666").Record.Settings;
 
     [Fact]
+    public async Task The_lavapipe_help_comes_from_the_platform()
+    {
+        var page = await OpenAsync();
+
+        Assert.Equal("Slow but works on any PC. " + FakeLavapipe.HowToGetText, page.LavapipeHelp);
+    }
+
+    [Fact]
     public async Task Shows_the_saved_settings_and_the_detected_gpus()
     {
         _probe.Outcome = Probe(VulkanProbeStatus.Succeeded, Radeon, IrisXe);

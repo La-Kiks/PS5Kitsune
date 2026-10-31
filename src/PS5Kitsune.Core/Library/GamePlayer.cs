@@ -18,6 +18,9 @@ public sealed partial class GamePlayer(
     /// <inheritdoc cref="LaunchAsync(string, IProgress{LaunchProgress}?, CancellationToken)"/>
     public Task<PlayingGame> LaunchAsync(string titleId, CancellationToken cancellationToken) => LaunchAsync(titleId, null, cancellationToken);
 
+    /// <summary>How the platform gets Lavapipe, as a sentence; null when the profile has no Mesa download.</summary>
+    public string? LavapipeHowToGet => preparation.LavapipeHowToGet;
+
     /// <summary>
     /// Downloads what the settings need (outside the lock: it can take minutes), then launches the game from its folder with its settings
     /// as environment variables, its output in a new log, marks it played and records it in running.json. The game lock is held from the
@@ -67,7 +70,7 @@ public sealed partial class GamePlayer(
         // The settings may have turned Lavapipe on since the preparation.
         var manifest = !record.Settings.Lavapipe
             ? null
-            : resources.LavapipeManifest ?? preparation.InstalledLavapipe() ?? throw new LavapipeUnavailableException("Lavapipe is not installed. Launch again to download it.");
+            : resources.LavapipeManifest ?? preparation.InstalledLavapipe() ?? throw new LavapipeUnavailableException($"Lavapipe is not installed: {preparation.LavapipeWhenMissing ?? "this profile has no Mesa download"}.");
         var environment = LaunchEnvironment.For(record.Settings, manifest, resources.FontsDirectory);
         var process = launcher.Launch(new GameLaunchRequest(executable, game.Root, game.Logs) { Environment = environment });
         GameRecord played;
