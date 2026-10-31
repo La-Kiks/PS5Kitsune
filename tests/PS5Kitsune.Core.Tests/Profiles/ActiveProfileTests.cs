@@ -23,7 +23,7 @@ public sealed class ActiveProfileTests : IDisposable
     [Fact]
     public void A_valid_override_replaces_the_embedded_profile()
     {
-        TestFiles.Write(OverridePath, """{ "schemaVersion": 1, "id": "my-override", "source": { "kind": "release", "tag": "v9" } }""");
+        TestFiles.Write(OverridePath, """{ "schemaVersion": 2, "os": "windows", "id": "my-override", "source": { "kind": "release", "tag": "v9" } }""");
 
         var active = ProfileLoader.LoadActive(Layout);
 
@@ -52,13 +52,43 @@ public sealed class ActiveProfileTests : IDisposable
             Assert.Skip("Only Windows refuses to open a file another handle holds with FileShare.None.");
         }
 
-        TestFiles.Write(OverridePath, """{ "schemaVersion": 1, "id": "locked", "source": { "kind": "release", "tag": "v9" } }""");
+        TestFiles.Write(OverridePath, """{ "schemaVersion": 2, "os": "windows", "id": "locked", "source": { "kind": "release", "tag": "v9" } }""");
         using var lockHandle = new FileStream(OverridePath, FileMode.Open, FileAccess.Read, FileShare.None);
 
         var active = ProfileLoader.LoadActive(Layout);
 
         Assert.Equal(ProfileOrigin.Embedded, active.Origin);
         Assert.Contains("override.json", active.Problem, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Each_os_gets_its_own_embedded_profile()
+    {
+        Assert.Equal(ProfileOs.Windows, ProfileLoader.LoadActive(Layout, ProfileOs.Windows).Profile.Os);
+        Assert.Equal(ProfileOs.Linux, ProfileLoader.LoadActive(Layout, ProfileOs.Linux).Profile.Os);
+    }
+
+    [Fact]
+    public void An_override_for_the_other_os_is_ignored_with_a_problem()
+    {
+        TestFiles.Write(OverridePath, """{ "schemaVersion": 2, "os": "windows", "id": "windows-override", "source": { "kind": "release", "tag": "v9" } }""");
+
+        var active = ProfileLoader.LoadActive(Layout, ProfileOs.Linux);
+
+        Assert.Equal(ProfileOrigin.Embedded, active.Origin);
+        Assert.Equal(ProfileOs.Linux, active.Profile.Os);
+        Assert.Contains("is for windows, not linux", active.Problem, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_schema_1_override_is_ignored_with_a_problem()
+    {
+        TestFiles.Write(OverridePath, """{ "schemaVersion": 1, "id": "old", "source": { "kind": "release", "tag": "v9" } }""");
+
+        var active = ProfileLoader.LoadActive(Layout);
+
+        Assert.Equal(ProfileOrigin.Embedded, active.Origin);
+        Assert.Contains("schema version 1", active.Problem, StringComparison.Ordinal);
     }
 
     public void Dispose() => _temp.Dispose();

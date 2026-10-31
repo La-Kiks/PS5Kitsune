@@ -124,4 +124,39 @@ public sealed class SystemCheckerTests : IDisposable
 
         public Task<VulkanProbeOutcome> RunAsync(CancellationToken cancellationToken = default) => Task.FromResult(Outcome);
     }
+
+    [Fact]
+    public async Task Checks_a_platform_adds_come_after_the_core_checks()
+    {
+        var added = new AddedCheck();
+        var checker = new SystemChecker(CreateCollector(), [added, .. SystemChecks.All], NullLogger<SystemChecker>.Instance);
+
+        var report = await checker.RunAsync(AnyPS5Mode.Release, TestContext.Current.CancellationToken);
+
+        Assert.Equal(SystemChecks.All[0].Id, report.Results[0].Id);
+        Assert.Equal("added", report.Results[^1].Id);
+    }
+
+    [Fact]
+    public void The_free_space_is_read_on_the_nearest_existing_folder_of_the_data_root()
+    {
+        var root = _temp.Combine("not", "yet", "created");
+
+        Assert.Equal(_temp.Path, SystemFactsCollector.ExistingAncestor(root));
+    }
+
+    [Fact]
+    public void An_existing_data_root_is_its_own_nearest_existing_folder()
+    {
+        Assert.Equal(_temp.Path, SystemFactsCollector.ExistingAncestor(_temp.Path));
+    }
+
+    private sealed class AddedCheck : SystemCheck
+    {
+        public override string Id => "added";
+
+        public override string Title => "Added";
+
+        public override CheckResult Evaluate(SystemFacts facts) => Result(CheckStatus.Ok, "Fine.");
+    }
 }

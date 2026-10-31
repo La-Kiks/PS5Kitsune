@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The hosts' single entry to the OS: picks the Windows or Linux platform at startup and registers its services. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\PS5Kitsune.Core\PS5Kitsune.Core.csproj" />
+    <ProjectReference Include="..\PS5Kitsune.Platform.Windows\PS5Kitsune.Platform.Windows.csproj" />
+    <ProjectReference Include="..\PS5Kitsune.Platform.Linux\PS5Kitsune.Platform.Linux.csproj" />
+  </ItemGroup>
+
+</Project>

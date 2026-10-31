@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design; the next one is Linux). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. Windows was re-checked on v0.1.4: release plays and quits cleanly; build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -27,13 +27,13 @@ Early development — milestone 7 of 8 done (the library and launch, per-game se
 - [x] **5. Build mode** — AnyPS5 built from source with portable tools (5a CLI, 5b screens), release and build installs side by side (5c)
 - [x] **6. Add-a-game screens** — choose, summary, add and verdict (6a), Reconvert (6b)
 - [x] **7. Launcher** — library and launch (7a), per-game settings with CPU rendering and fonts (7b), crash diagnosis (7c), visual design with light and dark themes and full keyboard use (7d)
-- [ ] **8. Linux** — native Linux support, CLI first, then the app
+- [ ] **8. Linux** — the CLI in release mode (8a), then the app and packaging (8b)
 
 The command-line tool installs AnyPS5, adds a game and runs it:
 
 ```powershell
 ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
-ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.3
+ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.4
 ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
 ps5kitsune use release|build         # switch between the release and build installs, both kept side by side
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
@@ -48,6 +48,18 @@ ps5kitsune diagnose <title ID>       # look for a known AnyPS5 error in the game
 In the app, the Library lists the added games and opens first once a game is added: one click launches a game and follows its log, and closing the app leaves the game running (reopening finds it again). Each game's menu opens its folder or its last log, reconverts it, clears its shader cache or removes it. Home's "Add a game" takes a folder or a .zip (picked or dropped), shows its summary, adds it and shows the audit verdict. After an AnyPS5 update, `ps5kitsune reconvert <titleId>` (or Reconvert in the app) converts a game again without copying it, keeping its saves; a failure puts the previous conversion back. After a game stops with an error AnyPS5 is known to print, the Game page explains it and offers its fix (Repair libs, Turn on CPU rendering, Reset a setting, …), or Report for an error nobody explains yet. The sidebar's theme switch (System, Light, Dark) is saved in `settings.json`.
 
 Every command takes `--root <data root>`; without it, the CLI uses the data folder chosen in the app, else `C:\PS5Kitsune`. `check` and `install` exit with code 2 when a check is blocking.
+
+### Linux
+
+The command-line tool runs on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
+
+There is no Linux package yet. To run it from source, install the .NET 10 SDK (for example with Microsoft's `dotnet-install.sh --channel 10.0`), clone the repository, then:
+
+```bash
+dotnet build src/PS5Kitsune.Cli -c Release
+cli=src/PS5Kitsune.Cli/bin/Release/net10.0/ps5kitsune
+$cli check && $cli install && $cli add <DOOM folder or .zip> && $cli run PPSA99666
+```
 
 ### Build mode
 

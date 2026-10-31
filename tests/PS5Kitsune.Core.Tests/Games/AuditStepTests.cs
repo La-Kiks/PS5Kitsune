@@ -77,6 +77,26 @@ public sealed class AuditStepTests : IDisposable
     }
 
     [Fact]
+    public async Task Leaves_out_the_relinker_guest_output_when_it_is_an_elf()
+    {
+        // On Linux the relinker writes <module>.guest.prx as an ELF that needs ld-linux-x86-64.so.2:
+        // audited as a game module, it adds its own imports and a missing library, and the verdict turns red.
+        TestFiles.Write(Path.Combine(_game.App0, "sce_module", "libc.prx.guest.prx"), TestFiles.Elf());
+        List<string> seen = [];
+        _runner.Respond = spec =>
+        {
+            var staged = Path.Combine(spec.WorkingDirectory!, StagedModules);
+            seen.AddRange(Directory.GetFiles(staged, "*", SearchOption.AllDirectories).Select(path => Path.GetRelativePath(staged, path)));
+            TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "audit.json"), AuditFiles.Json(1, 0, 0));
+            return new FakeProcessResult(0);
+        };
+
+        await CreateStep().ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["libc.prx"], seen);
+    }
+
+    [Fact]
     public async Task A_stale_staged_file_is_gone_when_the_audit_runs()
     {
         TestFiles.Write(Path.Combine(_game.AuditModules, "sce_module", "stale.prx"), TestFiles.Elf());

@@ -13,8 +13,6 @@ internal static class VulkanFacts
 
 public sealed class VulkanDriverCheck : SystemCheck
 {
-    private const string UpdateDriver = "Install or update the graphics driver from your GPU maker's website (AMD, Intel or NVIDIA).";
-
     public override string Id => "vulkan-driver";
 
     public override string Title => "Vulkan driver";
@@ -24,9 +22,9 @@ public sealed class VulkanDriverCheck : SystemCheck
         ArgumentNullException.ThrowIfNull(facts);
         return facts.Vulkan.Report switch
         {
-            null => Result(CheckStatus.Blocking, $"Vulkan enumeration failed. {facts.Vulkan.FailureReason}", UpdateDriver),
-            { LoaderFound: false } => Result(CheckStatus.Blocking, "No Vulkan loader was found (vulkan-1.dll).", UpdateDriver),
-            { Gpus.Count: 0 } report => Result(CheckStatus.Blocking, report.Error is null ? "Vulkan found no GPU." : $"Vulkan found no GPU: {report.Error}", UpdateDriver),
+            null => Result(CheckStatus.Blocking, $"Vulkan enumeration failed. {facts.Vulkan.FailureReason}", facts.VulkanInstallAction),
+            { LoaderFound: false } => Result(CheckStatus.Blocking, $"No Vulkan loader was found ({facts.VulkanLoaderName}).", facts.VulkanInstallAction),
+            { Gpus.Count: 0 } report => Result(CheckStatus.Blocking, report.Error is null ? "Vulkan found no GPU." : $"Vulkan found no GPU: {report.Error}", facts.VulkanInstallAction),
             var report => Result(CheckStatus.Ok, $"{report.Gpus.Count} GPU(s): {VulkanFacts.Names(report.Gpus)}."),
         };
     }

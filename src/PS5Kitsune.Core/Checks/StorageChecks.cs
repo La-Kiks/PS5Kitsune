@@ -47,7 +47,7 @@ public sealed class InstallPathCheck : SystemCheck
             ? Result(CheckStatus.Ok, root)
             : Result(
                 CheckStatus.Blocking,
-                $"{root} contains spaces or non-ASCII characters; WinLibs and CMake fail on such paths.",
-                @"Choose a data folder without spaces or accents, for example C:\PS5Kitsune (command line: --root).");
+                $"{root} contains spaces or non-ASCII characters; AnyPS5's tools fail on such paths.",
+                $"Choose a data folder without spaces or accents, for example {facts.DefaultDataRoot} (command line: --root).");
     }
 }

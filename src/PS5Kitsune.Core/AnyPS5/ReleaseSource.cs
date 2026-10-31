@@ -20,7 +20,7 @@ public sealed class ReleaseSource(AnyPS5Profile profile, AnyPS5Paths paths, Data
         var unwrapScript = profile.Asset(ProfileAssetKeys.UnwrapScript);
         return
         [
-            new DownloadFileStep("Download the relinker", profile.AssetUrl(ProfileAssetKeys.Relinker), target.Relinker, relinker.Sha256, downloader),
+            new DownloadFileStep("Download the relinker", profile.AssetUrl(ProfileAssetKeys.Relinker), target.Relinker, relinker.Sha256, downloader, executable: true),
             new DownloadArchiveStep(
                 "Download the libraries", profile.AssetUrl(ProfileAssetKeys.Libs), ArchivePath(ProfileAssetKeys.Libs, libs),
                 libs.Sha256, target.Libs, ZipExtraction.UnderPrefix("libs/"), downloader),

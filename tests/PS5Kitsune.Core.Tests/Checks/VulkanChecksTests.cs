@@ -157,4 +157,21 @@ public sealed class VulkanChecksTests
 
         Assert.Equal(CheckStatus.Info, new DozenCheck().Evaluate(facts).Status);
     }
+
+    [Fact]
+    public void A_missing_loader_names_the_platform_loader_and_its_fix()
+    {
+        var facts = TestFacts.Healthy() with
+        {
+            Vulkan = new VulkanProbeOutcome(VulkanProbeStatus.Succeeded, new VulkanProbeReport(false, "libvulkan.so.1 not found", []), null),
+            VulkanLoaderName = "libvulkan.so.1",
+            VulkanInstallAction = "Install Vulkan: sudo apt install libvulkan1 mesa-vulkan-drivers.",
+        };
+
+        var result = new VulkanDriverCheck().Evaluate(facts);
+
+        Assert.Equal(CheckStatus.Blocking, result.Status);
+        Assert.Equal("No Vulkan loader was found (libvulkan.so.1).", result.Summary);
+        Assert.Equal("Install Vulkan: sudo apt install libvulkan1 mesa-vulkan-drivers.", result.Action);
+    }
 }

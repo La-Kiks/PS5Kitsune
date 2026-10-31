@@ -79,8 +79,12 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         await library.Player.SaveSettingsAsync("PPSA99666", new GameSettings { Lavapipe = true }, TestContext.Current.CancellationToken);
         library.Lavapipe.Reports = [34L << 20];
         library.Lavapipe.Gate = new TaskCompletionSource();
+        // Back cancels the download, so only a slow unwind keeps the launch, and the page, busy.
+        library.Lavapipe.UnwindGate = new TaskCompletionSource();
         var page = new GameViewModel(library.Game("PPSA99666"), "DOOM", true, library.Player, library.Platform, new InlineDispatcher(), _navigator, new FakePages());
         _navigator.GoTo(page);
+        // The launch runs on the thread pool: Back pressed before it reaches the download would end it at once.
+        await library.Lavapipe.Waiting.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         // Back waits for the launch to end; meanwhile the page itself says it is leaving.
         var back = page.BackToLibraryCommand.ExecuteAsync(null);
@@ -89,7 +93,7 @@ public sealed partial class MainWindowViewModelTests : IDisposable
         Assert.True(_viewModel.IsBusy);
         Assert.False(_viewModel.GoHomeCommand.CanExecute(null));
 
-        library.Lavapipe.Gate.SetResult();
+        library.Lavapipe.UnwindGate.SetResult();
         await back;
 
         Assert.False(((IBusyPage)page).IsLeaving);

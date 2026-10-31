@@ -13,6 +13,14 @@ internal sealed class FakePlatform : IPlatform
 
     public string ExecutableSuffix => ".exe";
 
+    public string Os { get; set; } = "windows";
+
+    public string GameExecutableSuffix { get; set; } = ".exe";
+
+    public string VulkanLoaderName { get; set; } = "vulkan-1.dll";
+
+    public string VulkanInstallAction { get; set; } = "Install or update the graphics driver from your GPU maker's website (AMD, Intel or NVIDIA).";
+
     public ulong? CommitLimitBytes { get; set; } = 32UL << 30;
 
     public IReadOnlyList<string> VulkanDriverManifests { get; set; } = [];

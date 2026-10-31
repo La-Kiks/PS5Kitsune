@@ -7,7 +7,7 @@ using PS5Kitsune.Core.Profiles;
 namespace PS5Kitsune.Core.Games.Steps;
 
 /// <summary>
-/// Runs the relinker from the game folder: relinker --windows --registry [--to-intel] app0/eboot.bin &lt;titleId&gt;.exe.
+/// Runs the relinker from the game folder: relinker &lt;profile args&gt; [--to-intel] app0/eboot.bin &lt;game executable&gt;.
 /// Done when the marker written after a successful run exists, with the executable and its registry.
 /// </summary>
 public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, AnyPS5Profile profile, IProcessRunner processRunner) : IStep
@@ -21,7 +21,7 @@ public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, Any
     public async Task ExecuteAsync(IProgress<StepProgress>? progress, CancellationToken cancellationToken)
     {
         DeletePreviousOutputs();
-        List<string> arguments = [.. profile.Relinker.WindowsArgs];
+        List<string> arguments = [.. profile.Relinker.Args];
         if (context.ToIntel && profile.Relinker.IntelArg is { } intelArg)
         {
             arguments.Add(intelArg);

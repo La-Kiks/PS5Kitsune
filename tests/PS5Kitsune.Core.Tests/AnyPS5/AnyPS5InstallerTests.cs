@@ -1,6 +1,7 @@
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Pipeline;
+using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Core.Tests.AnyPS5;
 
@@ -138,6 +139,29 @@ public sealed class AnyPS5InstallerTests : IDisposable
 
         Assert.Equal(AnyPS5InstallStatus.Incomplete, state.Status);
         Assert.Null(state.Record);
+    }
+
+    [Fact]
+    public void On_linux_build_mode_is_refused_with_its_own_message()
+    {
+        var linuxProfile = _setup.Profile with { Os = ProfileOs.Linux };
+        var releaseOnly = new AnyPS5Installer([_setup.ReleaseSource], _setup.PythonTool, _setup.Paths, _setup.StepRunner, _setup.Time, linuxProfile);
+
+        var create = Assert.Throws<InvalidOperationException>(() => releaseOnly.CreateSteps(AnyPS5Mode.Build));
+        var use = Assert.Throws<InvalidOperationException>(() => releaseOnly.Use(AnyPS5Mode.Build));
+
+        Assert.Equal("Build mode is not available on Linux yet; use release mode.", create.Message);
+        Assert.Equal("Build mode is not available on Linux yet; use release mode.", use.Message);
+    }
+
+    [Fact]
+    public async Task On_linux_the_downloaded_relinker_is_executable()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+
+        await _setup.Installer.InstallAsync(AnyPS5Mode.Release, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(ExecutableBits.Has(_setup.Paths.For(AnyPS5Mode.Release).Relinker));
     }
 
     public void Dispose() => _temp.Dispose();

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.AnyPS5;
 using PS5Kitsune.Core.Games;
+using PS5Kitsune.Core.IO;
 using PS5Kitsune.Core.Launch;
 
 namespace PS5Kitsune.Core.Library;
@@ -59,6 +60,9 @@ public sealed partial class GamePlayer(
         {
             throw new GameExecutableMissingException(executable);
         }
+
+        // A copy may have dropped the execute bits (Linux); the relinker set them.
+        ExecutableBits.EnsureGame(executable);
 
         // The settings may have turned Lavapipe on since the preparation.
         var manifest = !record.Settings.Lavapipe

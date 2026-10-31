@@ -16,17 +16,18 @@ public sealed class ProfileLoaderTests
         var python = profile.Tools["python"];
         Assert.Equal(Uri.UriSchemeHttps, python.Url.Scheme);
         Assert.Equal(64, python.Sha256.Length);
-        Assert.Contains("--windows", profile.Relinker.WindowsArgs);
+        Assert.Equal(ProfileOs.Windows, profile.Os);
+        Assert.Equal(["--windows", "--registry"], profile.Relinker.Args);
     }
 
     [Fact]
     public void Rejects_an_unknown_schema_version()
     {
         var exception = Assert.Throws<InvalidProfileException>(() => Load("""
-            { "schemaVersion": 2, "id": "future", "source": { "kind": "release", "tag": "v9" } }
+            { "schemaVersion": 3, "os": "windows", "id": "future", "source": { "kind": "release", "tag": "v9" } }
             """));
 
-        Assert.Contains("schema version 2", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("schema version 3", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -34,7 +35,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load("""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "tools": { "python": { "version": "3", "url": "https://example.test/p.zip", "sha256": "ABC" } }
             }
             """));
@@ -45,7 +46,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "tools": { "python": { "version": "3", "url": "http://example.test/p.zip", "sha256": "{{new string('a', 64)}}" } }
             }
             """));
@@ -63,15 +64,15 @@ public sealed class ProfileLoaderTests
         var profile = ProfileLoader.LoadEmbedded();
 
         Assert.Equal(
-            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.3/relinker-v0.1.3.exe"),
+            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.4/relinker-v0.1.4.exe"),
             profile.AssetUrl(ProfileAssetKeys.Relinker));
         Assert.Equal(
-            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.3/prx-windows-v0.1.3.zip"),
+            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.4/prx-windows-v0.1.4.zip"),
             profile.AssetUrl(ProfileAssetKeys.Libs));
-        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.3.zip"), profile.AssetUrl(ProfileAssetKeys.Scripts));
+        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.4.zip"), profile.AssetUrl(ProfileAssetKeys.Scripts));
         Assert.Equal(["tools/", "core/libs/prx/"], profile.Asset(ProfileAssetKeys.Scripts).Include!);
-        Assert.Contains("3fd1cc393b8512c2e989860053f30dee5a8cd1aa", profile.AssetUrl(ProfileAssetKeys.UnwrapScript).AbsolutePath, StringComparison.Ordinal);
-        Assert.Equal("v0.1.3", profile.Source.Version);
+        Assert.Contains("7fcab08f71e463b1768730a626a0f5472d336708", profile.AssetUrl(ProfileAssetKeys.UnwrapScript).AbsolutePath, StringComparison.Ordinal);
+        Assert.Equal("v0.1.4", profile.Source.Version);
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "assets": { "scripts": { "sha256": "{{new string('a', 64)}}" } }
             }
             """));
@@ -96,7 +97,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "assets": { "scripts": { "url": "http://example.test/s.zip", "sha256": "{{new string('a', 64)}}" } }
             }
             """));
@@ -116,7 +117,7 @@ public sealed class ProfileLoaderTests
     public void A_profile_without_checks_gets_the_default_thresholds()
     {
         var profile = Load("""
-            { "schemaVersion": 1, "id": "minimal", "source": { "kind": "release", "tag": "v1" } }
+            { "schemaVersion": 2, "os": "windows", "id": "minimal", "source": { "kind": "release", "tag": "v1" } }
             """);
 
         Assert.Equal(13824, profile.Checks.CommitLimitMiB);
@@ -129,14 +130,14 @@ public sealed class ProfileLoaderTests
     {
         var profile = ProfileLoader.LoadEmbedded();
 
-        Assert.Equal(new DateTimeOffset(2026, 10, 20, 9, 31, 13, TimeSpan.Zero), profile.Source.PublishedAt);
+        Assert.Equal(new DateTimeOffset(2026, 10, 30, 23, 9, 14, TimeSpan.Zero), profile.Source.PublishedAt);
     }
 
     [Fact]
     public void The_release_date_is_optional()
     {
         var profile = Load("""
-            { "schemaVersion": 1, "id": "no-date", "source": { "kind": "release", "tag": "v1" } }
+            { "schemaVersion": 2, "os": "windows", "id": "no-date", "source": { "kind": "release", "tag": "v1" } }
             """);
 
         Assert.Null(profile.Source.PublishedAt);
@@ -146,7 +147,7 @@ public sealed class ProfileLoaderTests
     public void Rejects_a_non_positive_commit_limit()
     {
         var exception = Assert.Throws<InvalidProfileException>(() => Load("""
-            { "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" }, "checks": { "commitLimitMiB": 0 } }
+            { "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" }, "checks": { "commitLimitMiB": 0 } }
             """));
 
         Assert.Contains("commitLimitMiB", exception.Message, StringComparison.Ordinal);
@@ -158,7 +159,7 @@ public sealed class ProfileLoaderTests
         var profile = ProfileLoader.LoadEmbedded();
 
         Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5.git"), profile.Build?.Repository);
-        Assert.Equal("3fd1cc393b8512c2e989860053f30dee5a8cd1aa", profile.Build?.Commit);
+        Assert.Equal("7fcab08f71e463b1768730a626a0f5472d336708", profile.Build?.Commit);
         Assert.Equal("da35e72aa21c005a5a0d298cfbae110bc1609a815730ea0dde84b01a1b3cd3be", profile.Tools["mingit"].Sha256);
         Assert.Equal("cb2fbad6162540cdf5e1facdce08d4dac359e8cf64f7f696a99274291763b815", profile.Tools["winlibs"].Sha256);
         Assert.Equal(10, profile.Checks.BuildMinFreeDiskGiB);
@@ -172,7 +173,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "build": { "repository": "{{repository}}", "commit": "{{commit}}" }
             }
             """));
@@ -183,7 +184,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load("""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "checks": { "buildMinFreeDiskGiB": -1 }
             }
             """));
@@ -192,7 +193,7 @@ public sealed class ProfileLoaderTests
     [Fact]
     public void RequireBuild_names_the_profile_when_it_has_no_build_section()
     {
-        var profile = Load("""{ "schemaVersion": 1, "id": "release-only", "source": { "kind": "release", "tag": "v1" } }""");
+        var profile = Load("""{ "schemaVersion": 2, "os": "windows", "id": "release-only", "source": { "kind": "release", "tag": "v1" } }""");
 
         var exception = Assert.Throws<InvalidProfileException>(() => profile.RequireBuild());
 
@@ -214,7 +215,7 @@ public sealed class ProfileLoaderTests
     {
         var profile = Load($$"""
             {
-              "schemaVersion": 1, "id": "ok", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "ok", "source": { "kind": "release", "tag": "v1" },
               "tools": { "python": { "version": "3", "url": "https://example.test/p.zip", "sha256": "{{new string('a', 64)}}" } }
             }
             """);
@@ -229,7 +230,7 @@ public sealed class ProfileLoaderTests
     {
         var exception = Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "tools": { "python": { "version": "3", "url": "https://example.test/p.zip", "sha256": "{{new string('a', 64)}}", "size": {{size}} } }
             }
             """));
@@ -261,7 +262,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "fonts": [ { "name": "{{name.Replace(@"\", @"\\", StringComparison.Ordinal)}}", "url": "https://example.test/f.ttf", "sha256": "{{new string('a', 64)}}", "size": 1 } ]
             }
             """));
@@ -273,7 +274,7 @@ public sealed class ProfileLoaderTests
         var font = $$"""{ "name": "NotoSans-Regular.ttf", "url": "https://example.test/f.ttf", "sha256": "{{new string('a', 64)}}", "size": 1 }""";
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "fonts": [ {{font}}, {{font}} ]
             }
             """));
@@ -284,7 +285,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "fonts": [ { "name": "f.ttf", "url": "http://example.test/f.ttf", "sha256": "{{new string('a', 64)}}", "size": 1 } ]
             }
             """));
@@ -306,7 +307,7 @@ public sealed class ProfileLoaderTests
     [Fact]
     public void A_profile_without_diagnostics_has_no_rules()
     {
-        var profile = Load("""{ "schemaVersion": 1, "id": "plain", "source": { "kind": "release", "tag": "v1" } }""");
+        var profile = Load("""{ "schemaVersion": 2, "os": "windows", "id": "plain", "source": { "kind": "release", "tag": "v1" } }""");
 
         Assert.Empty(profile.Diagnostics.Rules);
         Assert.Null(profile.Diagnostics.ReportUrl);
@@ -329,7 +330,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "diagnostics": { "rules": [ {{rule}} ] }
             }
             """));
@@ -343,7 +344,7 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load($$"""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "diagnostics": {{diagnostics}}
             }
             """));
@@ -354,11 +355,64 @@ public sealed class ProfileLoaderTests
     {
         Assert.Throws<InvalidProfileException>(() => Load("""
             {
-              "schemaVersion": 1, "id": "bad", "source": { "kind": "release", "tag": "v1" },
+              "schemaVersion": 2, "os": "windows", "id": "bad", "source": { "kind": "release", "tag": "v1" },
               "diagnostics": { "reportUrl": "http://example.test/report", "rules": [] }
             }
             """));
     }
+
+    [Fact]
+    public void The_linux_profile_downloads_the_linux_release_and_no_tools()
+    {
+        var profile = ProfileLoader.LoadEmbedded(ProfileOs.Linux);
+
+        Assert.Equal(ProfileOs.Linux, profile.Os);
+        Assert.True(profile.Validated);
+        Assert.Equal("relinker-v0.1.4", profile.Asset(ProfileAssetKeys.Relinker).Name);
+        Assert.Equal("9e5afd1313520906a9af43c468d6e31a5d2237879a85c0984134d628348e92a8", profile.Asset(ProfileAssetKeys.Relinker).Sha256);
+        Assert.Equal("prx-linux-v0.1.4.zip", profile.Asset(ProfileAssetKeys.Libs).Name);
+        Assert.Equal("04ea0a4a51cc93d5aad1c9d558473bd3eea4bf9ef7d17511aa467449b744a27e", profile.Asset(ProfileAssetKeys.Libs).Sha256);
+        Assert.Empty(profile.Tools);
+        Assert.Equal(["--registry"], profile.Relinker.Args);
+        Assert.Equal("--to-intel", profile.Relinker.IntelArg);
+    }
+
+    [Fact]
+    public void Both_profiles_share_the_release_the_scripts_the_fonts_and_the_thresholds()
+    {
+        var windows = ProfileLoader.LoadEmbedded(ProfileOs.Windows);
+        var linux = ProfileLoader.LoadEmbedded(ProfileOs.Linux);
+
+        Assert.Equal(windows.Id, linux.Id);
+        Assert.Equal(Json(windows.Source), Json(linux.Source));
+        Assert.Equal(Json(windows.Build), Json(linux.Build));
+        Assert.Equal(Json(windows.Asset(ProfileAssetKeys.Scripts)), Json(linux.Asset(ProfileAssetKeys.Scripts)));
+        Assert.Equal(Json(windows.Asset(ProfileAssetKeys.UnwrapScript)), Json(linux.Asset(ProfileAssetKeys.UnwrapScript)));
+        Assert.Equal(Json(windows.Fonts), Json(linux.Fonts));
+        Assert.Equal(Json(windows.Checks), Json(linux.Checks));
+        Assert.Equal(windows.Diagnostics.ReportUrl, linux.Diagnostics.ReportUrl);
+    }
+
+    [Fact]
+    public void Rejects_an_unknown_os()
+    {
+        var exception = Assert.Throws<InvalidProfileException>(() => Load("""
+            { "schemaVersion": 2, "os": "macos", "id": "mac", "source": { "kind": "release", "tag": "v9" } }
+            """));
+
+        Assert.Contains("\"macos\"", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Rejects_a_profile_without_an_os()
+    {
+        Assert.Throws<InvalidProfileException>(() => Load("""
+            { "schemaVersion": 2, "id": "none", "source": { "kind": "release", "tag": "v9" } }
+            """));
+    }
+
+    private static string Json<T>(T value) => System.Text.Json.JsonSerializer.Serialize(value);
+
 
     private static AnyPS5Profile Load(string json) => ProfileLoader.Load(new MemoryStream(Encoding.UTF8.GetBytes(json)));
 }

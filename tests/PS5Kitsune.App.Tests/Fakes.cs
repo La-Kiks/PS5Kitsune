@@ -36,6 +36,14 @@ internal sealed class TestPlatform : IPlatform
 
     public string ExecutableSuffix => ".exe";
 
+    public string Os => "windows";
+
+    public string GameExecutableSuffix => ".exe";
+
+    public string VulkanLoaderName => "vulkan-1.dll";
+
+    public string VulkanInstallAction => "Install or update the graphics driver from your GPU maker's website (AMD, Intel or NVIDIA).";
+
     public ulong? GetCommitLimitBytes() => null;
 
     public IReadOnlyList<string> GetVulkanDriverManifests() => [];

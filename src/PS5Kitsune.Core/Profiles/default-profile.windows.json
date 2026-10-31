@@ -1,29 +1,30 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "os": "windows",
   "id": "doom-validated-2026-10",
   "validated": true,
-  "source": { "kind": "release", "tag": "v0.1.3", "publishedAt": "2026-10-20T09:31:13Z" },
+  "source": { "kind": "release", "tag": "v0.1.4", "publishedAt": "2026-10-30T23:09:14Z" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
-    "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
+    "commit": "7fcab08f71e463b1768730a626a0f5472d336708"
   },
   "assets": {
     "relinker": {
-      "name": "relinker-v0.1.3.exe",
-      "sha256": "c0de554bd426c35d3a38b67720879a0ec8dbdb06d89b0360442e45c7c268d021"
+      "name": "relinker-v0.1.4.exe",
+      "sha256": "6f6d49e3613ea7fce859621265068bfd64161a729a8051c83150f2d45ec193e0"
     },
     "libs": {
-      "name": "prx-windows-v0.1.3.zip",
-      "sha256": "a0d6ce41859368f7be43bb7ceefda8542f9abaaa80f16d157a1847287d46d0e0"
+      "name": "prx-windows-v0.1.4.zip",
+      "sha256": "cbd61c521d555614dbcddc62cdabf45acfe409c520307cdb58732c8486dd0d7a"
     },
     "scripts": {
-      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.3.zip",
-      "sha256": "a241e46f39fb38eb64d7c060f2902a778de8bbc169ac420124ab8602281f2e98",
+      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.4.zip",
+      "sha256": "fd13fe84a43c32b6296f502097d4b9da06610f94937e20ef724c007e1ae41ff1",
       "include": [ "tools/", "core/libs/prx/" ]
     },
     "unwrapScript": {
-      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/3fd1cc393b8512c2e989860053f30dee5a8cd1aa/tools/unwrap_self.py",
-      "sha256": "803fb6330c925db227cf921c9b54ed603ad5ff36a2064a86b7fadfa5859cc1cc"
+      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/7fcab08f71e463b1768730a626a0f5472d336708/tools/unwrap_self.py",
+      "sha256": "9d6f75be2bf721a88e15c997923a901179073a55d2ebf4cbae568b4a33ad3cc2"
     }
   },
   "tools": {
@@ -79,7 +80,7 @@
     { "name": "NotoSansCJK-Bold.ttc", "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTC/NotoSansCJK-Bold.ttc", "sha256": "faa5f3656a78b2e2d450d27fe8382c778bc2b6bb5ea29c986664a6a435056ceb", "size": 20050760 }
   ],
   "relinker": {
-    "windowsArgs": [ "--windows", "--registry" ],
+    "args": [ "--windows", "--registry" ],
     "intelArg": "--to-intel"
   },
   "checks": {

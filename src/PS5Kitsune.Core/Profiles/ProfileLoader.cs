@@ -8,41 +8,57 @@ public sealed class InvalidProfileException(string message, Exception? innerExce
 
 public static class ProfileLoader
 {
-    private const string EmbeddedResourceName = "PS5Kitsune.Core.Profiles.default-profile.json";
+    private const string EmbeddedResourcePrefix = "PS5Kitsune.Core.Profiles.default-profile.";
 
     public const string OverrideFileName = "override.json";
 
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
-    /// <summary>The profile shipped inside the app.</summary>
-    public static AnyPS5Profile LoadEmbedded()
+    /// <summary>The profile shipped inside the app for <paramref name="os"/>, a <see cref="ProfileOs"/> value.</summary>
+    public static AnyPS5Profile LoadEmbedded(string os = ProfileOs.Windows)
     {
-        using var stream = typeof(ProfileLoader).Assembly.GetManifestResourceStream(EmbeddedResourceName)
-            ?? throw new InvalidProfileException($"Embedded resource {EmbeddedResourceName} is missing.");
+        if (!ProfileOs.All.Contains(os))
+        {
+            throw new ArgumentOutOfRangeException(nameof(os), os, "Unknown profile OS.");
+        }
+
+        var name = $"{EmbeddedResourcePrefix}{os}.json";
+        using var stream = typeof(ProfileLoader).Assembly.GetManifestResourceStream(name)
+            ?? throw new InvalidProfileException($"Embedded resource {name} is missing.");
         return Load(stream);
     }
 
     /// <summary>
-    /// The override in the data root's profiles folder when it is valid, else the embedded profile.
-    /// An override that cannot be read or validated is ignored, and <see cref="ActiveProfile.Problem"/> says why.
+    /// The override in the data root's profiles folder when it is valid and for <paramref name="os"/>, else the embedded profile of <paramref name="os"/>.
+    /// An override that cannot be read, fails validation or is for another OS is ignored, and <see cref="ActiveProfile.Problem"/> says why.
     /// </summary>
-    public static ActiveProfile LoadActive(DataLayout layout)
+    public static ActiveProfile LoadActive(DataLayout layout, string os = ProfileOs.Windows)
     {
         ArgumentNullException.ThrowIfNull(layout);
         var path = Path.Combine(layout.Profiles, OverrideFileName);
         if (!File.Exists(path))
         {
-            return new ActiveProfile(LoadEmbedded(), ProfileOrigin.Embedded, null);
+            return new ActiveProfile(LoadEmbedded(os), ProfileOrigin.Embedded, null);
         }
 
         try
         {
-            using var stream = File.OpenRead(path);
-            return new ActiveProfile(Load(stream), ProfileOrigin.Override, null);
+            AnyPS5Profile profile;
+            using (var stream = File.OpenRead(path))
+            {
+                profile = Load(stream);
+            }
+
+            if (profile.Os != os)
+            {
+                throw new InvalidProfileException($"Profile {profile.Id} is for {profile.Os}, not {os}.");
+            }
+
+            return new ActiveProfile(profile, ProfileOrigin.Override, null);
         }
         catch (Exception exception) when (exception is InvalidProfileException or IOException or UnauthorizedAccessException)
         {
-            return new ActiveProfile(LoadEmbedded(), ProfileOrigin.Embedded, $"Ignored {path}: {exception.Message} Using the embedded profile.");
+            return new ActiveProfile(LoadEmbedded(os), ProfileOrigin.Embedded, $"Ignored {path}: {exception.Message} Using the embedded profile.");
         }
     }
 
@@ -73,6 +89,11 @@ public static class ProfileLoader
         if (profile.SchemaVersion != AnyPS5Profile.CurrentSchemaVersion)
         {
             throw new InvalidProfileException($"Profile {profile.Id} has schema version {profile.SchemaVersion}; this app reads version {AnyPS5Profile.CurrentSchemaVersion}.");
+        }
+
+        if (!ProfileOs.All.Contains(profile.Os))
+        {
+            throw new InvalidProfileException($"Profile {profile.Id} has os \"{profile.Os}\"; expected \"{ProfileOs.Windows}\" or \"{ProfileOs.Linux}\".");
         }
 
         foreach (var (name, asset) in profile.Assets)

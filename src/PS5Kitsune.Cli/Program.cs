@@ -11,7 +11,7 @@ if (args is [VulkanProbeRunner.ProbeArgument])
 
 var rootOption = new Option<DirectoryInfo?>("--root")
 {
-    Description = "Data root (tools, AnyPS5, games). Defaults to the folder chosen in the app, else C:\\PS5Kitsune on Windows.",
+    Description = "Data root (tools, AnyPS5, games). Defaults to the folder chosen in the app, else C:\\PS5Kitsune on Windows and ~/.local/share/ps5kitsune on Linux.",
     Recursive = true,
 };
 

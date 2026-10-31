@@ -8,6 +8,30 @@ public sealed class DiagnosisTextsTests
     private static Diagnosis Of(string id, string? capture = null, string? value = null, uint? exitCode = 1, string? line = "the line") =>
         new(id, capture is null ? new Dictionary<string, string>() : new Dictionary<string, string> { [capture] = value! }, line, line is null ? null : 2, exitCode, "C:\\G\\logs\\1.log");
 
+    [Theory]
+    [InlineData(DiagnosisIds.VulkanMissing, "Vulkan could not be loaded", "AnyPS5 could not load the Vulkan loader or a Vulkan driver. Run ps5kitsune check: it shows the command that installs them.")]
+    [InlineData(DiagnosisIds.BdaAccess, "The GPU could not reach some memory", "GPU stores failed (BDA access failed), usually because /dev/udmabuf could not be used. Run ps5kitsune check: it tells whether this kernel provides /dev/udmabuf and whether you can open it.")]
+    [InlineData(DiagnosisIds.UdmabufAccess, "No access to /dev/udmabuf", "AnyPS5 could not open /dev/udmabuf, so it copied shared memory instead of importing it. Give your user access: sudo usermod -aG kvm $USER, then log out and in again.")]
+    public void The_linux_diagnoses_explain_without_a_button(string id, string title, string explanation)
+    {
+        var text = DiagnosisTexts.For(Of(id), new GameSettings());
+
+        Assert.Equal(title, text.Title);
+        Assert.Equal(explanation, text.Explanation);
+        Assert.Equal(DiagnosisAction.None, text.Action);
+        Assert.Null(text.ActionText);
+    }
+
+    [Fact]
+    public void A_missing_shared_library_is_named()
+    {
+        var text = DiagnosisTexts.For(Of(DiagnosisIds.SharedLibraryMissing, "library", "libpulse.so.0"), new GameSettings());
+
+        Assert.Equal("A system library is missing", text.Title);
+        Assert.Equal("libpulse.so.0 is not installed. Install the package that provides it with your distribution's package manager.", text.Explanation);
+        Assert.Equal(DiagnosisAction.None, text.Action);
+    }
+
     [Fact]
     public void A_missing_dll_names_the_module_file_and_offers_repair_libs()
     {

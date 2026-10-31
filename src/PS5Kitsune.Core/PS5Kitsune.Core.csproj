@@ -15,7 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Profiles\default-profile.json" LogicalName="PS5Kitsune.Core.Profiles.default-profile.json" />
+    <EmbeddedResource Include="Profiles\default-profile.windows.json" LogicalName="PS5Kitsune.Core.Profiles.default-profile.windows.json" />
+    <EmbeddedResource Include="Profiles\default-profile.linux.json" LogicalName="PS5Kitsune.Core.Profiles.default-profile.linux.json" />
   </ItemGroup>
 
   <ItemGroup>

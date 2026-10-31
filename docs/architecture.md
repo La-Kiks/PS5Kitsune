@@ -42,13 +42,13 @@ The stack is .NET LTS + Avalonia with MVVM, published as a self-contained execut
 | Process execution | CliWrap for tools (git, cmake, python, relinker); native `Process` with inherited file handles for the game | Tools are followed line by line; the game must not depend on the launcher staying alive (see V3) |
 | Logging | NLog via `Microsoft.Extensions.Logging` (file + view in the UI) | One log per operation, attachable to a report; BSD-3 license, GPLv2-compatible (Serilog, under Apache 2.0, is not) |
 | Downloads | `HttpClient` + GitHub REST API | Releases, WinLibs, MinGit, Python, Mesa; resume, progress, SHA-256 check |
-| Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z`: only Lavapipe's manifest and driver are extracted, with SharpCompress's sequential reader; Linux `tar.gz` via `System.Formats.Tar` |
+| Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z`: only Lavapipe's manifest and driver are extracted, with SharpCompress's sequential reader; Linux uses a zip too (`prx-linux-<version>.zip`), extracted with the same zip code |
 | Tests | xUnit + fake test folders | Validate detection and folder validation without a real game |
 | Publishing | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true` | A single `.exe` (~80–100 MB), no .NET to install; Avalonia's native libraries are included |
 
 **Administrator rights:** never required. The page file is never changed automatically: the app explains and opens the right settings panel.
 
-**Python:** the repository's scripts (`import_audit.py`, `unwrap_self.py`) are called as-is rather than rewritten in C#. They only use the standard library ("needs Python 3 and nothing else", per `USAGE.md`), so the official **embeddable Python** (zip) is enough. It is needed **in both modes**, release and build. The build itself does not need Python (only its tests do).
+**Python:** the repository's scripts (`import_audit.py`, `unwrap_self.py`) are called as-is rather than rewritten in C#. They only use the standard library ("needs Python 3 and nothing else", per `USAGE.md`), so the official **embeddable Python** (zip) is enough on Windows; Linux uses the system `python3` instead. It is needed **in both modes**, release and build. The build itself does not need Python (only its tests do).
 
 **Signing:** the app executable is unsigned at first; SmartScreen will warn on first launch. To be documented, and reconsidered (certificate) if the app is widely distributed.
 
@@ -56,7 +56,7 @@ The stack is .NET LTS + Avalonia with MVVM, published as a self-contained execut
 
 The logic lives in `Core`, with no reference to Avalonia or Windows. The UI only displays steps and their progress, and each OS provides its own implementation of `Core`'s interfaces.
 
-Dependencies go one way only: the UI and the CLI only call Core, and only the Platform projects talk to Windows or Linux. The Linux project is planned, but not before V3.
+Dependencies go one way only: the UI and the CLI only call Core, and only the Platform projects talk to Windows or Linux.
 
 ```text
 PS5Kitsune/
@@ -71,11 +71,13 @@ PS5Kitsune/
 │   │   ├── Pipeline/                   IStep, StepRunner, progress, resume
 │   │   └── Abstractions/               IPlatform, IProcessRunner, IDownloader, IGameLauncher
 │   ├── PS5Kitsune.Platform.Windows/    commit limit, Windows paths, Job Objects, P/Invoke
-│   ├── PS5Kitsune.Platform.Linux/      (later) packages, XDG paths, udmabuf
+│   ├── PS5Kitsune.Platform.Linux/      XDG paths, package commands, posix_spawn launcher, udmabuf check
+│   ├── PS5Kitsune.Platform/            picks the platform at startup
 │   ├── PS5Kitsune.App/                 Avalonia: Views, ViewModels, navigation
 │   └── PS5Kitsune.Cli/                 same logic on the command line; isolated Vulkan probe
 └── tests/
-    └── PS5Kitsune.Core.Tests/          fake game folders, fake IProcessRunner
+    ├── PS5Kitsune.Core.Tests/          fake game folders, fake IProcessRunner
+    └── PS5Kitsune.Platform.Linux.Tests/ XDG paths, os-release, launcher (Linux-only tests)
 ```
 
 | Abstraction | Role | Example implementation |
@@ -97,7 +99,7 @@ Each `IStep` exposes `IsAlreadyDone()`, based on **what the step produced** (the
 
 Vulkan enumeration can crash the process (Dozen driver, some D3D12 drivers, see `USAGE.md`). So it **never runs in the UI process**: the app relaunches itself as `PS5Kitsune.exe --probe-vulkan`, which queries Vulkan via Silk.NET and writes JSON (GPUs, `shaderInt64`, `bufferDeviceAddress`, driver version). A probe crash becomes a result ("Vulkan enumeration failed") and triggers a second attempt with `VK_LOADER_DRIVERS_DISABLE='*dzn*'`. `vulkaninfo` is not used: it ships with the Vulkan SDK and is missing on most PCs. Both executables handle `--probe-vulkan` before anything else starts (`PS5Kitsune.exe` and `ps5kitsune.exe`); the parent waits 15 seconds at most per attempt. The thresholds (commit limit, disk space, NVIDIA drivers) live in the profile's `checks` section.
 
-The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and will be the first Linux deliverable.
+The CLI costs little once `Core` exists. It hosts the probe, drives the end-to-end path of milestone 2, and is the first Linux deliverable (milestone 8a).
 
 The theme lives in `Styles/AppTheme.axaml`, as token brushes for Light and Dark over Fluent, and views use only token keys (a test enforces it). Fluent's ComboBox, TextBox, Expander and accent-button resources are re-pointed at the tokens per variant, because Fluent derives them from translucent palette colors. The sidebar is locked while a page runs work, and otherwise leaves every page in the stack through `ILeavable` before `GoHome`. The theme choice is `settings.json`'s `theme`.
 
@@ -107,9 +109,10 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "doom-validated-2026-10",
-  "source": { "kind": "release", "tag": "v0.1.3" },
+  "os": "windows",
+  "source": { "kind": "release", "tag": "v0.1.4" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
     "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
@@ -123,11 +126,12 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
     "mingit":  { "url": "…", "sha256": "…" },
     "python":  { "url": "…/python-3.14.8-embed-amd64.zip", "sha256": "…" }
   },
-  "relinker": { "windowsArgs": ["--windows", "--registry"], "intelArg": "--to-intel" },
+  "relinker": { "args": ["--windows", "--registry"], "intelArg": "--to-intel" },
   "errorPatterns": "patterns-v1.json"
 }
 ```
 
+- **One profile per OS:** the app embeds `default-profile.windows.json` and `default-profile.linux.json` and uses the one for the OS it runs on. Schema 2 adds `os` (`windows` or `linux`) and `relinker.args`, the relinker options for that OS (`["--windows", "--registry"]` on Windows, `["--registry"]` on Linux). An override written for the other OS is ignored, with a warning in the log.
 - **`build` section:** `repository` uses HTTPS and `commit` is 40 lowercase hex characters. Build mode installs that commit.
 - **Source archive hash:** The source archive's hash is computed from the downloaded `archive/refs/tags/<tag>.zip`, since GitHub publishes no digest for it and does not guarantee these archives stay byte-identical; if GitHub regenerates it, the install fails its hash check and the profile needs a new hash.
 - **Resolution order:** the profile embedded in the app, or a valid local override `<root>\profiles\override.json`, which replaces it for both the CLI and the app. An override that cannot be read or is invalid is ignored, with a warning in the log. The profile downloaded from the PS5Kitsune repository (checked on demand) is still to come; the most recent valid one will then win, and the user will see which one is active.
@@ -332,23 +336,23 @@ Report copies a text (PC, AnyPS5, game, settings, exit, matched line, last 30 lo
 
 ## Linux compatibility
 
-Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linux ELF by default and releases already publish `prx-linux-<version>.tar.gz`. The work is mostly about installing prerequisites and a few different checks.
+Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linux ELF by default and releases already publish `prx-linux-<version>.zip`, extracted like the Windows zip. The work is mostly about installing prerequisites and a few different checks.
 
 ### What changes
 
 | Topic | Windows | Linux |
 | --- | --- | --- |
-| Tool installation | Portable archives in `tools\` | Distribution packages (`apt`, `dnf`), read from `/etc/os-release`; commands shown for copying or run via `pkexec` |
+| Tool installation | Portable archives in `tools\` | Distribution packages (`apt`, `dnf`, `pacman`), read from `/etc/os-release`; PS5Kitsune shows the command to copy and never runs anything as root |
 | Compiler | WinLibs GCC 15.2.0 r7, mandatory | System GCC and G++ |
 | Build dependencies | None extra | X11, Xext, XRandR, Wayland, xkbcommon, EGL, libdecor, PipeWire, PulseAudio, ALSA headers (list in `BUILD.md`); on Fedora `glibc-static` and `libstdc++-static` |
 | FFmpeg SSL error | Worked around with `SSL_CERT_FILE` | Not applicable |
 | Libs | `.prx` + 3 DLLs | `.prx` only |
-| Conversion | `--windows`, `.exe` output | No option, `.elf` output; restore the execute bit after a copy, on the exe and every listed `Executable file:` |
-| Python | Portable embeddable Python | System `python3` |
-| Lavapipe | Downloaded Mesa | System Mesa package; manifest in `/usr/share/vulkan/icd.d/` |
-| Memory | Commit limit check | No equivalent check; instead, read-write access to `/dev/udmabuf` |
-| `/dev/udmabuf` | Not applicable | If denied: suggest `sudo usermod -aG kvm $USER` then logging in again |
-| Display | Not applicable | `SDL_VIDEODRIVER` setting (Wayland or X11) in game settings |
+| Conversion | `--windows`, `.exe` output | `--registry`, `.elf` output; execute bits ensured before each launch |
+| Python | Portable embeddable Python | System `python3`, found on `PATH` |
+| Lavapipe | Downloaded Mesa | System Mesa (`lvp_icd*.json` in `/usr/share/vulkan/icd.d` or `/etc/vulkan/icd.d`); nothing downloaded |
+| Memory | Commit limit check | No commit limit ("Not applicable on this system."); instead, read-write access to `/dev/udmabuf`: a Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver; if denied, the fix is `sudo usermod -aG kvm $USER` then logging in again |
+| Launch | Inherited handles, breakaway from the parent job, exit detected by handle | `posix_spawn` in its own session. `running.json` identifies the game by its executable, compared after resolving symlinks, and its start time, compared with a 5-second tolerance. A game found again after the launcher restarted is not its child, so its exit code is unknown (-1) |
+| Display | Not applicable | `SDL_VIDEODRIVER` if a game needs it; SDL picks Wayland, then X11, and the game inherits the environment |
 | Desktop shortcut | `.lnk` (optional) | The relinker already writes a `.desktop` file and an icon when `icon0.png` exists |
 
 ### Rules from V1 onwards
@@ -356,7 +360,7 @@ Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linu
 - No hard-coded paths with `\`: always `Path.Combine` and folders provided by `IPlatform`.
 - No direct call to a tool or Windows API outside `Platform.Windows`. Windows code (P/Invoke, registry) stays in that project.
 - CPU and Vulkan checks live in `Core`: .NET intrinsics and Silk.NET work on both OSes.
-- CI builds `Core` and the CLI for `win-x64` **and** `linux-x64` from the start: a Windows dependency slipping into `Core` breaks the build immediately. The `Platform.Linux` project is only created at the Linux milestone.
+- CI builds `Core` and the CLI for `win-x64` **and** `linux-x64` from the start: a Windows dependency slipping into `Core` breaks the build immediately. `PS5Kitsune.Platform` picks `Platform.Windows` or `Platform.Linux` at startup; the CLI and the app reference only it.
 
 ## Data and configuration
 
@@ -483,7 +487,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 
 | Point | Finding |
 | --- | --- |
-| Latest release | `v0.1.3` of 2026-10-20 (tag commit `3fd1cc3`, the build mode's commit); Windows libs weigh ~92 MB |
+| Latest release | `v0.1.4` of 2026-10-30 (tag commit `7fcab08`, the build mode's commit); Windows libs weigh ~91 MB, Linux libs ~96 MB |
 | Release asset names | `relinker-<tag>.exe`, `prx-windows-<tag>.zip` (content under `libs/`), plus `USAGE.md` and `INPUT_MAPPING.md` |
 | Release asset hashes | `digest` field (`sha256:…`) present in the GitHub API |
 | Relinker path after a full build | `build\core\relinker\relinker.exe` (`tools/package_release.py`) |
@@ -509,7 +513,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] License: **GPL v2 only**, public GitHub repository
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
-- [x] Default mode of the first profile: **release `v0.1.3`**, which runs DOOM for PS5 (validated 2026-10-25 from the app: install, Reconvert, launch; audit orange: 360 implemented, 4 stubs, 0 absent). Release `v0.1.2` was validated first, on 2026-10-20 with milestone 2's CLI (361, 3, 0).
+- [x] Default mode of the first profile: **release `v0.1.3`**, which runs DOOM for PS5 (validated 2026-10-25 from the app: install, Reconvert, launch; audit orange: 360 implemented, 4 stubs, 0 absent). Release `v0.1.2` was validated first, on 2026-10-20 with milestone 2's CLI (361, 3, 0). Both profiles moved to **`v0.1.4`** on 2026-10-31: on Linux, `v0.1.3` adopted the stub `malloc` exported by DOOM's clean-room `libc.prx` as the game's allocator, so DOOM could not allocate memory; `v0.1.4` runs it (audit green: 357, 0, 0). Windows is re-checked on `v0.1.4` before PR #13 is merged.
 - [x] Build mode disk space threshold: **`buildMinFreeDiskGiB` = 10 GiB**, from the build measured on 2026-10-21 (root of 3.2 GB)
 - [ ] Check for new profiles at startup, or only on demand
 
@@ -547,7 +551,9 @@ The order follows "end to end first, screens second": each milestone ends with a
      - Criterion: a deliberately provoked error 126 is recognized and repaired.
    - **7d — Visual design.** Once every main screen exists (install, add a game, library and launch): a coherent theme in light and dark, typography and spacing, shared card components (Mode, Tools), the library's look with game icons, and accessibility (selected states exposed to screen readers, keyboard navigation). Spec: [milestone 7d](superpowers/specs/2026-10-25-milestone-7d-visual-design-design.md).
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
-8. **Linux.** `Platform.Linux`: per-distribution packages, `/dev/udmabuf`, XDG paths; CLI first, then UI.
-   - Criterion: DOOM converted and run on native Linux or in a VM with a GPU.
+8. **Linux**, in two parts. Build mode on Linux comes later (see `TODO.md`).
+   - **8a — The CLI on Linux, release mode.** `Platform` picks the OS at startup; `Platform.Linux`: XDG paths, per-distribution package commands, system Python and Lavapipe, the posix_spawn launcher, the Python and `/dev/udmabuf` checks; one profile per OS (schema 2). Spec: [milestone 8a](superpowers/specs/2026-10-30-milestone-8a-linux-cli-design.md).
+     - Criterion: the CLI path in WSL Ubuntu (DOOM added with the Windows verdict), then DOOM played on a real Ubuntu install. Met on 2026-10-31 on Ubuntu 26.04 (Ryzen 7 7730U, RADV) with AnyPS5 `v0.1.4`: `check`, `install`, `add`, `reconvert`, then DOOM played from `run`.
+   - **8b — The app on Linux.** The Avalonia app on Linux and `linux-x64` packaging.
 
 From milestone 2 the tool is usable from the command line; milestone 4 gives a first graphical installer with no C++ build on the user's side.

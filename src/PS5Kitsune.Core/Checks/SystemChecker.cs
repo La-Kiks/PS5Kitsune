@@ -21,19 +21,37 @@ public sealed class SystemFactsCollector(IPlatform platform, ICpuInfo cpu, IVulk
         FreeDiskBytes = FreeSpace(layout.Root),
         Limits = profile.Checks,
         Mode = mode,
+        VulkanLoaderName = platform.VulkanLoaderName,
+        VulkanInstallAction = platform.VulkanInstallAction,
+        DefaultDataRoot = platform.DefaultDataRoot,
     };
 
-    // The data root may not exist yet: its drive is what matters.
+    // The data root may not exist yet: the filesystem of its nearest existing folder is what matters. On Linux that is not
+    // always "/" (a separate /home); on Windows DriveInfo takes any path on the drive and uses its root.
     private static long? FreeSpace(string root)
     {
         try
         {
-            return new DriveInfo(Path.GetPathRoot(root) ?? root).AvailableFreeSpace;
+            return new DriveInfo(ExistingAncestor(root)).AvailableFreeSpace;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
         {
             return null;
         }
+    }
+
+    /// <summary><paramref name="path"/> itself when it is a folder, else its nearest existing parent; the path root when none exists.</summary>
+    internal static string ExistingAncestor(string path)
+    {
+        for (var current = path; !string.IsNullOrEmpty(current); current = Path.GetDirectoryName(current))
+        {
+            if (Directory.Exists(current))
+            {
+                return current;
+            }
+        }
+
+        return Path.GetPathRoot(path) is { Length: > 0 } root ? root : path;
     }
 }
 
@@ -61,7 +79,8 @@ public sealed partial class SystemChecker(SystemFactsCollector collector, IEnume
     public async Task<SystemCheckReport> RunAsync(AnyPS5Mode mode, CancellationToken cancellationToken = default)
     {
         var facts = await collector.CollectAsync(mode, cancellationToken).ConfigureAwait(false);
-        var results = checks.Select(check => check.Evaluate(facts)).ToList();
+        // Core's checks first, in their order; then those the platform added (registered before Core's, so first in the sequence).
+        var results = checks.OrderBy(check => SystemChecks.All.Contains(check) ? 0 : 1).Select(check => check.Evaluate(facts)).ToList();
         foreach (var result in results)
         {
             LogResult(result.Id, result.Status, result.Summary);

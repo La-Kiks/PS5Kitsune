@@ -15,7 +15,7 @@ public sealed class GameLayout(string root, string titleId, IPlatform platform)
     public string Libs => Path.Combine(Root, "libs");
 
     /// <summary>Name of the converted executable, which also names its registry files.</summary>
-    public string ExecutableName => TitleId + platform.ExecutableSuffix;
+    public string ExecutableName => TitleId + platform.GameExecutableSuffix;
 
     public string Executable => Path.Combine(Root, ExecutableName);
 

@@ -4,7 +4,7 @@ using PS5Kitsune.Core;
 using PS5Kitsune.Core.Logging;
 using PS5Kitsune.Core.Profiles;
 using PS5Kitsune.Core.Settings;
-using PS5Kitsune.Platform.Windows;
+using PS5Kitsune.Platform;
 
 namespace PS5Kitsune.Cli;
 
@@ -21,7 +21,7 @@ internal static class CommandHost
         var layout = new DataLayout(DataRoots.Resolve(rootOverride?.FullName, settings.Settings, platform.DefaultDataRoot));
         var services = new ServiceCollection();
         var logFile = services.AddPS5KitsuneLogging(layout.Logs, runName, console: true);
-        var active = ProfileLoader.LoadActive(layout);
+        var active = ProfileLoader.LoadActive(layout, platform.Os);
         services.AddPlatform(platform).AddPS5KitsuneCore(layout, active.Profile);
         services.AddSingleton(new CommandContext(DataRoots.Describe(rootOverride?.FullName, settings.Settings), active.Origin));
 

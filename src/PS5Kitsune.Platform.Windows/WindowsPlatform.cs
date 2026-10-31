@@ -5,6 +5,7 @@ using System.Runtime.Versioning;
 using Microsoft.Win32;
 using PS5Kitsune.Core.Abstractions;
 using PS5Kitsune.Core.Checks;
+using PS5Kitsune.Core.Profiles;
 
 namespace PS5Kitsune.Platform.Windows;
 
@@ -23,6 +24,14 @@ public sealed partial class WindowsPlatform : IPlatform
     public string SettingsDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PS5Kitsune");
 
     public string ExecutableSuffix => ".exe";
+
+    public string Os => ProfileOs.Windows;
+
+    public string GameExecutableSuffix => ".exe";
+
+    public string VulkanLoaderName => "vulkan-1.dll";
+
+    public string VulkanInstallAction => "Install or update the graphics driver from your GPU maker's website (AMD, Intel or NVIDIA).";
 
     /// <summary>ullTotalPageFile is the commit limit (RAM + page files), despite its name.</summary>
     public ulong? GetCommitLimitBytes()

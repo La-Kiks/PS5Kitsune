@@ -19,7 +19,7 @@ public sealed partial class GameReconverter(
     AnyPS5Paths paths,
     AnyPS5Profile profile,
     AnyPS5Installer installer,
-    PythonEmbeddableTool python,
+    IPythonRuntime python,
     IProcessRunner processRunner,
     StepRunner stepRunner,
     TimeProvider time,
