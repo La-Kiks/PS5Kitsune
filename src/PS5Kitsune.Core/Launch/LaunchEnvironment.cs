@@ -24,10 +24,20 @@ public static class LaunchEnvironment
 
     public const string SystemFonts = "ANYPS5_SYSTEM_FONTS";
 
+    public const string OutputResolution = "APS5_OUTPUT_RESOLUTION";
+
     /// <summary>The name AnyPS5 matches against Lavapipe's device.</summary>
     public const string LavapipeGpu = "llvmpipe";
 
     public const string DozenPattern = "*dzn*";
+
+    /// <summary>The <c>&lt;width&gt;x&lt;height&gt;</c> AnyPS5 reads for a resolution choice; null for null or an unknown choice.</summary>
+    public static string? ResolutionValue(string? resolution) => resolution switch
+    {
+        "1080p" => "1920x1080",
+        "2160p" => "3840x2160",
+        _ => null,
+    };
 
     /// <summary>A value equal to AnyPS5's default is left out, so a game with default settings and no fonts gets nothing.</summary>
     /// <param name="lavapipeManifest">Mesa's Lavapipe manifest; required when <see cref="GameSettings.Lavapipe"/> is on.</param>
@@ -77,6 +87,11 @@ public static class LaunchEnvironment
         if (settings.PlayGoUnlistedChunks is { } chunks)
         {
             variables[PlayGoUnlistedChunks] = chunks;
+        }
+
+        if (ResolutionValue(settings.Resolution) is { } size)
+        {
+            variables[OutputResolution] = size;
         }
 
         if (fontsDirectory is not null)

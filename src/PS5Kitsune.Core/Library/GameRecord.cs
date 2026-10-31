@@ -67,4 +67,7 @@ public sealed record GameSettings
 
     /// <summary>"installed" or "absent" for dumps without PlayGo files; null keeps AnyPS5's error.</summary>
     public string? PlayGoUnlistedChunks { get; init; }
+
+    /// <summary>One of <see cref="GameSettingsValidator.Resolutions"/>; null lets AnyPS5 follow the display.</summary>
+    public string? Resolution { get; init; }
 }

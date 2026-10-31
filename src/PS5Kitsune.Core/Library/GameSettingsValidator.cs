@@ -13,6 +13,9 @@ public static class GameSettingsValidator
 
     public static IReadOnlyList<string> PlayGoValues { get; } = ["installed", "absent"];
 
+    /// <summary>The video-out modes AnyPS5 v0.1.4 has; a future mode is one more entry here and in <see cref="Launch.LaunchEnvironment.ResolutionValue"/>.</summary>
+    public static IReadOnlyList<string> Resolutions { get; } = ["1080p", "2160p"];
+
     /// <summary>Replaces each value AnyPS5 would refuse with its default; a blank GPU name becomes null.</summary>
     /// <returns>The settings to use, and the JSON names of the fields replaced, in declaration order.</returns>
     public static (GameSettings Settings, IReadOnlyList<string> Replaced) Normalize(GameSettings settings)
@@ -48,6 +51,12 @@ public static class GameSettingsValidator
         {
             normalized = normalized with { PlayGoUnlistedChunks = null };
             replaced.Add("playGoUnlistedChunks");
+        }
+
+        if (settings.Resolution is { } resolution && !Resolutions.Contains(resolution))
+        {
+            normalized = normalized with { Resolution = null };
+            replaced.Add("resolution");
         }
 
         return (normalized, replaced);

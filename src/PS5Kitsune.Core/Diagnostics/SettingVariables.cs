@@ -19,6 +19,7 @@ public static class SettingVariables
         new("ANYPS5_OVERLAY", "performance overlay", settings => settings with { Overlay = Defaults.Overlay }),
         new("ANYPS5_OVERLAY_POS", "overlay position", settings => settings with { OverlayPosition = Defaults.OverlayPosition }),
         new("APS5_PLAYGO_UNLISTED_CHUNKS", "PlayGo unlisted chunks", settings => settings with { PlayGoUnlistedChunks = Defaults.PlayGoUnlistedChunks }),
+        new("APS5_OUTPUT_RESOLUTION", "resolution", settings => settings with { Resolution = Defaults.Resolution }),
     ];
 
     /// <summary>The setting behind <paramref name="variable"/>, compared ignoring case; null for a variable no game setting sets.</summary>

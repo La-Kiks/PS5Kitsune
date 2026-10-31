@@ -44,6 +44,15 @@ public sealed class DiagnosisTextsTests
     }
 
     [Fact]
+    public void A_refused_resolution_offers_to_reset_it()
+    {
+        var text = DiagnosisTexts.For(Of(DiagnosisIds.InvalidSetting, "variable", "APS5_OUTPUT_RESOLUTION"), new GameSettings { Resolution = "1080p" });
+
+        Assert.Equal(DiagnosisAction.ResetSetting, text.Action);
+        Assert.Equal("Reset resolution", text.ActionText);
+    }
+
+    [Fact]
     public void A_refused_setting_variable_offers_to_reset_its_setting()
     {
         var text = DiagnosisTexts.For(Of(DiagnosisIds.InvalidSetting, "variable", "ANYPS5_LANGUAGE"), new GameSettings());

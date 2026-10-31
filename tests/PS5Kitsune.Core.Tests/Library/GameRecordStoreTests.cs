@@ -23,6 +23,17 @@ public sealed class GameRecordStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task The_resolution_round_trips()
+    {
+        var record = TestRecords.Sample() with { Settings = new GameSettings { Resolution = "2160p" } };
+
+        await GameRecordStore.WriteAsync(RecordFile, record, TestContext.Current.CancellationToken);
+
+        Assert.Equal("2160p", GameRecordStore.Read(RecordFile)!.Settings.Resolution);
+        Assert.Contains("\"resolution\": \"2160p\"", File.ReadAllText(RecordFile), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_missing_record_reads_as_null()
     {
         Assert.Null(GameRecordStore.Read(RecordFile));

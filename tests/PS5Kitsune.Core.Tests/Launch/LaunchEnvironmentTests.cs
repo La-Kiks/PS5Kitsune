@@ -27,6 +27,8 @@ public sealed class LaunchEnvironmentTests
         { new GameSettings { PresentMode = "mailbox" }, "ANYPS5_PRESENT_MODE", "mailbox" },
         { new GameSettings { Overlay = true }, "ANYPS5_OVERLAY", "1" },
         { new GameSettings { PlayGoUnlistedChunks = "installed" }, "APS5_PLAYGO_UNLISTED_CHUNKS", "installed" },
+        { new GameSettings { Resolution = "1080p" }, "APS5_OUTPUT_RESOLUTION", "1920x1080" },
+        { new GameSettings { Resolution = "2160p" }, "APS5_OUTPUT_RESOLUTION", "3840x2160" },
     };
 
     [Fact]

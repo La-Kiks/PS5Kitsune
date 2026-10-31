@@ -48,6 +48,26 @@ public sealed class GameSettingsValidatorTests
     }
 
     [Fact]
+    public void An_unknown_resolution_reads_as_following_the_display()
+    {
+        var (settings, replaced) = GameSettingsValidator.Normalize(new GameSettings { Resolution = "1440p" });
+
+        Assert.Null(settings.Resolution);
+        Assert.Equal(["resolution"], replaced);
+    }
+
+    [Theory]
+    [InlineData("1080p")]
+    [InlineData("2160p")]
+    public void A_known_resolution_is_kept(string resolution)
+    {
+        var (settings, replaced) = GameSettingsValidator.Normalize(new GameSettings { Resolution = resolution });
+
+        Assert.Equal(resolution, settings.Resolution);
+        Assert.Empty(replaced);
+    }
+
+    [Fact]
     public void Languages_cover_0_to_30_by_name()
     {
         Assert.Equal(Enumerable.Range(0, 31), GameLanguages.All.Select(language => language.Number));
