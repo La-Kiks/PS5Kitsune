@@ -33,7 +33,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
         await game.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
     private static RunningGame RecordOf(ILaunchedGame game, string executable) =>
-        new(RunningGame.CurrentSchemaVersion, game.ProcessId, game.StartedAt, executable, game.LogFile);
+        new(RunningGame.CurrentSchemaVersion, game.ProcessId, game.StartedAt, executable, game.LogFile) { BootId = game.BootId, StartTicks = game.StartTicks };
 
     private static async Task LogContains(ILaunchedGame game, string text)
     {
@@ -139,8 +139,44 @@ public sealed class LinuxGameLauncherTests : IDisposable
         using var game = Sleep(30);
         try
         {
-            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartedAt = game.StartedAt.AddSeconds(-60) }));
-            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/true")));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { BootId = null, StartTicks = null, StartedAt = game.StartedAt.AddSeconds(-60) }));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/true") with { BootId = null, StartTicks = null }));
+        }
+        finally
+        {
+            await game.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task A_launched_game_carries_its_boot_identity()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        using var game = Sleep(30);
+        try
+        {
+            Assert.Equal((await File.ReadAllTextAsync("/proc/sys/kernel/random/boot_id", TestContext.Current.CancellationToken)).Trim(), game.BootId);
+            Assert.NotNull(game.StartTicks);
+        }
+        finally
+        {
+            await game.StopAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task Attach_with_a_boot_identity_ignores_the_wall_clock()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        using var game = Sleep(30);
+        try
+        {
+            // A clock stepped by a minute after the launch: the identity still matches.
+            using var attached = _launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartedAt = game.StartedAt.AddMinutes(1) });
+            Assert.NotNull(attached);
+
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { BootId = "00000000-0000-0000-0000-000000000000" }));
+            Assert.Null(_launcher.Attach(RecordOf(game, "/usr/bin/sleep") with { StartTicks = game.StartTicks + 1 }));
         }
         finally
         {

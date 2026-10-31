@@ -30,7 +30,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         var pid = PosixSpawn.Start(request.Executable, request.Arguments, request.WorkingDirectory, logFile, EnvironmentOf(request.Environment));
 
         // The child cannot be reaped before the waiting thread starts, so its stat is readable (at worst as a zombie).
-        var game = new SpawnedGame(pid, logFile, StartTimeOrNow(pid), StopGrace);
+        var game = new SpawnedGame(pid, logFile, StartTimeOrNow(pid), ProcStat.BootId(), ProcStat.Read(pid)?.StartTicks, StopGrace);
         var executable = request.Executable;
         LogLaunched(executable, pid, logFile);
         return game;
@@ -56,8 +56,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         try
         {
             return ProcStat.Read(record.ProcessId) is { State: not 'Z' }
-                && ProcStat.StartTimeOf(record.ProcessId) is { } started
-                && ProcStat.SameStart(started, record.StartedAt)
+                && SameStart(record)
                 && new FileInfo($"/proc/{record.ProcessId.ToString(CultureInfo.InvariantCulture)}/exe").LinkTarget is { } target
                 // The kernel shows the resolved path: resolve the recorded one too (a games folder reached through a link).
                 && PosixSpawn.CanonicalPath(record.Executable) is { } executable
@@ -68,6 +67,12 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
             return false;
         }
     }
+
+    // A record with the boot identity is compared exactly; an older one (or one whose identity could not be read) by start time within the tolerance.
+    private static bool SameStart(RunningGame record) =>
+        record is { BootId: { } bootId, StartTicks: { } ticks }
+            ? ProcStat.BootId() == bootId && ProcStat.Read(record.ProcessId)?.StartTicks == ticks
+            : ProcStat.StartTimeOf(record.ProcessId) is { } started && ProcStat.SameStart(started, record.StartedAt);
 
     // Never throws: the game is already running, so it must still get its SpawnedGame and the thread that reaps it.
     private static DateTimeOffset StartTimeOrNow(int pid)
@@ -138,8 +143,10 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         private readonly TaskCompletionSource<int?> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TimeSpan _stopGrace;
 
-        public SpawnedGame(int processId, string logFile, DateTimeOffset startedAt, TimeSpan stopGrace)
+        public SpawnedGame(int processId, string logFile, DateTimeOffset startedAt, string? bootId, ulong? startTicks, TimeSpan stopGrace)
         {
+            BootId = bootId;
+            StartTicks = startTicks;
             ProcessId = processId;
             LogFile = logFile;
             StartedAt = startedAt;
@@ -152,6 +159,10 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         public string LogFile { get; }
 
         public DateTimeOffset StartedAt { get; }
+
+        public string? BootId { get; }
+
+        public ulong? StartTicks { get; }
 
         public Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default) => _exited.Task.WaitAsync(cancellationToken);
 
@@ -173,6 +184,10 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         public string LogFile => record.LogFile;
 
         public DateTimeOffset StartedAt => record.StartedAt;
+
+        public string? BootId => record.BootId;
+
+        public ulong? StartTicks => record.StartTicks;
 
         public async Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default)
         {

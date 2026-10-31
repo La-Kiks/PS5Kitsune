@@ -16,7 +16,13 @@ public sealed record GameLaunchRequest(string Executable, string WorkingDirector
 /// <param name="Executable">The full path of the game's executable.</param>
 public sealed record RunningGame(int SchemaVersion, int ProcessId, DateTimeOffset StartedAt, string Executable, string LogFile)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+
+    /// <summary>Linux: /proc/sys/kernel/random/boot_id when the game started; null on Windows and in schema 1.</summary>
+    public string? BootId { get; init; }
+
+    /// <summary>Linux: the game's start time in clock ticks since boot (/proc/&lt;pid&gt;/stat field 22); null on Windows and in schema 1.</summary>
+    public ulong? StartTicks { get; init; }
 }
 
 /// <summary>A started game. Disposing releases the launcher's handle; it never stops the game.</summary>
@@ -29,6 +35,12 @@ public interface ILaunchedGame : IDisposable
 
     /// <summary>The process creation time read from the OS, in UTC.</summary>
     DateTimeOffset StartedAt { get; }
+
+    /// <summary>Linux: the boot the game started in; null elsewhere or when unreadable. Recorded with <see cref="StartTicks"/> so a clock change cannot hide the game.</summary>
+    string? BootId => null;
+
+    /// <summary>Linux: the game's start in clock ticks since boot; null elsewhere or when unreadable.</summary>
+    ulong? StartTicks => null;
 
     /// <summary>Completes with the exit code when the game exits; null when the code cannot be read (a game found again on Linux).</summary>
     Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default);
