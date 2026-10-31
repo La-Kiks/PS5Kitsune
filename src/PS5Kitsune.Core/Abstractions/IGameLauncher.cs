@@ -30,8 +30,8 @@ public interface ILaunchedGame : IDisposable
     /// <summary>The process creation time read from the OS, in UTC.</summary>
     DateTimeOffset StartedAt { get; }
 
-    /// <summary>Completes with the exit code when the game exits.</summary>
-    Task<int> WaitForExitAsync(CancellationToken cancellationToken = default);
+    /// <summary>Completes with the exit code when the game exits; null when the code cannot be read (a game found again on Linux).</summary>
+    Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Asks the game's windows to close, waits a few seconds, then ends the process. Completes once it has exited.</summary>
     /// <exception cref="System.ComponentModel.Win32Exception">The process could not be ended.</exception>

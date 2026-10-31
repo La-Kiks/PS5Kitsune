@@ -39,7 +39,7 @@ internal sealed class FakeGameLauncher : IGameLauncher
 
 internal sealed class FakeLaunchedGame(int processId, string logFile, DateTimeOffset startedAt) : ILaunchedGame
 {
-    private readonly TaskCompletionSource<int> _exit = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<int?> _exit = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public int ProcessId { get; } = processId;
 
@@ -52,9 +52,9 @@ internal sealed class FakeLaunchedGame(int processId, string logFile, DateTimeOf
     /// <summary>Thrown by StopAsync when set; the game then keeps running.</summary>
     public Exception? StopFailure { get; set; }
 
-    public void Exit(int exitCode) => _exit.TrySetResult(exitCode);
+    public void Exit(int? exitCode) => _exit.TrySetResult(exitCode);
 
-    public Task<int> WaitForExitAsync(CancellationToken cancellationToken = default) => _exit.Task.WaitAsync(cancellationToken);
+    public Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default) => _exit.Task.WaitAsync(cancellationToken);
 
     public Task StopAsync(CancellationToken cancellationToken = default)
     {

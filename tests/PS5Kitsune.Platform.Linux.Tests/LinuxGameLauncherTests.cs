@@ -29,7 +29,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
     private ILaunchedGame Sleep(int seconds) =>
         _launcher.Launch(new GameLaunchRequest("/usr/bin/sleep", _temp.Path, Logs) { Arguments = [seconds.ToString(System.Globalization.CultureInfo.InvariantCulture)] });
 
-    private static async Task<int> ExitOf(ILaunchedGame game) =>
+    private static async Task<int?> ExitOf(ILaunchedGame game) =>
         await game.WaitForExitAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
 
     private static RunningGame RecordOf(ILaunchedGame game, string executable) =>
@@ -129,7 +129,7 @@ public sealed class LinuxGameLauncherTests : IDisposable
 
         Assert.NotNull(attached);
         Assert.Equal(game.ProcessId, attached.ProcessId);
-        Assert.Equal(-1, await ExitOf(attached));
+        Assert.Null(await ExitOf(attached));
     }
 
     [Fact]

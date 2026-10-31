@@ -135,7 +135,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
     /// <summary>A game this launcher started: a thread waits for it from the start, so its exit code is kept and no zombie stays.</summary>
     private sealed class SpawnedGame : ILaunchedGame
     {
-        private readonly TaskCompletionSource<int> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource<int?> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TimeSpan _stopGrace;
 
         public SpawnedGame(int processId, string logFile, DateTimeOffset startedAt, TimeSpan stopGrace)
@@ -153,7 +153,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
 
         public DateTimeOffset StartedAt { get; }
 
-        public Task<int> WaitForExitAsync(CancellationToken cancellationToken = default) => _exited.Task.WaitAsync(cancellationToken);
+        public Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default) => _exited.Task.WaitAsync(cancellationToken);
 
         // Once reaped, the PID (and so the group) may belong to another process: never signal it.
         public Task StopAsync(CancellationToken cancellationToken = default) =>
@@ -165,7 +165,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         }
     }
 
-    /// <summary>A game found again from running.json: not our child, so its exit is seen by polling /proc and its exit code is unknown (-1).</summary>
+    /// <summary>A game found again from running.json: not our child, so its exit is seen by polling /proc and its exit code is unknown (null).</summary>
     private sealed class AttachedGame(RunningGame record, TimeSpan stopGrace, TimeSpan poll) : ILaunchedGame
     {
         public int ProcessId => record.ProcessId;
@@ -174,7 +174,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
 
         public DateTimeOffset StartedAt => record.StartedAt;
 
-        public async Task<int> WaitForExitAsync(CancellationToken cancellationToken = default)
+        public async Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default)
         {
             // Gone, a zombie, or a later process reusing the PID (another start time or executable): the game has exited.
             while (IsRecorded(record))
@@ -182,7 +182,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
                 await Task.Delay(poll, cancellationToken).ConfigureAwait(false);
             }
 
-            return -1;
+            return null;
         }
 
         // A PID that is no longer the recorded game means the game has exited: its group may be another process's now.
