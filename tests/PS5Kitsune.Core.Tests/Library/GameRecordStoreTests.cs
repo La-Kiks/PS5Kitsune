@@ -73,8 +73,6 @@ public sealed class GameRecordStoreTests : IDisposable
         Assert.Null(GameRecordStore.Read(RecordFile)!.ReconvertedAt);
     }
 
-    public void Dispose() => _temp.Dispose();
-
     [Fact]
     public async Task Extra_variables_round_trip_sorted_by_name()
     {
@@ -109,4 +107,6 @@ public sealed class GameRecordStoreTests : IDisposable
         Assert.Null(settings.Resolution);
         Assert.Empty(settings.ExtraEnvironment);
     }
+
+    public void Dispose() => _temp.Dispose();
 }

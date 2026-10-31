@@ -304,7 +304,7 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 | Disable Dozen | `disableDozen` | `VK_LOADER_DRIVERS_DISABLE='*dzn*'` | Shown when Dozen and another driver are found, or the probe only worked without Dozen |
 | Performance overlay | `overlay`, `overlayPosition` | `ANYPS5_OVERLAY=1` (+ `ANYPS5_OVERLAY_POS`) | Otherwise F10 in game. Position: `tl` (default), `tr`, `bl`, `br` |
 | Advanced: PlayGo chunks | `playGoUnlistedChunks` | `APS5_PLAYGO_UNLISTED_CHUNKS` | `installed`, `absent` or empty (`null`) |
-| Advanced: extra AnyPS5 variables | `extraEnvironment` (object, sorted by name) | Each `NAME=value`, after the variables above, never replacing one | Names match `A(NY)?PS5_[A-Z0-9_]+` and are not set by PS5Kitsune; the page refuses other lines, and a hand-edited entry that breaks the rule is dropped on read. Empty by default |
+| Advanced: extra AnyPS5 variables | `extraEnvironment` (object, sorted by name) | Each `NAME=value`, after the variables above, never replacing one | Names match `A(NY)?PS5_[A-Z0-9_]+` and are not set by PS5Kitsune; the page refuses other lines, and a hand-edited entry that breaks the rule, or whose value has a line break or NUL, is dropped on read. Empty by default |
 | Keyboard and mouse bindings | none | `anyps5-input.ini` file beside the game exe | Later milestone: until then, Open folder and edit `anyps5-input.ini` |
 
 These variables only apply to the game process, never to the system. A value equal to AnyPS5's default is not passed. A value AnyPS5 would refuse (hand-edited `game.json`) is read as its default and logged; the file is not rewritten. The Settings page only offers valid values.

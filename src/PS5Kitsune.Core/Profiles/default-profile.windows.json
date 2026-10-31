@@ -112,7 +112,7 @@
         "match": "any",
         "log": [ "param\\.json not found", "failed to open param\\.json", "unexpected end of param\\.json", "malformed param\\.json", " in param\\.json" ]
       },
-      { "id": "invalid-setting", "log": [ "(?<variable>A(?:NY)?PS5_[A-Z_]+) must " ] },
+      { "id": "invalid-setting", "log": [ "(?<variable>A(?:NY)?PS5_[A-Z0-9_]+) must " ] },
       { "id": "invalid-setting", "log": [ "(?<variable>ANYPS5_SYSTEM_FONTS) is not a directory" ] },
       { "id": "invalid-setting", "log": [ "whose name contains (?<variable>ANYPS5_GPU)=" ] },
       {

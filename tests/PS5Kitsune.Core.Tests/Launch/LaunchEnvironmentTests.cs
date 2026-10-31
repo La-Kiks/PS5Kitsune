@@ -10,6 +10,10 @@ public sealed class LaunchEnvironmentTests
     private const string Fonts = @"C:\PS5Kitsune\fonts";
 
     [Fact]
+    public void Every_resolution_the_validator_accepts_has_a_video_out_size() =>
+        Assert.All(GameSettingsValidator.Resolutions, resolution => Assert.NotNull(LaunchEnvironment.ResolutionValue(resolution)));
+
+    [Fact]
     public void Default_settings_without_fonts_pass_nothing() =>
         Assert.Empty(LaunchEnvironment.For(new GameSettings(), null, null));
 

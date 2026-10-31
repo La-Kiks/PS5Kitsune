@@ -217,7 +217,7 @@
       {
         "id": "invalid-setting",
         "log": [
-          "(?<variable>A(?:NY)?PS5_[A-Z_]+) must "
+          "(?<variable>A(?:NY)?PS5_[A-Z0-9_]+) must "
         ]
       },
       {

@@ -88,6 +88,21 @@ public sealed class GameSettingsValidatorTests
         Assert.Equal(["extraEnvironment"], replaced);
     }
 
+    [Theory]
+    [InlineData("a\nb")]
+    [InlineData("a\rb")]
+    [InlineData("a\0b")]
+    public void Extra_variables_whose_value_has_a_line_break_or_nul_are_dropped(string value)
+    {
+        var (settings, replaced) = GameSettingsValidator.Normalize(new GameSettings
+        {
+            ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144", ["APS5_BAD"] = value },
+        });
+
+        Assert.Equal(new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "6144" }, settings.ExtraEnvironment);
+        Assert.Equal(["extraEnvironment"], replaced);
+    }
+
     [Fact]
     public void Valid_extra_variables_are_kept()
     {

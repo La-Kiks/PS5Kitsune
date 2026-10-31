@@ -62,7 +62,7 @@ public static class GameSettingsValidator
         }
 
         var kept = settings.ExtraEnvironment
-            .Where(variable => variable.Value is not null && ExtraVariables.Problem(variable.Key) is null)
+            .Where(variable => variable.Value is not null && variable.Value.AsSpan().IndexOfAny('\r', '\n', '\0') < 0 && ExtraVariables.Problem(variable.Key) is null)
             .ToDictionary(StringComparer.Ordinal);
         if (kept.Count != settings.ExtraEnvironment.Count)
         {

@@ -126,8 +126,6 @@ public sealed class CrashReporterTests : IDisposable
         Assert.Contains("GPU: none detected (boom)", report, StringComparison.Ordinal);
     }
 
-    public void Dispose() => _temp.Dispose();
-
     [Fact]
     public void The_settings_line_lists_the_extra_variables()
     {
@@ -135,6 +133,8 @@ public sealed class CrashReporterTests : IDisposable
 
         Assert.Contains("Settings: APS5_HOST_IMPORT_MIB=6144", report, StringComparison.Ordinal);
     }
+
+    public void Dispose() => _temp.Dispose();
 
     private sealed class FakeCpuInfo : ICpuInfo
     {
