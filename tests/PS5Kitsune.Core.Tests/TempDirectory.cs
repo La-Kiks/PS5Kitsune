@@ -18,9 +18,10 @@ internal sealed class TempDirectory : IDisposable
         {
             Directory.Delete(Path, recursive: true);
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            // Best effort: a file may still be held by the OS.
+            // Best effort: a file may still be held by the OS. On Windows a file being scanned
+            // (Defender, the indexer) can also refuse deletion with UnauthorizedAccessException.
         }
     }
 }
