@@ -1,4 +1,5 @@
 using System.Collections;
+using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
@@ -142,6 +143,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
     {
         private readonly TaskCompletionSource<int?> _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TimeSpan _stopGrace;
+        private volatile bool _stopRequested;
 
         public SpawnedGame(int processId, string logFile, DateTimeOffset startedAt, string? bootId, ulong? startTicks, TimeSpan stopGrace)
         {
@@ -151,7 +153,25 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
             LogFile = logFile;
             StartedAt = startedAt;
             _stopGrace = stopGrace;
-            new Thread(() => _exited.TrySetResult(PosixSpawn.WaitForExit(processId))) { IsBackground = true, Name = "Game exit" }.Start();
+            new Thread(() => _exited.TrySetResult(WaitAndReap(processId))) { IsBackground = true, Name = "Game exit" }.Start();
+        }
+
+        // The leader is seen exiting before it is reaped: after a Stop, its whole group is killed while the group ID cannot be reused.
+        private int WaitAndReap(int processId)
+        {
+            if (PosixSpawn.WaitForExitWithoutReaping(processId) && _stopRequested)
+            {
+                try
+                {
+                    PosixSpawn.SignalGroup(processId, PosixSpawn.SigKill);
+                }
+                catch (Win32Exception)
+                {
+                    // The reap below must not be skipped.
+                }
+            }
+
+            return PosixSpawn.WaitForExit(processId);
         }
 
         public int ProcessId { get; }
@@ -167,8 +187,16 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
         public Task<int?> WaitForExitAsync(CancellationToken cancellationToken = default) => _exited.Task.WaitAsync(cancellationToken);
 
         // Once reaped, the PID (and so the group) may belong to another process: never signal it.
-        public Task StopAsync(CancellationToken cancellationToken = default) =>
-            _exited.Task.IsCompleted ? _exited.Task : LinuxGameLauncher.StopAsync(this, _stopGrace, cancellationToken);
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            if (_exited.Task.IsCompleted)
+            {
+                return _exited.Task;
+            }
+
+            _stopRequested = true;
+            return LinuxGameLauncher.StopAsync(this, _stopGrace, cancellationToken);
+        }
 
         // The waiting thread keeps running: it reaps the game whenever it exits. Nothing else to release.
         public void Dispose()

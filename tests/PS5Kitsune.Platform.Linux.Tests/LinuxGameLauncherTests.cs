@@ -119,6 +119,68 @@ public sealed class LinuxGameLauncherTests : IDisposable
         Assert.Equal(128 + 9, await ExitOf(game));
     }
 
+    private static int ChildPid(string log) =>
+        int.Parse(log.Split('\n').First(line => line.StartsWith("child ", StringComparison.Ordinal))["child ".Length..].Trim(), System.Globalization.CultureInfo.InvariantCulture);
+
+    private static async Task<bool> GoneAsync(int pid)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (ProcStat.Read(pid) is null or { State: 'Z' })
+            {
+                return true;
+            }
+
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+        }
+
+        return false;
+    }
+
+    [Fact]
+    public async Task Stop_kills_a_child_that_outlives_the_leader()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        // The leader exits on SIGTERM; its child ignores it (an ignored signal stays ignored across exec).
+        using var game = Shell("(trap '' TERM; echo ready; exec sleep 30) & echo \"child $!\"; wait");
+        await LogContains(game, "ready");
+        await LogContains(game, "child ");
+        var child = ChildPid(await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken));
+
+        await game.StopAsync(TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        Assert.True(await GoneAsync(child), "The child survived Stop.");
+    }
+
+    [Fact]
+    public async Task A_game_that_exits_on_its_own_leaves_its_group_alone()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "Linux only.");
+        using var game = Shell("(trap '' TERM; echo ready; exec sleep 30) & echo \"child $!\"");
+        await LogContains(game, "ready");
+        await LogContains(game, "child ");
+        var child = ChildPid(await File.ReadAllTextAsync(game.LogFile, TestContext.Current.CancellationToken));
+        try
+        {
+            Assert.Equal(0, await ExitOf(game));
+
+            Assert.Equal('S', ProcStat.Read(child)?.State);
+        }
+        finally
+        {
+            try
+            {
+                using var leftover = System.Diagnostics.Process.GetProcessById(child);
+                leftover.Kill();
+            }
+            catch (ArgumentException)
+            {
+                // Already gone.
+            }
+        }
+    }
+
     [Fact]
     public async Task Attach_finds_a_running_game_and_follows_it_until_it_exits()
     {
