@@ -35,7 +35,7 @@ The AppImage is read-only; settings and data stay where 8a put them (`~/.config/
 
 ### CI
 
-- **Ubuntu job:** the "Publish the Linux CLI" step is replaced by `packaging/linux/build-appimage.sh 0.0.0-ci.<run number>+<short sha>`, then:
+- **Ubuntu job:** the "Publish the Linux CLI" step is replaced by `packaging/linux/build-appimage.sh 0.0.0-ci.<run number>` (no `+sha`: the SDK appends its own source revision to the `--version` output), then:
   - `./PS5Kitsune-*.AppImage --appimage-extract-and-run --version` must print that version (the runner has no FUSE; this goes through `AppRun` to the CLI);
   - the extracted `usr/bin` must hold both `PS5Kitsune` and `ps5kitsune`;
   - the AppImage is uploaded as an artifact.
@@ -47,15 +47,15 @@ A Linux section: download the AppImage artifact from a CI run, `chmod +x`, run i
 
 ## The app on Linux
 
-The App project keeps no OS check: every difference below comes from `IPlatform`, `ILavapipe` or the profile.
+The App project keeps no OS check: every difference below comes from `IPlatform`, `IAnyPS5Installer`, `ILavapipe` or the profile.
 
-- **Build card on Mode.** A new `IPlatform.BuildUnavailableReason` (`string?`): null on Windows, "Build mode is not available on Linux yet." on Linux. When it is set, the build card shows it instead of "This profile does not define a build." The CLI's refusal of `install --mode build` and `use build` uses the same text. `CanBuild` is already false on Linux (the Linux profile has no build section), so the Tools screen stays unreachable.
-- **Lavapipe wording.** `ILavapipe` gains `string HowToGet`:
+- **Build card on Mode.** A new `IAnyPS5Installer.BuildUnavailableReason` (not an `IPlatform` member: the installer already knows the profile's OS and owns the CLI's refusal text): "Build mode is not available on Linux yet." on Linux, "This profile does not define a build." otherwise. The build card shows it. The CLI's refusal of `install --mode build` and `use build` uses the same text. `CanBuild` is already false on Linux (the Linux profile has no build section), so the Tools screen stays unreachable.
+- **Lavapipe wording.** `ILavapipe` gains two texts, `HowToGet` (a sentence) and `WhenMissing` (what to do now). A text that can end in a shell command goes last in its sentence and gets no trailing period. `HowToGet`:
   - Windows: "Mesa (~70 MB) is downloaded on the first launch."
   - Linux: "Uses the system's Mesa (Lavapipe). If it is missing, install it with: `<command>`", the command from 8a's per-distribution packages.
 
   It replaces the fixed texts in the Settings page help, `GamePlayer`'s "Launch again to download it.", the `settings` command's `VK_DRIVER_FILES= (downloaded on first launch)`, and the diagnosis message after Turn on CPU rendering.
-- **Dozen.** On Linux, the Dozen check shows "Not applicable on this system." (in `check` and on the Check page), like the commit limit, and the Settings page hides "Disable Dozen" through the existing `ShowDisableDozen`.
+- **Dozen.** `SystemFacts.Os`, filled from `IPlatform.Os`, tells the check where it runs. On Linux, the Dozen check shows "Not applicable on this system." (in `check` and on the Check page), like the commit limit, and the Settings page hides "Disable Dozen" through the existing `ShowDisableDozen`.
 - **Diagnosis fixes.** Page file settings and NVIDIA drivers are only offered by Windows profile rules: no change. Open folder and View last log use `xdg-open`, already in `LinuxPlatform.OpenPath`.
 - **Pickers, drag and drop, window.** Avalonia's own: the folder and zip pickers (desktop portal) and drag and drop (X11 and Wayland) are checked in the criterion run, with no code planned. The `.desktop` file's `StartupWMClass` matches the window class so the dock shows the PS5Kitsune icon.
 
@@ -71,7 +71,7 @@ The App project keeps no OS check: every difference below comes from `IPlatform`
 ### Linux exit codes
 
 - The Linux launcher keeps returning the exit status, or 128 + the signal that ended the game.
-- `IPlatform.DescribeExitCode(int code)`:
+- `ExitCodes.Describe(uint code)` in Core (`PS5Kitsune.Core.Diagnostics`), not an `IPlatform` member: `ExitLines`, `DiagnosisTexts` and `CrashReporter` are static or platform-free, and an exit code always comes from the OS PS5Kitsune runs on:
   - Windows: `0xC0000005` (the existing hex form);
   - Linux: `1`, or `139 (signal 11, SIGSEGV)` for a code above 128 that matches a known signal.
 - The exit line keeps its decimal code first, so `Parse` and older logs keep working: `exited with code {code} ({DescribeExitCode})` on Windows as today, `exited with code 139 (signal 11, SIGSEGV)` on Linux, and `exited with code 1` when the description is the number itself.
@@ -99,7 +99,7 @@ The App project keeps no OS check: every difference below comes from `IPlatform`
 ## Tests
 
 - **Core:** `ExitLines` (unknown line; parsing old lines, new lines and the unknown line); diagnosis with a null code (exit-code rules skipped, log rules applied); `RunningGame` schema 1 and 2 round-trips.
-- **Platforms:** `DescribeExitCode` on Windows and Linux (0, 1, 139, 137, a code above 128 that is no signal); `BuildUnavailableReason`; `HowToGet` on both; the Linux Dozen check.
+- **Platforms:** `ExitCodes.Describe` on Windows and Linux (0, 1, 139, 137, a code above 128 that is no signal); `BuildUnavailableReason` (installer); `HowToGet` and `WhenMissing` on both; the Linux Dozen check.
 - **App:** the Mode build card's text from the platform; the Settings Lavapipe help from `ILavapipe`; the Game page's "exited." line for a null code.
 - **Linux launcher, with real processes** (WSL and ubuntu-latest): Stop kills a child that ignores `SIGTERM` after the leader exits on it; a natural exit leaves such a child running (then the test kills it); `Attach` with `boot_id` and ticks matching, with another `boot_id`, with other ticks; a reattached game's exit reported as null.
 - **Packaging:** the CI checks in [CI](#ci). Opening the window is left to the criterion.

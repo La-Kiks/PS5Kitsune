@@ -44,7 +44,7 @@ The stack is .NET LTS + Avalonia with MVVM, published as a self-contained execut
 | Downloads | `HttpClient` + GitHub REST API | Releases, WinLibs, MinGit, Python, Mesa; resume, progress, SHA-256 check |
 | Archives | `System.IO.Compression` (zip) + SharpCompress (7z) | Mesa for Windows ships as `.7z`: only Lavapipe's manifest and driver are extracted, with SharpCompress's sequential reader; Linux uses a zip too (`prx-linux-<version>.zip`), extracted with the same zip code |
 | Tests | xUnit + fake test folders | Validate detection and folder validation without a real game |
-| Publishing | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true` | A single `.exe` (~80–100 MB), no .NET to install; Avalonia's native libraries are included |
+| Publishing | `dotnet publish -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true` | A single `.exe` (~80–100 MB), no .NET to install; Avalonia's native libraries are included. Linux: an AppImage holding the app and the CLI (`packaging/linux/build-appimage.sh`) |
 
 **Administrator rights:** never required. The page file is never changed automatically: the app explains and opens the right settings panel.
 
@@ -283,7 +283,7 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 - Working directory = game folder. The game looks up its files relative to it and creates `data\`, `download0\` and `_trophy\` there; this is the easiest mistake to make by hand.
 - Stdout and stderr are **written directly to** `<game>\.ps5kitsune\logs\<date-time>.log`: the launcher opens the file and the game inherits its handle. Nothing goes through pipes: the game is neither slowed by very verbose output nor crashed if the launcher closes. The UI follows the log by reading the file (*tail*). The last 10 logs are kept.
 - No console window (`CreateNoWindow`), Stop button during play, exit code shown at the end.
-- Closing the launcher during a game **does not kill the game**: the game is never in a kill-on-close Job Object. A launch records the game in `.ps5kitsune\running.json` (PID, process creation time, executable, log file); on reopening, the launcher opens the process again and checks its start time and executable, so a PID reused by another process is never taken for the game. A record whose process is gone is deleted. One game runs at a time from the app.
+- Closing the launcher during a game **does not kill the game**: the game is never in a kill-on-close Job Object. A launch records the game in `.ps5kitsune\running.json` (PID, process creation time, executable, log file; schema 2 adds `bootId` and `startTicks` on Linux, see Linux compatibility); on reopening, the launcher opens the process again and checks its start time and executable, so a PID reused by another process is never taken for the game. A record whose process is gone is deleted. One game runs at a time from the app.
 - The tools PS5Kitsune runs (git, CMake, Ninja, Python, the relinker) are in a kill-on-close Job Object: killing PS5Kitsune, even from the Task Manager, ends them.
 - Every action that changes a game folder (Reconvert, a launch until it is recorded, Remove, Clear shader cache, the restore of an interrupted Reconvert) holds `.ps5kitsune\game.lock`, retried for about 250 ms. A running game refuses Reconvert, Remove and Clear shader cache.
 - The game gets its settings as environment variables (see "Per-game settings") on top of the launcher's own environment.
@@ -330,7 +330,7 @@ The launcher searches the log and error output for known patterns, then shows an
 
 Rules live in the profile's `diagnostics` section (`reportUrl`, `rules`: `id`, `log` regexes, `exitCodes`, `match` `all`/`any`, `captures`); the first rule met, in profile order, wins. An id the app does not know is skipped with a warning; an invalid rule makes the profile invalid.
 
-After the exit it watched, the Game page or `run` appends `[ps5kitsune] exited with code N (0x…)` to the launch's log (`stopped by the user` after Stop, which is never diagnosed). A zero exit code returns null without searching the log (no AnyPS5 error in the table exits with 0). With no match, a non-zero exit is `unexplained` and offers Report.
+After the exit it watched, the Game page or `run` appends `[ps5kitsune] exited with code N (0x…)` to the launch's log (on Linux `exited with code 139 (signal 11, SIGSEGV)`; `exited (exit code unknown)` for a game found again after a restart) (`stopped by the user` after Stop, which is never diagnosed). A zero exit code returns null without searching the log (no AnyPS5 error in the table exits with 0). With no match, a non-zero exit is `unexplained` and offers Report.
 
 Report copies a text (PC, AnyPS5, game, settings, exit, matched line, last 30 log lines, log path) and opens the Game bring-up Discussions; nothing is sent. `ps5kitsune diagnose <titleId> [--report]` does the same from the game's newest log.
 
@@ -351,7 +351,7 @@ Linux is a good second OS: AnyPS5 is at home there. The relinker produces a Linu
 | Python | Portable embeddable Python | System `python3`, found on `PATH` |
 | Lavapipe | Downloaded Mesa | System Mesa (`lvp_icd*.json` in `/usr/share/vulkan/icd.d` or `/etc/vulkan/icd.d`); nothing downloaded |
 | Memory | Commit limit check | No commit limit ("Not applicable on this system."); instead, read-write access to `/dev/udmabuf`: a Warning check (never blocking), skipped when every GPU uses NVIDIA's proprietary driver; if denied, the fix is `sudo usermod -aG kvm $USER` then logging in again |
-| Launch | Inherited handles, breakaway from the parent job, exit detected by handle | `posix_spawn` in its own session. `running.json` identifies the game by its executable, compared after resolving symlinks, and its start time, compared with a 5-second tolerance. A game found again after the launcher restarted is not its child, so its exit code is unknown (-1) |
+| Launch | Inherited handles, breakaway from the parent job, exit detected by handle | `posix_spawn` in its own session. `running.json` identifies the game by its executable, compared after resolving symlinks, and its identity. A record written on Linux (`running.json` schema 2) holds the boot ID (`/proc/sys/kernel/random/boot_id`) and the process's start ticks (`/proc/<pid>/stat` field 22), which are compared exactly, so a stepped clock cannot lose the game. The start time with a 5-second tolerance is only the fallback for a record without them (schema 1). A game found again after the launcher restarted is not its child, so its exit code is unknown: the app and `run` say it exited, with no code. Stop sends SIGTERM to the game's process group, then SIGKILL after the grace period; once the leader has exited after a Stop, the whole group gets SIGKILL before the leader is reaped (`waitid` with `WNOWAIT` sees the exit without freeing the PID). A game that exits on its own leaves its group alone |
 | Display | Not applicable | `SDL_VIDEODRIVER` if a game needs it; SDL picks Wayland, then X11, and the game inherits the environment |
 | Desktop shortcut | `.lnk` (optional) | The relinker already writes a `.desktop` file and an icon when `icon0.png` exists |
 
@@ -554,6 +554,7 @@ The order follows "end to end first, screens second": each milestone ends with a
 8. **Linux**, in two parts. Build mode on Linux comes later (see `TODO.md`).
    - **8a — The CLI on Linux, release mode.** `Platform` picks the OS at startup; `Platform.Linux`: XDG paths, per-distribution package commands, system Python and Lavapipe, the posix_spawn launcher, the Python and `/dev/udmabuf` checks; one profile per OS (schema 2). Spec: [milestone 8a](superpowers/specs/2026-10-30-milestone-8a-linux-cli-design.md).
      - Criterion: the CLI path in WSL Ubuntu (DOOM added with the Windows verdict), then DOOM played on a real Ubuntu install. Met on 2026-10-31 on Ubuntu 26.04 (Ryzen 7 7730U, RADV) with AnyPS5 `v0.1.4`: `check`, `install`, `add`, `reconvert`, then DOOM played from `run`.
-   - **8b — The app on Linux.** The Avalonia app on Linux and `linux-x64` packaging.
+   - **8b — The app on Linux.** The Avalonia app on Linux, shipped with the CLI as one AppImage built in CI; Linux exit codes, a clock-proof running-game identity and a process-group Stop. Spec: [milestone 8b](superpowers/specs/2026-10-31-milestone-8b-linux-app-design.md).
+     - Criterion: the AppImage rehearsed in WSLg, then DOOM installed, added and played from the app on a real Ubuntu install.
 
 From milestone 2 the tool is usable from the command line; milestone 4 gives a first graphical installer with no C++ build on the user's side.

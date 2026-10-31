@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. Windows was re-checked on v0.1.4: release plays and quits cleanly; build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8b, the app on Linux shipped as one AppImage with the CLI, is implemented and awaits its run on a real Ubuntu install; milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. Windows was re-checked on v0.1.4: release plays and quits cleanly; build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [TODO.md](TODO.md)). The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -62,6 +62,8 @@ chmod +x PS5Kitsune-*-x86_64.AppImage
 ```
 
 If it does not start because FUSE is missing, add `--appimage-extract-and-run` before the other arguments. To add it to your app menu, open it with Gear Lever or AppImageLauncher.
+
+The app needs the X11 session libraries `libsm6` and `libice6`. Desktop Ubuntu has them; on a minimal install, run `sudo apt install libsm6 libice6`. Avalonia 12.1.4 loads them at startup even with session management off.
 
 To run it from source instead, install the .NET 10 SDK (for example with Microsoft's `dotnet-install.sh --channel 10.0`), clone the repository, then:
 
