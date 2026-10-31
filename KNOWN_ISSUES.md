@@ -2,14 +2,6 @@
 
 Problems you may hit with PS5Kitsune, and how to get around them. To report a new one, open an [issue](https://github.com/La-Kiks/PS5Kitsune/issues) with the text `ps5kitsune diagnose <title ID> --report` prints (Report on the Game page in the app).
 
-## Adding a game fails with "Ambiguous guest dependency name"
-
-Some dumps ship backups next to the real files, such as `eboot.bin.esbak` or `sce_module/libc.prx.esbak` (seen with Demon's Souls, PPSA01342). The relinker matches module names loosely, so a backup and its original both answer to the same dependency name, and conversion fails with `Ambiguous guest dependency name: libc.prx`.
-
-**Workaround:** move every `.esbak` file (and any other copy named like `eboot.bin.*` or `*.prx.*`) out of the game folder, then add the game again.
-
-**Planned fix:** the validation step finds these files across the whole game folder, leaves them out of the `app0` copy, keeps them under `.ps5kitsune\`, and lists them on the summary screen.
-
 ## Build mode on Windows: DOOM crashes at the quit prompt
 
 With AnyPS5 built from `7fcab08` (v0.1.4) on Windows, DOOM plays, but choosing Quit ends it with `0xC0000005` before the confirm screen shows: a string function in `ucrtbase.dll` reads a bad address while DOOM writes the quit message. The release download of the same tag shows the confirm screen and exits with 0, on Windows and on Linux. It is an AnyPS5 issue (the locally built libraries), seen on 2026-10-31.
