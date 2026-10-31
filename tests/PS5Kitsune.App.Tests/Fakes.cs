@@ -91,6 +91,8 @@ internal sealed class FakeInstaller(params string[] stepNames) : IAnyPS5Installe
 
     public bool Supports(AnyPS5Mode mode) => mode == AnyPS5Mode.Release || BuildSupported;
 
+    public string BuildUnavailableReason { get; set; } = "This profile does not define a build.";
+
     public AnyPS5Mode? InstalledMode { get; private set; }
 
     /// <summary>When set, ReadRecord() blocks on it (at most 5 s, so a broken test cannot hang): the library read stays pending.</summary>

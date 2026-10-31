@@ -37,6 +37,9 @@ public sealed record SystemFacts
     /// <summary>See <see cref="IPlatform.VulkanInstallAction"/>.</summary>
     public string VulkanInstallAction { get; init; } = "Install or update the graphics driver from your GPU maker's website (AMD, Intel or NVIDIA).";
 
+    /// <summary>The <see cref="ProfileOs"/> value of the OS the checks run on.</summary>
+    public string Os { get; init; } = ProfileOs.Windows;
+
     /// <summary>The platform's default data root, suggested when the data root is unusable.</summary>
     public string DefaultDataRoot { get; init; } = @"C:\PS5Kitsune";
 }

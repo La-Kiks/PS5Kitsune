@@ -24,6 +24,7 @@ public sealed class SystemFactsCollector(IPlatform platform, ICpuInfo cpu, IVulk
         VulkanLoaderName = platform.VulkanLoaderName,
         VulkanInstallAction = platform.VulkanInstallAction,
         DefaultDataRoot = platform.DefaultDataRoot,
+        Os = platform.Os,
     };
 
     // The data root may not exist yet: the filesystem of its nearest existing folder is what matters. On Linux that is not

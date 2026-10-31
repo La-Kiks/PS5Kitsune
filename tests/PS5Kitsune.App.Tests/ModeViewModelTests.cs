@@ -19,6 +19,14 @@ public sealed class ModeViewModelTests
     private ModeViewModel Create(AnyPS5Profile? profile = null) => new(profile ?? BuildProfile, _installer, _navigator, new FakePages());
 
     [Fact]
+    public void The_build_card_shows_the_installer_reason()
+    {
+        _installer.BuildUnavailableReason = "Build mode is not available on Linux yet.";
+
+        Assert.Equal("Build mode is not available on Linux yet.", Create().BuildUnavailableText);
+    }
+
+    [Fact]
     public void Describes_the_release()
     {
         var viewModel = Create();
