@@ -44,7 +44,7 @@ PS5Kitsune:
 ### Extra variables
 
 - A multi-line box in the page's "Advanced" section, labelled "Extra AnyPS5 variables", one `NAME=value` per line, with the help text: "For AnyPS5 options PS5Kitsune has no setting for. One NAME=value per line; names start with APS5_ or ANYPS5_."
-- Reading the box: each line is trimmed; blank lines are skipped; the line splits at its first `=`; the name is trimmed, the value is kept as written after trimming the line. An empty value is allowed (`NAME=`).
+- Reading the box: each line is trimmed; blank lines are skipped; the line splits at its first `=`; the name and the value are trimmed. An empty value is allowed (`NAME=`).
 - Errors, checked as the user types and shown under the box as `Line N: …`; Save is disabled while there is one:
   - no `=`: "Line 3: write NAME=value.";
   - a name that does not match `^A(NY)?PS5_[A-Z0-9_]+$`: "Line 3: the name must start with APS5_ or ANYPS5_ and use only capital letters, digits and _.";
@@ -57,9 +57,9 @@ PS5Kitsune:
   ```
 
   A file without the field reads as empty. When the file is read, entries whose name breaks the rules above are dropped and `extraEnvironment` is reported as normalized, like the other fields.
-- The page shows the saved variables sorted by name. Reset empties the box with the other settings.
+- The page shows the saved variables sorted by name. Reset empties the box with the other settings. The Advanced section opens by itself when the saved settings have extra variables or a PlayGo value.
 - At launch they are added after PS5Kitsune's own variables. As none is reserved, nothing is overridden.
-- The game's log gets one line before AnyPS5's output when there are any: `[ps5kitsune] extra environment: APS5_HOST_IMPORT_MIB=6144`, the names sorted, separated by `, `.
+- The bug report (`ps5kitsune diagnose <title ID> --report`, Report in the app) lists them on its `Settings:` line, which already shows every variable a launch passes. No line is added to the game's log: the platform launchers open that file, and AnyPS5 writes to it from its first instruction.
 - When AnyPS5 refuses one of them (the same `invalid-setting` rule), the diagnosis says "APS5_HOST_IMPORT_MIB has a value AnyPS5 refuses." and offers "Remove APS5_HOST_IMPORT_MIB", which saves the settings without it.
 - `ps5kitsune settings <title ID>` shows a "Resolution" line and an "Extra variables" line (their count, or "none"); the variables themselves appear under "Environment at launch" like the others.
 
@@ -79,31 +79,31 @@ PS5Kitsune:
   - `OutputResolution = "APS5_OUTPUT_RESOLUTION"` and the mapping `1080p` → `1920x1080`, `2160p` → `3840x2160`.
   - `ReservedNames`: every variable `For` can set (`ANYPS5_GPU`, `VK_DRIVER_FILES`, `ANYPS5_LANGUAGE`, `ANYPS5_PRESENT_MODE`, `VK_LOADER_DRIVERS_DISABLE`, `ANYPS5_OVERLAY`, `ANYPS5_OVERLAY_POS`, `APS5_PLAYGO_UNLISTED_CHUNKS`, `ANYPS5_SYSTEM_FONTS`, `APS5_OUTPUT_RESOLUTION`).
   - `For`: emits `APS5_OUTPUT_RESOLUTION` when `Resolution` is set, then each extra variable.
-- **New `Launch/ExtraEnvironment.cs`** (static):
-  - `ExtraEnvironmentParse Parse(string text)`: the variables and a list of `ExtraEnvironmentError(int Line, string Message)`, with the rules and texts above.
+- **New `Launch/ExtraVariables.cs`** (static; not named `ExtraEnvironment`, which is the settings property):
+  - `ExtraVariablesParse Parse(string? text)`: the variables and a list of `ExtraVariableError(int Line, string Message)`, with the rules and texts above.
   - `string Format(IReadOnlyDictionary<string, string> variables)`: `NAME=value` lines sorted by name, joined with `\n`.
   - `string? Problem(string name)`: why a name is not allowed, or null. Used by `Parse` and by `Normalize`.
 - **`Diagnostics/SettingVariables.cs`:** `new("APS5_OUTPUT_RESOLUTION", "resolution", settings => settings with { Resolution = Defaults.Resolution })`.
 - **`Diagnostics/DiagnosisTexts.cs`:** new `DiagnosisAction.RemoveExtraVariable`; when the refused variable is a key of `settings.ExtraEnvironment` (ignoring case), the button is "Remove NAME".
 - **`Launch/GameSettingsReport.cs`:** the "Resolution" (`match the display`, `1080p` or `4K`) and "Extra variables" lines, after "PlayGo unlisted chunks".
-- **`Library/GamePlayer.cs`:** writes the `[ps5kitsune] extra environment: …` line to the new log before starting the game.
+- **`Diagnostics/CrashReporter.cs`:** unchanged; its `Settings:` line comes from `LaunchEnvironment.For`.
 
 ### App
 
-- **`GameSettingsViewModel`:** `Resolutions` (labels "Match the display", "1080p", "4K"), `SelectedResolution`, `ExtraEnvironmentText` (two-way), `ExtraEnvironmentErrors` (refreshed on each change); `SaveCommand` can run only with no errors; Save writes the parsed variables; Reset and load fill the text with `ExtraEnvironment.Format`.
-- **`GameSettingsView.axaml`:** the Resolution box after Vertical sync; in Advanced, after PlayGo, a `TextBox` with `AcceptsReturn="True"`, a monospace font, about 4 lines high, its label and help, and the errors in the `error` style with `AutomationProperties.LiveSetting="Polite"`.
+- **`GameSettingsViewModel`:** `Resolutions` (labels "Match the display", "1080p", "4K"), `SelectedResolution`, `ExtraEnvironmentText` (two-way), `ExtraEnvironmentErrors` (`string?`, the error lines joined, refreshed on each change), `IsAdvancedOpen`; `SaveCommand` can run only with no errors; Save writes the parsed variables; Reset and load fill the text with `ExtraVariables.Format`; leaving with an error in the box counts as unsaved changes.
+- **`GameSettingsView.axaml`:** the Resolution box after Vertical sync; the Advanced expander bound to `IsAdvancedOpen`; in Advanced, after PlayGo, a `TextBox` with `AcceptsReturn="True"`, a monospace font, about 4 lines high, its label and help, and the errors in the `error` style with `AutomationProperties.LiveSetting="Polite"`.
 - **`DiagnosisViewModel`:** `RemoveExtraVariable` saves the settings without the captured name, as `ResetSetting` does for a setting.
 
 ## Tests
 
-- **`ExtraEnvironment`** (Core.Tests): valid lines; blank lines and spaces; a value containing `=`; an empty value; each error with its line number and text; a lower-case name is refused; `Format` sorted, and `Parse(Format(x))` gives `x`.
+- **`ExtraVariables`** (Core.Tests): valid lines; blank lines and spaces; a value containing `=`; an empty value; each error with its line number and text; a lower-case name is refused; `Format` sorted, and `Parse(Format(x))` gives `x`.
 - **`GameSettingsValidator`:** an unknown resolution becomes null; a bad and a reserved extra name are dropped; the `replaced` names.
 - **`LaunchEnvironment`:** default settings still give no variables; each resolution gives its value; extra variables are added; `ReservedNames` contains every name `For` emits (checked by turning every setting on).
 - **`game.json`:** a file without the new fields loads with null and empty; both round-trip; the dictionary is written sorted.
 - **`GameSettings` equality:** the same variables in another order are equal; a different value is not; equal settings have equal hash codes.
 - **Diagnosis:** a refused `APS5_OUTPUT_RESOLUTION` offers "Reset resolution"; a refused extra variable offers "Remove NAME"; one that is in neither keeps no action.
 - **`GameSettingsReport`:** the two new lines, and the variables under "Environment at launch".
-- **`GamePlayer`:** the log line with extra variables, and none without.
+- **`CrashReporter`:** the `Settings:` line lists an extra variable.
 - **App.Tests:** an error disables Save and lists the line; fixing it enables Save; saving writes the variables and the resolution; Reset clears both; the diagnosis action removes only that name.
 - **Visual:** headless screenshots of the Settings page with Advanced open and one error, light and dark, attached to the PR.
 
@@ -111,5 +111,5 @@ PS5Kitsune:
 
 1. Unit tests pass on Windows and Linux CI.
 2. Manual, Windows: Demon's Souls with "1080p" logs `guest 1920x1080`; with "Match the display" on a 4K screen it logs `guest 3840x2160` as before.
-3. Manual: `APS5_HOST_IMPORT_MIB=6144` in the box is in the game's log line and AnyPS5's budget line names it; a typo such as `APS5-HOST=1` shows the error and cannot be saved.
+3. Manual: with `APS5_HOST_IMPORT_MIB=6144` in the box, the bug report's `Settings:` line lists it and AnyPS5's budget line names it; a typo such as `APS5-HOST=1` shows the error and cannot be saved.
 4. The report's "Result of the workaround" line is filled in with the FPS seen at 1080p.
