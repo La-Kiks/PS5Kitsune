@@ -24,13 +24,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly Func<ILogger>? _loggerSource;
     private INotifyPropertyChanged? _watched;
 
-    public MainWindowViewModel(Navigator navigator, IDialogService dialogs, IPages pages, ThemeService theme, Func<ILogger>? loggerSource = null)
+    public MainWindowViewModel(Navigator navigator, IDialogService dialogs, IPages pages, ThemeService theme, Func<ILogger>? loggerSource = null, UpdateNoticeViewModel? updateNotice = null)
     {
         Navigator = navigator;
         _dialogs = dialogs;
         _pages = pages;
         _theme = theme;
         _loggerSource = loggerSource;
+        UpdateNotice = updateNotice ?? new UpdateNoticeViewModel(_ => { });
         navigator.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(Navigator.CurrentPage))
@@ -42,6 +43,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public Navigator Navigator { get; }
+
+    /// <summary>The sidebar's update notice; usable while the page runs work, since it only opens the browser.</summary>
+    public UpdateNoticeViewModel UpdateNotice { get; }
 
     /// <summary>The page runs work the sidebar must not interrupt: an install, an add, a reconvert, reading a game, a launch's downloads, or a page going back on its own.</summary>
     public bool IsBusy => Navigator.CurrentPage is IRunningWork { IsRunning: true } or GameViewModel { IsPreparing: true } or IBusyPage { IsLeaving: true };

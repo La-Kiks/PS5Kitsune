@@ -70,14 +70,23 @@
                   ToolTip.Tip="{Binding NavTip}" AutomationProperties.ItemStatus="{Binding LibraryItemStatus}" />
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
-                    c:ArrowSelection.IsEnabled="True">
-          <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="◐" Padding="10,4"
-                       IsChecked="{Binding IsSystemTheme}" ToolTip.Tip="System theme" AutomationProperties.Name="System theme" />
-          <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="☀" Padding="10,4"
-                       IsChecked="{Binding IsLightTheme}" ToolTip.Tip="Light theme" AutomationProperties.Name="Light theme" />
-          <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="☾" Padding="10,4"
-                       IsChecked="{Binding IsDarkTheme}" ToolTip.Tip="Dark theme" AutomationProperties.Name="Dark theme" />
+        <StackPanel Grid.Row="2" Spacing="16">
+          <StackPanel Spacing="4" Margin="4,0" IsVisible="{Binding UpdateNotice.HasUpdate}">
+            <TextBlock Text="Update available" Classes="caption" />
+            <TextBlock Text="{Binding UpdateNotice.Text}" TextWrapping="Wrap" />
+            <Button Classes="accent" Content="Download" Command="{Binding UpdateNotice.OpenCommand}" HorizontalAlignment="Left"
+                    AutomationProperties.Name="{Binding UpdateNotice.ButtonName}" ToolTip.Tip="Opens the release page in your browser" />
+          </StackPanel>
+
+          <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center"
+                      c:ArrowSelection.IsEnabled="True">
+            <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="◐" Padding="10,4"
+                         IsChecked="{Binding IsSystemTheme}" ToolTip.Tip="System theme" AutomationProperties.Name="System theme" />
+            <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="☀" Padding="10,4"
+                         IsChecked="{Binding IsLightTheme}" ToolTip.Tip="Light theme" AutomationProperties.Name="Light theme" />
+            <RadioButton GroupName="Theme" Theme="{StaticResource {x:Type ToggleButton}}" Content="☾" Padding="10,4"
+                         IsChecked="{Binding IsDarkTheme}" ToolTip.Tip="Dark theme" AutomationProperties.Name="Dark theme" />
+          </StackPanel>
         </StackPanel>
       </Grid>
     </Border>

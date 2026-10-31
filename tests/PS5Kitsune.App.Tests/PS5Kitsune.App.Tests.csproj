@@ -23,6 +23,7 @@
     <Compile Include="..\PS5Kitsune.Core.Tests\Fakes\FakeGameLauncher.cs" Link="FakeGameLauncher.cs" />
     <Compile Include="..\PS5Kitsune.Core.Tests\Fakes\FakeLaunchTools.cs" Link="FakeLaunchTools.cs" />
     <Compile Include="..\PS5Kitsune.Core.Tests\Fakes\FakeVulkanProbeRunner.cs" Link="FakeVulkanProbeRunner.cs" />
+    <Compile Include="..\PS5Kitsune.Core.Tests\Fakes\StubHttpHandler.cs" Link="StubHttpHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

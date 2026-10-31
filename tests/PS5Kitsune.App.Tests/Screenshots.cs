@@ -62,6 +62,34 @@ public sealed class Screenshots(HeadlessSession session)
                     });
                 }
             }
+
+            foreach (var variant in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+            {
+                await session.RunAsync(() =>
+                {
+                    Application.Current!.RequestedThemeVariant = variant;
+                    var notice = new UpdateNoticeViewModel(_ => { })
+                    {
+                        Update = new PS5Kitsune.Core.Updates.UpdateInfo(new PS5Kitsune.Core.Updates.AppVersion(0, 2, 0, false), new Uri("https://github.com/La-Kiks/PS5Kitsune/releases/tag/v0.2.0")),
+                    };
+                    var window = new MainWindow
+                    {
+                        DataContext = new MainWindowViewModel(new Navigator(), new FakeDialogs(), new FakePages(), new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { }), updateNotice: notice),
+                        Width = 860,
+                        Height = 680,
+                    };
+                    try
+                    {
+                        window.Show();
+                        Dispatcher.UIThread.RunJobs();
+                        window.CaptureRenderedFrame()!.Save(Path.Combine(folder, $"update-notice-{variant.Key}.png"), new PngBitmapEncoderOptions());
+                    }
+                    finally
+                    {
+                        window.Close();
+                    }
+                });
+            }
         }
         finally
         {
