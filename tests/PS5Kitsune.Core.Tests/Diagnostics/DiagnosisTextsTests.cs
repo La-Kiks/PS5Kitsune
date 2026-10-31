@@ -72,6 +72,28 @@ public sealed class DiagnosisTextsTests
     }
 
     [Fact]
+    public void A_refused_extra_variable_offers_to_remove_it()
+    {
+        var settings = new GameSettings { ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "lots" } };
+
+        var text = DiagnosisTexts.For(Of(DiagnosisIds.InvalidSetting, "variable", "APS5_HOST_IMPORT_MIB"), settings);
+
+        Assert.Equal("A setting has a value AnyPS5 refuses", text.Title);
+        Assert.Equal("APS5_HOST_IMPORT_MIB has a value AnyPS5 refuses.", text.Explanation);
+        Assert.Equal(DiagnosisAction.RemoveExtraVariable, text.Action);
+        Assert.Equal("Remove APS5_HOST_IMPORT_MIB", text.ActionText);
+    }
+
+    [Fact]
+    public void A_refused_variable_that_nothing_sets_has_no_action()
+    {
+        var text = DiagnosisTexts.For(Of(DiagnosisIds.InvalidSetting, "variable", "APS5_UNKNOWN"), new GameSettings());
+
+        Assert.Equal(DiagnosisAction.None, text.Action);
+        Assert.Null(text.ActionText);
+    }
+
+    [Fact]
     public void With_cpu_rendering_on_a_missing_llvmpipe_device_offers_to_turn_it_off()
     {
         var text = DiagnosisTexts.For(Of(DiagnosisIds.InvalidSetting, "variable", "anyps5_gpu"), new GameSettings { Lavapipe = true });
@@ -125,6 +147,22 @@ public sealed class DiagnosisTextsTests
                 "A library could not load: libSceAudioOut.prx needs a DLL that is missing from the game's libs folder or from Windows.",
                 "Line 2: the line",
                 "Fix: launch DOOM from the app; when it stops, choose Repair libs.",
+            ],
+            lines);
+    }
+
+    [Fact]
+    public void The_cli_fix_for_a_refused_extra_variable_names_the_remove_button()
+    {
+        var settings = new GameSettings { ExtraEnvironment = new Dictionary<string, string> { ["APS5_HOST_IMPORT_MIB"] = "lots" } };
+
+        var lines = DiagnosisTexts.Lines(Of(DiagnosisIds.InvalidSetting, "variable", "APS5_HOST_IMPORT_MIB"), settings, "DOOM", "PPSA99666");
+
+        Assert.Equal(
+            [
+                "A setting has a value AnyPS5 refuses: APS5_HOST_IMPORT_MIB has a value AnyPS5 refuses.",
+                "Line 2: the line",
+                "Fix: launch DOOM from the app; when it stops, choose Remove APS5_HOST_IMPORT_MIB.",
             ],
             lines);
     }
