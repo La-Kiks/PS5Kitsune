@@ -4,6 +4,10 @@ using PS5Kitsune.Core.Launch;
 namespace PS5Kitsune.Core.Tests.Fakes;
 
 /// <summary>Mesa without a download: installing reports <see cref="Reports"/>, waits for <see cref="Gate"/> when set, then fails or installs. Also linked into the App tests.</summary>
+/// <remarks>
+/// <see cref="Waiting"/> completes once an install waits for <see cref="Gate"/>. A cancelled wait for <see cref="Gate"/> then waits for
+/// <see cref="UnwindGate"/> when set, like a download that takes time to stop.
+/// </remarks>
 internal sealed class FakeLavapipe : ILavapipe
 {
     public const long Total = 70L << 20;
@@ -21,6 +25,10 @@ internal sealed class FakeLavapipe : ILavapipe
 
     public TaskCompletionSource? Gate { get; set; }
 
+    public TaskCompletionSource? UnwindGate { get; set; }
+
+    public TaskCompletionSource Waiting { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public bool IsInstalled() => Installed;
 
     public async Task InstallAsync(IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
@@ -33,7 +41,16 @@ internal sealed class FakeLavapipe : ILavapipe
 
         if (Gate is not null)
         {
-            await Gate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            Waiting.TrySetResult();
+            try
+            {
+                await Gate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (UnwindGate is not null)
+            {
+                await UnwindGate.Task.ConfigureAwait(false);
+                throw;
+            }
         }
 
         if (Failure is not null)
