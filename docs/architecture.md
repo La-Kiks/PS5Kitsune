@@ -112,7 +112,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
   "schemaVersion": 2,
   "id": "doom-validated-2026-10",
   "os": "windows",
-  "source": { "kind": "release", "tag": "v0.1.3" },
+  "source": { "kind": "release", "tag": "v0.1.4" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
     "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
@@ -487,7 +487,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 
 | Point | Finding |
 | --- | --- |
-| Latest release | `v0.1.3` of 2026-10-20 (tag commit `3fd1cc3`, the build mode's commit); Windows libs weigh ~92 MB |
+| Latest release | `v0.1.4` of 2026-10-30 (tag commit `7fcab08`, the build mode's commit); Windows libs weigh ~91 MB, Linux libs ~96 MB |
 | Release asset names | `relinker-<tag>.exe`, `prx-windows-<tag>.zip` (content under `libs/`), plus `USAGE.md` and `INPUT_MAPPING.md` |
 | Release asset hashes | `digest` field (`sha256:…`) present in the GitHub API |
 | Relinker path after a full build | `build\core\relinker\relinker.exe` (`tools/package_release.py`) |
@@ -513,7 +513,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 - [x] License: **GPL v2 only**, public GitHub repository
 - [x] Project language: **English**
 - [ ] Publish AnyPS5 builds from PS5Kitsune's CI, or let users choose between the official release and a local build
-- [x] Default mode of the first profile: **release `v0.1.3`**, which runs DOOM for PS5 (validated 2026-10-25 from the app: install, Reconvert, launch; audit orange: 360 implemented, 4 stubs, 0 absent). Release `v0.1.2` was validated first, on 2026-10-20 with milestone 2's CLI (361, 3, 0).
+- [x] Default mode of the first profile: **release `v0.1.3`**, which runs DOOM for PS5 (validated 2026-10-25 from the app: install, Reconvert, launch; audit orange: 360 implemented, 4 stubs, 0 absent). Release `v0.1.2` was validated first, on 2026-10-20 with milestone 2's CLI (361, 3, 0). Both profiles moved to **`v0.1.4`** on 2026-10-31: on Linux, `v0.1.3` adopted the stub `malloc` exported by DOOM's clean-room `libc.prx` as the game's allocator, so DOOM could not allocate memory; `v0.1.4` runs it (audit green: 357, 0, 0). Windows is re-checked on `v0.1.4` before PR #13 is merged.
 - [x] Build mode disk space threshold: **`buildMinFreeDiskGiB` = 10 GiB**, from the build measured on 2026-10-21 (root of 3.2 GB)
 - [ ] Check for new profiles at startup, or only on demand
 
@@ -553,7 +553,7 @@ The order follows "end to end first, screens second": each milestone ends with a
      - Criterion: every screen follows the same design in both themes, and each one can be used with the keyboard alone.
 8. **Linux**, in two parts. Build mode on Linux comes later (see `TODO.md`).
    - **8a — The CLI on Linux, release mode.** `Platform` picks the OS at startup; `Platform.Linux`: XDG paths, per-distribution package commands, system Python and Lavapipe, the posix_spawn launcher, the Python and `/dev/udmabuf` checks; one profile per OS (schema 2). Spec: [milestone 8a](superpowers/specs/2026-10-30-milestone-8a-linux-cli-design.md).
-     - Criterion: the CLI path in WSL Ubuntu (DOOM added with the Windows verdict), then DOOM played on a real Ubuntu install.
+     - Criterion: the CLI path in WSL Ubuntu (DOOM added with the Windows verdict), then DOOM played on a real Ubuntu install. Met on 2026-10-31 on Ubuntu 26.04 (Ryzen 7 7730U, RADV) with AnyPS5 `v0.1.4`: `check`, `install`, `add`, `reconvert`, then DOOM played from `run`.
    - **8b — The app on Linux.** The Avalonia app on Linux and `linux-x64` packaging.
 
 From milestone 2 the tool is usable from the command line; milestone 4 gives a first graphical installer with no C++ build on the user's side.

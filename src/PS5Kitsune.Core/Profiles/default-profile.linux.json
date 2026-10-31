@@ -2,36 +2,36 @@
   "schemaVersion": 2,
   "os": "linux",
   "id": "doom-validated-2026-10",
-  "validated": false,
+  "validated": true,
   "source": {
     "kind": "release",
-    "tag": "v0.1.3",
-    "publishedAt": "2026-10-20T09:31:13Z"
+    "tag": "v0.1.4",
+    "publishedAt": "2026-10-30T23:09:14Z"
   },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
-    "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
+    "commit": "7fcab08f71e463b1768730a626a0f5472d336708"
   },
   "assets": {
     "relinker": {
-      "name": "relinker-v0.1.3",
-      "sha256": "bd2a959885830e14f091477edf297fc4c3f45b83a29171c47f5719d721fedb45"
+      "name": "relinker-v0.1.4",
+      "sha256": "9e5afd1313520906a9af43c468d6e31a5d2237879a85c0984134d628348e92a8"
     },
     "libs": {
-      "name": "prx-linux-v0.1.3.zip",
-      "sha256": "017bdb0e931fa0cdb17f0cea805a824180b88205f5c50f4473550c63a4e811f3"
+      "name": "prx-linux-v0.1.4.zip",
+      "sha256": "04ea0a4a51cc93d5aad1c9d558473bd3eea4bf9ef7d17511aa467449b744a27e"
     },
     "scripts": {
-      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.3.zip",
-      "sha256": "a241e46f39fb38eb64d7c060f2902a778de8bbc169ac420124ab8602281f2e98",
+      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.4.zip",
+      "sha256": "fd13fe84a43c32b6296f502097d4b9da06610f94937e20ef724c007e1ae41ff1",
       "include": [
         "tools/",
         "core/libs/prx/"
       ]
     },
     "unwrapScript": {
-      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/3fd1cc393b8512c2e989860053f30dee5a8cd1aa/tools/unwrap_self.py",
-      "sha256": "803fb6330c925db227cf921c9b54ed603ad5ff36a2064a86b7fadfa5859cc1cc"
+      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/7fcab08f71e463b1768730a626a0f5472d336708/tools/unwrap_self.py",
+      "sha256": "9d6f75be2bf721a88e15c997923a901179073a55d2ebf4cbae568b4a33ad3cc2"
     }
   },
   "fonts": [

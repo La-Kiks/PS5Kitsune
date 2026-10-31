@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13) and passes `check`, `install` and `add` in WSL; it waits for DOOM to be played on a real Ubuntu install before it is merged. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — milestone 7 of 8 done (the library and launch, per-game settings, crash diagnosis and the visual design); milestone 8a, the Linux command-line tool in release mode, is implemented (PR #13), and DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4; it waits for a re-check of Windows on v0.1.4 before it is merged. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -33,7 +33,7 @@ The command-line tool installs AnyPS5, adds a game and runs it:
 
 ```powershell
 ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
-ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.3
+ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.4
 ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
 ps5kitsune use release|build         # switch between the release and build installs, both kept side by side
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
