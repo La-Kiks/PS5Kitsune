@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using PS5Kitsune.App.Navigation;
 using PS5Kitsune.App.ViewModels;
+using PS5Kitsune.Core.Diagnostics;
 using PS5Kitsune.Core.Games;
 using PS5Kitsune.Core.Launch;
 using PS5Kitsune.Core.Library;
@@ -409,7 +410,7 @@ public sealed class GameViewModelTests : IDisposable
 
         Assert.Equal("No GPU here supports AnyPS5", page.Diagnosis?.Title);
         Assert.Equal("Exited with code 1", page.StatusText);
-        Assert.Equal("[ps5kitsune] exited with code 1 (0x00000001)", (await File.ReadAllLinesAsync(process.LogFile, TestContext.Current.CancellationToken))[^1]);
+        Assert.Equal(ExitLines.Exited(1), (await File.ReadAllLinesAsync(process.LogFile, TestContext.Current.CancellationToken))[^1]);
     }
 
     [Fact]

@@ -98,7 +98,7 @@ public sealed class DiagnosisTextsTests
     }
 
     [Fact]
-    public void An_unexplained_exit_shows_the_code_in_hex_and_offers_report()
+    public void An_unexplained_exit_shows_the_code_and_offers_report()
     {
         var text = DiagnosisTexts.For(Of(DiagnosisIds.Unexplained, exitCode: 0xC0000005, line: null), new GameSettings());
 

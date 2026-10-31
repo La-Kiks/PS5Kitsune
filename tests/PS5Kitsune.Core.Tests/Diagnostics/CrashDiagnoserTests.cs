@@ -185,7 +185,7 @@ public sealed class CrashDiagnoserTests : IDisposable
 
         Assert.Equal(DiagnosisIds.GpuFeatures, diagnosis?.Id);
         var lines = await File.ReadAllLinesAsync(log, Token);
-        Assert.Equal(["last line without newline", "[ps5kitsune] exited with code 3 (0x00000003)"], lines[^2..]);
+        Assert.Equal(["last line without newline", ExitLines.Exited(3)], lines[^2..]);
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public sealed class CrashDiagnoserTests : IDisposable
         await _diagnoser.AppendExitLineAsync(log, 3, stopped: false);
 
         Assert.Equal(
-            ["last line without newline", "[ps5kitsune] exited with code 3 (0x00000003)", "[ps5kitsune] exited with code 3 (0x00000003)"],
+            ["last line without newline", ExitLines.Exited(3), ExitLines.Exited(3)],
             await File.ReadAllLinesAsync(log, Token));
     }
 
