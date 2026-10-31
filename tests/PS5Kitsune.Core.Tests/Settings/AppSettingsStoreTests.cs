@@ -169,5 +169,31 @@ public sealed class AppSettingsStoreTests : IDisposable
         Assert.Equal(AppTheme.Light, Store.Load().Settings.Theme);
     }
 
+    [Fact]
+    public async Task A_file_without_checkForUpdates_checks_for_updates()
+    {
+        Directory.CreateDirectory(_temp.Combine("settings"));
+        await File.WriteAllTextAsync(_temp.Combine("settings", "settings.json"), """{ "schemaVersion": 1, "dataRoot": null, "theme": "dark" }""", TestContext.Current.CancellationToken);
+
+        var load = Store.Load();
+
+        Assert.Null(load.Problem);
+        Assert.True(load.Settings.CheckForUpdates);
+    }
+
+    [Fact]
+    public async Task Turning_the_check_off_is_saved_and_kept_when_the_theme_changes()
+    {
+        await Store.SaveAsync(AppSettings.Default with { CheckForUpdates = false }, TestContext.Current.CancellationToken);
+
+        Assert.Contains("\"checkForUpdates\": false", await File.ReadAllTextAsync(Store.FilePath, TestContext.Current.CancellationToken), StringComparison.Ordinal);
+
+        await Store.UpdateAsync(settings => settings with { Theme = AppTheme.Dark }, TestContext.Current.CancellationToken);
+
+        var settings = Store.Load().Settings;
+        Assert.Equal(AppTheme.Dark, settings.Theme);
+        Assert.False(settings.CheckForUpdates);
+    }
+
     public void Dispose() => _temp.Dispose();
 }
