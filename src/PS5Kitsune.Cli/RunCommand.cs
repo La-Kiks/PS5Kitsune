@@ -45,7 +45,8 @@ internal static class RunCommand
                 player.Forget(playing);
                 if (exitCode is { } code)
                 {
-                    logger.GameExited(record.Name, ExitCodes.Describe((uint)code));
+                    var exitText = ExitCodes.Describe((uint)code);
+                    logger.GameExited(record.Name, exitText);
                 }
                 else
                 {
