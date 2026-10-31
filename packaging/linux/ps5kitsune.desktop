@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=PS5Kitsune
+Comment=Installer and launcher for AnyPS5
+Exec=PS5Kitsune
+Icon=ps5kitsune
+Categories=Game;Utility;
+StartupWMClass=PS5Kitsune
+Terminal=false

@@ -41,10 +41,31 @@ jobs:
           echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
       - run: dotnet build PS5Kitsune.slnx -c Release
       - run: dotnet test --solution PS5Kitsune.slnx -c Release --no-build
-      # What Linux ships: a self-contained CLI. A Windows-only dependency in it fails here.
-      - name: Publish the Linux CLI
+      # What Linux ships: the app and the CLI in one AppImage. A Windows-only dependency fails here.
+      - name: Build the AppImage
         if: runner.os == 'Linux'
-        run: dotnet publish src/PS5Kitsune.Cli -c Release -r linux-x64 --self-contained -o "$RUNNER_TEMP/cli-linux"
+        run: |
+          version="0.0.0-ci.${{ github.run_number }}"
+          sh packaging/linux/build-appimage.sh "$version"
+          image="artifacts/appimage/PS5Kitsune-$version-x86_64.AppImage"
+          "./$image" --appimage-extract-and-run --version | grep -F "$version"
+          cd "$RUNNER_TEMP" && "$GITHUB_WORKSPACE/$image" --appimage-extract > /dev/null
+          test -x squashfs-root/usr/bin/PS5Kitsune && test -x squashfs-root/usr/bin/ps5kitsune
+      - name: Upload the AppImage
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PS5Kitsune-linux-x64-AppImage
+          path: artifacts/appimage/*.AppImage
+      - name: Publish the Windows app
+        if: runner.os == 'Windows'
+        run: dotnet publish src/PS5Kitsune.App -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:Version=0.0.0-ci.${{ github.run_number }} -o artifacts/windows
+      - name: Upload the Windows app
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PS5Kitsune-win-x64
+          path: artifacts/windows/PS5Kitsune.exe
 
   licenses:
     name: License check (shipped packages)
