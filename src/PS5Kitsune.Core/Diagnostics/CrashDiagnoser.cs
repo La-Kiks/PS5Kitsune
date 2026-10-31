@@ -53,7 +53,7 @@ public sealed partial class CrashDiagnoser
         var line = (stopped, exitCode) switch
         {
             (true, { } code) => ExitLines.Stopped(code),
-            (true, null) => ExitLines.Stopped(-1),
+            (true, null) => ExitLines.StoppedUnknown(),
             (false, { } code) => ExitLines.Exited(code),
             (false, null) => ExitLines.Unknown(),
         };

@@ -119,7 +119,7 @@ public sealed partial class LinuxGameLauncher(ILogger<LinuxGameLauncher> logger)
     [LoggerMessage(Level = LogLevel.Information, Message = "Found {Executable} running again (PID {ProcessId})")]
     private partial void LogAttached(string executable, int processId);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not watch PID {ProcessId} exit without reaping it (errno {Error}); a stopped game's leftover processes may survive.")]
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not watch PID {ProcessId} exit without reaping it (errno {Error}); a stopped game's leftover processes may survive")]
     private partial void LogWatchFailed(int processId, int error);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not kill the process group of PID {ProcessId} after its leader exited")]

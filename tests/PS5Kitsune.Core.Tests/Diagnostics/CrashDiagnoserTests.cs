@@ -213,6 +213,18 @@ public sealed class CrashDiagnoserTests : IDisposable
     }
 
     [Fact]
+    public async Task Finishing_a_stopped_game_with_an_unknown_code_says_so_and_diagnoses_nothing()
+    {
+        var log = Log("Vulkan: buffer device address and shaderInt64 are required\n");
+
+        var diagnosis = await _diagnoser.FinishAsync(log, null, stopped: true, Token);
+
+        Assert.Null(diagnosis);
+        Assert.Equal("[ps5kitsune] stopped by the user (exit code unknown)", (await File.ReadAllLinesAsync(log, Token))[^1]);
+        Assert.Equal(new ExitRecord(null, Stopped: true), ExitLines.Parse(ExitLines.StoppedUnknown()));
+    }
+
+    [Fact]
     public void Exit_lines_print_the_code_unsigned_and_in_hex_on_windows() =>
         Assert.Equal("[ps5kitsune] exited with code 3221225477 (0xC0000005)", ExitLines.Exited(unchecked((int)0xC0000005), linux: false));
 

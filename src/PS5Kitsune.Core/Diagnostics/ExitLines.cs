@@ -13,6 +13,8 @@ public static class ExitLines
 
     private const string UnknownLine = "exited (exit code unknown)";
 
+    private const string StoppedUnknownLine = "stopped by the user (exit code unknown)";
+
     /// <summary>The exit line of a game that ran on this OS.</summary>
     public static string Exited(int exitCode) => Exited(exitCode, OperatingSystem.IsLinux());
 
@@ -20,10 +22,13 @@ public static class ExitLines
     internal static string Exited(int exitCode, bool linux) =>
         linux
             ? $"{Prefix}{ExitedStart}{ExitCodes.Describe((uint)exitCode, linux: true)}"
-            : string.Create(CultureInfo.InvariantCulture, $"{Prefix}{ExitedStart}{(uint)exitCode} ({ExitCodes.Describe((uint)exitCode, linux: false)})");
+            : string.Create(CultureInfo.InvariantCulture, $"{Prefix}{ExitedStart}{(uint)exitCode} (0x{(uint)exitCode:X8})");
 
     /// <summary>The exit line of a game whose exit code cannot be read: a game found again on Linux, which is not PS5Kitsune's child.</summary>
     public static string Unknown() => Prefix + UnknownLine;
+
+    /// <summary>The line of a game stopped by the user whose exit code cannot be read: a game found again on Linux.</summary>
+    public static string StoppedUnknown() => Prefix + StoppedUnknownLine;
 
     public static string Stopped(int exitCode) =>
         string.Create(CultureInfo.InvariantCulture, $"{Prefix}{StoppedStart}{(uint)exitCode})");
@@ -40,6 +45,11 @@ public static class ExitLines
         if (rest.SequenceEqual(UnknownLine))
         {
             return new ExitRecord(null, Stopped: false);
+        }
+
+        if (rest.SequenceEqual(StoppedUnknownLine))
+        {
+            return new ExitRecord(null, Stopped: true);
         }
 
         if (TryCode(rest, ExitedStart, out var code))

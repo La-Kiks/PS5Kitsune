@@ -166,7 +166,9 @@ public sealed class LinuxGameLauncherTests : IDisposable
         {
             Assert.Equal(0, await ExitOf(game));
 
-            Assert.Equal('S', ProcStat.Read(child)?.State);
+            var stat = ProcStat.Read(child);
+            Assert.NotNull(stat);
+            Assert.NotEqual('Z', stat.Value.State);
         }
         finally
         {

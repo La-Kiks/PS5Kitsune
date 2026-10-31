@@ -51,7 +51,7 @@ Every command takes `--root <data root>`; without it, the CLI uses the data fold
 
 ### Linux
 
-The command-line tool runs on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
+The app and the command-line tool run on Linux in release mode (build mode is Windows-only for now). It needs Python 3, the Vulkan loader and a Vulkan driver from the distribution; `ps5kitsune check` names the missing ones and prints the command that installs them (apt, dnf or pacman). Games import shared memory through `/dev/udmabuf` (except with NVIDIA's proprietary driver). Desktop distributions such as Ubuntu usually give the logged-in user access already; if `ps5kitsune check` warns that it has no access, add yourself to the `kvm` group with `sudo usermod -aG kvm $USER`, then log out and in again. Settings live in `~/.config/ps5kitsune`, data in `~/.local/share/ps5kitsune`.
 
 The app and the command-line tool ship together as one AppImage. Download `PS5Kitsune-linux-x64-AppImage` from the latest CI run (Actions, then CI, then Artifacts), unzip it, then:
 
@@ -63,7 +63,7 @@ chmod +x PS5Kitsune-*-x86_64.AppImage
 
 If it does not start because FUSE is missing, add `--appimage-extract-and-run` before the other arguments. To add it to your app menu, open it with Gear Lever or AppImageLauncher.
 
-The app needs the X11 session libraries `libsm6` and `libice6`. Desktop Ubuntu has them; on a minimal install, run `sudo apt install libsm6 libice6`. Avalonia 12.1.4 loads them at startup even with session management off.
+The app needs the X11 session libraries `libsm6` and `libice6`. Desktop Ubuntu has them; on a minimal install, run `sudo apt install libsm6 libice6`. Avalonia 12.1.4 loads them at startup even with session management off. The self-contained .NET runtime also needs the ICU library (libicu): desktop Ubuntu has it; on a minimal install, install your distribution's libicu package (on Ubuntu, `sudo apt install libicu74` on 24.04).
 
 To run it from source instead, install the .NET 10 SDK (for example with Microsoft's `dotnet-install.sh --channel 10.0`), clone the repository, then:
 

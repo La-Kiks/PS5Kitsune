@@ -36,7 +36,7 @@ public sealed partial class RunningGames(IGameLauncher launcher, ILogger<Running
     {
         ArgumentNullException.ThrowIfNull(game);
         ArgumentNullException.ThrowIfNull(process);
-        var record = new RunningGame(RunningGame.CurrentSchemaVersion, process.ProcessId, process.StartedAt, Path.GetFullPath(executable), process.LogFile)
+        var record = new RunningGame(process.BootId is null && process.StartTicks is null ? 1 : RunningGame.CurrentSchemaVersion, process.ProcessId, process.StartedAt, Path.GetFullPath(executable), process.LogFile)
         {
             BootId = process.BootId,
             StartTicks = process.StartTicks,

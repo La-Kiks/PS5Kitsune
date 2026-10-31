@@ -5,7 +5,7 @@ namespace PS5Kitsune.Core.Tests.Diagnostics;
 public sealed class ExitCodesTests
 {
     [Theory]
-    [InlineData(0u, "0x00000000")]
+    [InlineData(0u, "0")]
     [InlineData(0xC0000005u, "0xC0000005")]
     public void Windows_codes_are_hexadecimal(uint code, string text) => Assert.Equal(text, ExitCodes.Describe(code, linux: false));
 

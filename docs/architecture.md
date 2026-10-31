@@ -326,7 +326,7 @@ The launcher searches the log and error output for known patterns, then shows an
 | `param-json` | Any of `param.json not found`, `failed to open param.json`, `unexpected end of param.json`, `malformed param.json`, `… in param.json` | **The game's metadata is missing.** `sce_sys\param.json` is missing or damaged. Remove the game and add it again from its original folder. | Open folder |
 | `invalid-setting` | `A(NY)?PS5_…` followed by ` must `; `ANYPS5_SYSTEM_FONTS is not a directory`; `whose name contains ANYPS5_GPU=`; `the surface does not support the requested present mode` (names `ANYPS5_PRESENT_MODE`) | **A setting has a value AnyPS5 refuses.** {variable} has a value AnyPS5 refuses. | Reset {setting} for GPU, language, vertical sync, overlay or PlayGo; none for `ANYPS5_SYSTEM_FONTS` |
 | `not-implemented` | `is not implemented` or `are not implemented` | **AnyPS5 does not handle this game yet.** The game uses a feature AnyPS5 has not implemented. | Report |
-| `unexplained` | None: no rule matches and the exit code is non-zero (set by the app, never by a profile rule) | **The game stopped with an error.** AnyPS5 stopped with an error it does not explain yet (exit code 0x…). | Report |
+| `unexplained` | None: no rule matches and the exit code is non-zero (set by the app, never by a profile rule) | **The game stopped with an error.** AnyPS5 stopped with an error it does not explain yet (exit code 0x… on Windows, decimal on Linux). | Report |
 
 Rules live in the profile's `diagnostics` section (`reportUrl`, `rules`: `id`, `log` regexes, `exitCodes`, `match` `all`/`any`, `captures`); the first rule met, in profile order, wins. An id the app does not know is skipped with a warning; an invalid rule makes the profile invalid.
 

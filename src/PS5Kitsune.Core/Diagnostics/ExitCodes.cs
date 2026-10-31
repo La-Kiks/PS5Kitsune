@@ -12,14 +12,14 @@ public static class ExitCodes
         "SIGSEGV", "SIGUSR2", "SIGPIPE", "SIGALRM", "SIGTERM",
     ];
 
-    /// <summary>The code of a process that ran on this OS: hexadecimal on Windows (0xC0000005), decimal on Linux with the signal (139 (signal 11, SIGSEGV)).</summary>
+    /// <summary>The code of a process that ran on this OS: hexadecimal on Windows (0xC0000005, but 0 stays 0), decimal on Linux with the signal (139 (signal 11, SIGSEGV)).</summary>
     public static string Describe(uint code) => Describe(code, OperatingSystem.IsLinux());
 
     internal static string Describe(uint code, bool linux)
     {
         if (!linux)
         {
-            return string.Create(CultureInfo.InvariantCulture, $"0x{code:X8}");
+            return code == 0 ? "0" : string.Create(CultureInfo.InvariantCulture, $"0x{code:X8}");
         }
 
         // The Linux launcher returns 128 + the signal that ended a process; real-time signals go up to 64.
