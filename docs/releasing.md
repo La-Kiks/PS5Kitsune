@@ -25,7 +25,7 @@ Nothing is public until the draft is published by hand.
    - Windows: the `.exe` opens and the System check is green; `PS5Kitsune-X.Y.Z-win-x64.exe --probe-vulkan` prints JSON and exits with 0.
    - Linux: `./PS5Kitsune-X.Y.Z-x86_64.AppImage --version` prints `X.Y.Z`, and the app opens.
    - `sha256sum -c SHA256SUMS.txt` passes.
-6. **Write the notes.** The draft lists the merged pull requests. Above them, add a few lines: what is new, what is known not to work (see TODO.md), and the AnyPS5 version the default profile installs. The `.exe` is not signed, so say that Windows SmartScreen asks for "More info, then Run anyway".
+6. **Write the notes.** The draft lists the merged pull requests. Above them, add a few lines: what is new, what is known not to work (see KNOWN_ISSUES.md), and the AnyPS5 version the default profile installs. The `.exe` is not signed, so say that Windows SmartScreen asks for "More info, then Run anyway".
 7. **Publish** the draft. It becomes the latest release, which is what the README's download links point at.
 
 ## Rollback
