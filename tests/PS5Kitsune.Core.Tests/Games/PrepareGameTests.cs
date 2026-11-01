@@ -24,6 +24,50 @@ public sealed class PrepareGameTests : IDisposable
 
     private Task<PreparedGame> PrepareAsync(string input) => _importer.PrepareAsync(input, TestContext.Current.CancellationToken);
 
+    private string Ps4Folder()
+    {
+        var folder = _temp.Combine("bloodborne");
+        TestGames.Create(folder);
+        File.Delete(Path.Combine(folder, "sce_sys", "param.json"));
+        File.WriteAllBytes(Path.Combine(folder, "sce_sys", "param.sfo"), TestSfo.Bloodborne);
+        return folder;
+    }
+
+    [Fact]
+    public async Task A_ps4_game_is_blocked_with_the_active_install_version()
+    {
+        await _setup.InstallAsync();
+        var version = _setup.Installer.ReadRecord()!.Version;
+
+        await using var game = await PrepareAsync(Ps4Folder());
+
+        Assert.True(game.IsBlocked);
+        Assert.Equal(
+            $"PS4 game: AnyPS5 {version} cannot draw PS4 graphics yet (no libSceGnmDriver). PS4 support is in progress upstream.",
+            Assert.Single(game.Validation.Issues).Message);
+        Assert.Equal(_setup.Layout.GameDirectory("CUSA03173"), game.GameDirectory);
+    }
+
+    [Fact]
+    public async Task The_ps4_driver_in_the_active_install_turns_the_block_into_a_warning()
+    {
+        await _setup.InstallAsync();
+        File.WriteAllBytes(Path.Combine(_setup.Paths.For(_setup.Installer.ReadRecord()!.Mode).Libs, Ps4Support.DriverFile), [0]);
+
+        await using var game = await PrepareAsync(Ps4Folder());
+
+        Assert.False(game.IsBlocked);
+        Assert.Equal(IssueSeverity.Warning, Assert.Single(game.Validation.Issues).Severity);
+    }
+
+    [Fact]
+    public async Task Without_an_install_a_ps4_game_names_the_installed_anyps5()
+    {
+        await using var game = await PrepareAsync(Ps4Folder());
+
+        Assert.StartsWith("PS4 game: the installed AnyPS5 cannot draw", Assert.Single(game.Validation.Issues).Message, StringComparison.Ordinal);
+    }
+
     private string WriteZip(byte[] content)
     {
         var zip = _temp.Combine("PPSA99666.zip");

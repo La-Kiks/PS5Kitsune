@@ -63,11 +63,11 @@ public sealed class GameSummaryViewModelTests
     {
         var viewModel = Create(TestGameData.Prepared(issues:
         [
-            new ValidationIssue(IssueSeverity.Blocking, "sce_sys/param.json is missing."),
+            new ValidationIssue(IssueSeverity.Blocking, "sce_sys/param.json is missing (PS5) and so is sce_sys/param.sfo (PS4)."),
             new ValidationIssue(IssueSeverity.Warning, "Low disk space."),
         ]));
 
-        Assert.Equal(["sce_sys/param.json is missing."], viewModel.BlockingIssues);
+        Assert.Equal(["sce_sys/param.json is missing (PS5) and so is sce_sys/param.sfo (PS4)."], viewModel.BlockingIssues);
         Assert.Equal(["Low disk space."], viewModel.Warnings);
         Assert.False(viewModel.AddCommand.CanExecute(null));
     }
