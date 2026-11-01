@@ -41,8 +41,10 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, IPyt
 
         foreach (var directory in context.ModuleDirectories)
         {
-            var source = Path.Combine(game.App0, directory);
-            var staged = Path.Combine(game.AuditModules, directory);
+            // Media/Modules and Media/Plugins hold a '/': one separator style in the paths the audit gets.
+            var native = directory.Replace('/', Path.DirectorySeparatorChar);
+            var source = Path.Combine(game.App0, native);
+            var staged = Path.Combine(game.AuditModules, native);
             Directory.CreateDirectory(staged);
             foreach (var relative in FileTree.RelativeFiles(source).Where(relative =>
                 !relative.EndsWith(GuestSuffix, StringComparison.Ordinal) && BinaryKinds.Detect(Path.Combine(source, relative)) == BinaryKind.Elf))
@@ -53,7 +55,7 @@ public sealed class AuditStep(GameImportContext context, AnyPS5Paths paths, IPyt
             }
 
             arguments.Add("--modules");
-            arguments.Add(Path.Combine(Path.GetRelativePath(game.Root, game.AuditModules), directory));
+            arguments.Add(Path.Combine(Path.GetRelativePath(game.Root, game.AuditModules), native));
         }
 
         arguments.Add("--json");

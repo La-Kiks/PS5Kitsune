@@ -172,6 +172,32 @@ public sealed class GameValidatorTests : IDisposable
     }
 
     [Fact]
+    public void Unity_module_folders_are_found()
+    {
+        TestFiles.Write(Path.Combine(Game, "Media", "Modules", "Il2cppUserAssemblies.prx"), TestFiles.Elf());
+        TestFiles.Write(Path.Combine(Game, "Media", "Plugins", "PSN.prx"), TestFiles.Elf());
+        Directory.CreateDirectory(Path.Combine(Game, "Media", "StreamingAssets"));
+
+        var validation = Validate();
+
+        Assert.False(validation.IsBlocked);
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["sce_module", "Media/Modules", "Media/Plugins"], validation.ModuleDirectories);
+    }
+
+    [Fact]
+    public void A_unity_module_folder_alone_is_not_a_missing_module_folder()
+    {
+        Directory.Delete(Path.Combine(Game, "sce_module"), recursive: true);
+        TestFiles.Write(Path.Combine(Game, "Media", "Modules", "Il2cppUserAssemblies.prx"), TestFiles.Elf());
+
+        var validation = Validate();
+
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["Media/Modules"], validation.ModuleDirectories);
+    }
+
+    [Fact]
     public void No_module_folder_is_a_warning()
     {
         Directory.Delete(Path.Combine(Game, "sce_module"), recursive: true);

@@ -7,7 +7,7 @@ using PS5Kitsune.Core.Profiles;
 namespace PS5Kitsune.Core.Games.Steps;
 
 /// <summary>
-/// Runs the relinker from the game folder: relinker &lt;profile args&gt; [--to-intel] app0/eboot.bin &lt;game executable&gt;.
+/// Runs the relinker from the game folder: relinker &lt;profile args&gt; [--to-intel] [--module-dir &lt;Unity folder&gt;]... app0/eboot.bin &lt;game executable&gt;.
 /// Done when the marker written after a successful run exists, with the executable and its registry.
 /// </summary>
 public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, AnyPS5Profile profile, IProcessRunner processRunner) : IStep
@@ -25,6 +25,12 @@ public sealed class RelinkStep(GameImportContext context, AnyPS5Paths paths, Any
         if (context.ToIntel && profile.Relinker.IntelArg is { } intelArg)
         {
             arguments.Add(intelArg);
+        }
+
+        foreach (var directory in context.ModuleDirectories.Where(GameValidator.UnityModuleDirectoryNames.Contains))
+        {
+            arguments.Add("--module-dir");
+            arguments.Add(directory);
         }
 
         arguments.Add(Path.Combine("app0", GameSourceResolver.ExecutableName));
