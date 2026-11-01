@@ -103,6 +103,20 @@ The first two columns differ mostly by session length (the frame time rises the 
 - **The new budget is nearly full too:** 6052 of 6144 MiB live at shutdown. A longer session in the game world may refuse imports again. The driver's budget for that heap is 7491 MiB, so 7168 is the ceiling to try; each MiB is pinned RAM, which a 16 GB PC with a 13.5 GB game has little of.
 - **What is left is GPU work at 4K,** which no setting PS5Kitsune has can lower.
 
+### Longer sessions (2026-11-01)
+
+Two more runs with `APS5_HOST_IMPORT_MIB=6144`, each played past the main menu.
+
+**`r_Wants4K` in the game's render configs does not help, and crashed the game.** `app0/misc/renderconfig_ps5_high.txt` (Cinematic, `WantsSuperHigh`, 30 FPS) and `renderconfig_ps5_perf.txt` (Performance, `WantsHigh`, 60 FPS) set the engine's `EWantsDisplayMode`; the PS4 configs use the lower `WantsPerf` (PS4) and `WantsBase` (PS4 Pro). With both PS5 files set to `WantsPerf` (`20261101-100249.log`), the game still switched to `guest 3840x2160`, the GPU frame time did not change (43–65 ms), the log showed 8 `BDA access failed` lines (0 to 3 in the other runs), and AnyPS5 stopped with `driver failure: compute shader …: runtime image descriptor is invalid` (exit code `0xC0000409`): the shader read plain floats (0.5, 0.05, 0.5, 0.5) as an image descriptor. With the original files back (`20261101-102743.log`), the same session reached character creation without a crash. Leave these files alone.
+
+**The 6144 MiB budget is not enough past the menus.** In `20261101-102743.log`:
+
+- The budget is full from the main menu on (6143 of 6144 MiB live); 520,213 imports (about 5 TB) are refused by the end, 503,097 of them by draw building.
+- Most refusals are the same 120 MiB block (`last 0x385800000+0x7800000 by build`), so the CPU copies that block again and again.
+- The GPU frame time climbs from 43 ms in the menu to 99–139 ms at character creation, about 4–7 FPS, which matches what was seen. Ten `WAIT_REG_MEM … timed out after 1000ms` lines show the queues stalling on each other.
+
+**Last thing to try:** `APS5_HOST_IMPORT_MIB=7168`, the most the driver allows here (its budget for that heap is 7491 MiB, 6944 MiB of which were in use). That leaves room for the 120 MiB block, which may cut most of the copies; it also pins 1 GiB more RAM on a PC that has none to spare. Beyond that, the fix is 32 GB of RAM: the driver's budget for this heap is about half the RAM, so it would roughly double.
+
 ## Feature proposals
 
 ### 1. Per-game resolution setting (recommended, small)
