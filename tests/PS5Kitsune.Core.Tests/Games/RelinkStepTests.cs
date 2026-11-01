@@ -28,8 +28,8 @@ public sealed class RelinkStepTests : IDisposable
         };
     }
 
-    private RelinkStep CreateStep(bool toIntel) => new(
-        new GameImportContext(new GameSource(_temp.Combine("unused"), null), new GameMetadata(TestGames.TitleId, "DOOM"), ["sce_module"], _game, toIntel),
+    private RelinkStep CreateStep(bool toIntel, IReadOnlyList<string>? modules = null) => new(
+        new GameImportContext(new GameSource(_temp.Combine("unused"), null), new GameMetadata(TestGames.TitleId, "DOOM"), modules ?? ["sce_module"], _game, toIntel),
         _paths, ProfileLoader.LoadEmbedded(), _runner);
 
     [Fact]
@@ -53,6 +53,16 @@ public sealed class RelinkStepTests : IDisposable
         await CreateStep(toIntel: true).ExecuteAsync(null, TestContext.Current.CancellationToken);
 
         Assert.Equal(["--windows", "--registry", "--to-intel", Path.Combine("app0", "eboot.bin"), "PPSA99666.exe"], _runner.Calls[0].Arguments);
+    }
+
+    [Fact]
+    public async Task Names_each_unity_module_folder_with_module_dir()
+    {
+        await CreateStep(toIntel: true, ["sce_module", "Media/Modules", "Media/Plugins"]).ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            ["--windows", "--registry", "--to-intel", "--module-dir", "Media/Modules", "--module-dir", "Media/Plugins", Path.Combine("app0", "eboot.bin"), "PPSA99666.exe"],
+            _runner.Calls[0].Arguments);
     }
 
     [Fact]

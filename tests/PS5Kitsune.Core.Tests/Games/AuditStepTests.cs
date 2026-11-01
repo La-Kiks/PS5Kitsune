@@ -59,6 +59,30 @@ public sealed class AuditStepTests : IDisposable
     }
 
     [Fact]
+    public async Task Stages_the_unity_module_folders_too()
+    {
+        TestFiles.Write(Path.Combine(_game.App0, "Media", "Modules", "Il2cppUserAssemblies.prx"), TestFiles.Elf());
+        TestFiles.Write(Path.Combine(_game.App0, "Media", "Modules", "Il2cppUserAssemblies.prx.guest.prx"), "MZ fake pe"u8.ToArray());
+        var context = new GameImportContext(_context.Source, _context.Metadata, ["sce_module", "Media/Modules"], _game, toIntel: false);
+        var staged = Path.Combine(".ps5kitsune", "audit-modules", "Media", "Modules");
+        List<string> seen = [];
+        _runner.Respond = spec =>
+        {
+            seen.AddRange(Directory.GetFiles(Path.Combine(spec.WorkingDirectory!, staged)).Select(Path.GetFileName).OfType<string>());
+            TestFiles.Write(Path.Combine(spec.WorkingDirectory!, "audit.json"), AuditFiles.Json(1, 0, 0));
+            return new FakeProcessResult(0);
+        };
+
+        await new AuditStep(context, _paths, _python, _runner).ExecuteAsync(null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["--modules", StagedModules, "--modules", staged], ModulesArguments(_runner.Calls[0].Arguments));
+        Assert.Equal(["Il2cppUserAssemblies.prx"], seen);
+    }
+
+    private static List<string> ModulesArguments(IReadOnlyList<string> arguments) =>
+        [.. arguments.SelectMany((argument, index) => argument == "--modules" ? new[] { argument, arguments[index + 1] } : [])];
+
+    [Fact]
     public async Task Gives_the_audit_only_the_elf_modules()
     {
         List<string> seen = [];

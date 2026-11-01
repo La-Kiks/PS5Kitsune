@@ -7,7 +7,7 @@ public sealed class GameImportContext(GameSource source, GameMetadata metadata, 
 
     public GameMetadata Metadata { get; } = metadata;
 
-    /// <summary>Module folders of the game (sce_module, sce_modules, prx), relative to app0.</summary>
+    /// <summary>Module folders of the game, among <see cref="GameValidator.ModuleDirectoryNames"/>, relative to app0.</summary>
     public IReadOnlyList<string> ModuleDirectories { get; } = moduleDirectories;
 
     public GameLayout Game { get; } = game;

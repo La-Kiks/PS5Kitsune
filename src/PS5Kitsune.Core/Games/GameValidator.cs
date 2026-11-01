@@ -14,7 +14,14 @@ public sealed class GameValidator(Func<string, long> availableBytes)
     {
     }
 
-    public static IReadOnlyList<string> ModuleDirectoryNames { get; } = ["sce_module", "sce_modules", "prx"];
+    /// <summary>
+    /// Unity's module folders. The relinker converts them only when each is named with --module-dir;
+    /// it finds the other module folders by itself.
+    /// </summary>
+    public static IReadOnlyList<string> UnityModuleDirectoryNames { get; } = ["Media/Modules", "Media/Plugins"];
+
+    /// <summary>Every module folder the add converts, relative to app0.</summary>
+    public static IReadOnlyList<string> ModuleDirectoryNames { get; } = ["sce_module", "sce_modules", "prx", .. UnityModuleDirectoryNames];
 
     /// <summary>A title ID becomes a folder name: ASCII letters and digits only.</summary>
     public static bool IsValidTitleId(string titleId) =>
@@ -44,7 +51,7 @@ public sealed class GameValidator(Func<string, long> availableBytes)
 
         if (modules.Count == 0)
         {
-            issues.Add(new ValidationIssue(IssueSeverity.Warning, "No module folder (sce_module, sce_modules or prx): libraries kept beside eboot.bin are not converted yet."));
+            issues.Add(new ValidationIssue(IssueSeverity.Warning, "No module folder (sce_module, sce_modules, prx, Media/Modules or Media/Plugins): libraries kept beside eboot.bin are not converted yet."));
         }
 
         var size = FileTree.Size(gameRoot);
