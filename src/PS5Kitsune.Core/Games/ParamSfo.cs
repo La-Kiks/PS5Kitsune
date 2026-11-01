@@ -12,6 +12,7 @@ internal static class ParamSfo
     private const int EntrySize = 16;
     private const ushort TextWithNul = 0x0204;
     private const ushort Text = 0x0004;
+    private const long MaxSize = 64 * 1024;
     private const string NotPsf = "sce_sys/param.sfo is not a valid PSF file.";
 
     /// <summary>PS4 title IDs start with CUSA; PS5 ones with PPSA.</summary>
@@ -20,6 +21,11 @@ internal static class ParamSfo
     /// <exception cref="InvalidDataException">The file is not a PSF file with a usable TITLE_ID; the message says why.</exception>
     public static GameMetadata Read(string path)
     {
+        if (new FileInfo(path).Length > MaxSize)
+        {
+            throw new InvalidDataException(NotPsf);
+        }
+
         var texts = ReadTexts(File.ReadAllBytes(path));
         if (!texts.TryGetValue("TITLE_ID", out var titleId) || string.IsNullOrWhiteSpace(titleId))
         {
@@ -35,7 +41,7 @@ internal static class ParamSfo
         return new GameMetadata(titleId, name, IsPs4: true);
     }
 
-    // Every text entry by key; trailing NULs (terminator and padding) are trimmed.
+    // Every text entry by key; text stops at the first NUL.
     private static Dictionary<string, string> ReadTexts(byte[] bytes)
     {
         if (bytes.Length < HeaderSize || !bytes.AsSpan(0, 4).SequenceEqual("\0PSF"u8))
@@ -69,7 +75,9 @@ internal static class ParamSfo
                 throw new InvalidDataException(NotPsf);
             }
 
-            texts[key] = Encoding.UTF8.GetString(bytes, (int)start, (int)length).TrimEnd('\0');
+            var data = bytes.AsSpan((int)start, (int)length);
+            var nul = data.IndexOf((byte)0);
+            texts[key] = Encoding.UTF8.GetString(nul < 0 ? data : data[..nul]);
         }
 
         return texts;
