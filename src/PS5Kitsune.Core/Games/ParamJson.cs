@@ -44,7 +44,7 @@ internal static class ParamJson
                 throw new InvalidDataException("sce_sys/param.json has no localizedParameters.");
             }
 
-            return new GameMetadata(titleId, ResolveName(root, localized) ?? titleId);
+            return new GameMetadata(titleId, ResolveName(root, localized) ?? titleId, ParamSfo.IsPs4TitleId(titleId));
         }
     }
 
