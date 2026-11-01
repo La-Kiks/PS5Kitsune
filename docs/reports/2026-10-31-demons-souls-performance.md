@@ -105,9 +105,11 @@ The first two columns differ mostly by session length (the frame time rises the 
 
 ### Longer sessions (2026-11-01)
 
-Two more runs with `APS5_HOST_IMPORT_MIB=6144`, each played past the main menu.
+Three more runs, each played past the main menu: two with `APS5_HOST_IMPORT_MIB=6144`, one with `7168`.
 
-**`r_Wants4K` in the game's render configs does not help, and crashed the game.** `app0/misc/renderconfig_ps5_high.txt` (Cinematic, `WantsSuperHigh`, 30 FPS) and `renderconfig_ps5_perf.txt` (Performance, `WantsHigh`, 60 FPS) set the engine's `EWantsDisplayMode`; the PS4 configs use the lower `WantsPerf` (PS4) and `WantsBase` (PS4 Pro). With both PS5 files set to `WantsPerf` (`20261101-100249.log`), the game still switched to `guest 3840x2160`, the GPU frame time did not change (43–65 ms), the log showed 8 `BDA access failed` lines (0 to 3 in the other runs), and AnyPS5 stopped with `driver failure: compute shader …: runtime image descriptor is invalid` (exit code `0xC0000409`): the shader read plain floats (0.5, 0.05, 0.5, 0.5) as an image descriptor. With the original files back (`20261101-102743.log`), the same session reached character creation without a crash. Leave these files alone.
+**`r_Wants4K` in the game's render configs does not help.** `app0/misc/renderconfig_ps5_high.txt` (Cinematic, `WantsSuperHigh`, 30 FPS) and `renderconfig_ps5_perf.txt` (Performance, `WantsHigh`, 60 FPS) set the engine's `EWantsDisplayMode`; the PS4 configs use the lower `WantsPerf` (PS4) and `WantsBase` (PS4 Pro). With both PS5 files set to `WantsPerf` (`20261101-100249.log`), the game still switched to `guest 3840x2160` and the GPU frame time did not change (43–65 ms). The files are back to the originals.
+
+**A crash in AnyPS5, not caused by the config change.** That run stopped with `driver failure: compute shader 0x2489fbb00: runtime image descriptor is invalid: image 0 first used at pc 0x2dc` (exit code `0xC0000409`). It was first blamed on the edited files, but `20261101-105548.log`, with the original files, stops with the same shader and the same `pc 0x2dc`. Both crashes come after hundreds of thousands of refused imports, and the descriptor the shader reads holds plain data (`3f000000 3d4ccccd …`, floats such as 0.5 and 0.05, in the first crash), so the shader seems to read memory that was not updated in time. It is an AnyPS5 bug to report upstream with `ps5kitsune diagnose PPSA01342 --report`; PS5Kitsune's diagnosis already says it has no explanation for it and offers Report.
 
 **The 6144 MiB budget is not enough past the menus.** In `20261101-102743.log`:
 
@@ -115,77 +117,6 @@ Two more runs with `APS5_HOST_IMPORT_MIB=6144`, each played past the main menu.
 - Most refusals are the same 120 MiB block (`last 0x385800000+0x7800000 by build`), so the CPU copies that block again and again.
 - The GPU frame time climbs from 43 ms in the menu to 99–139 ms at character creation, about 4–7 FPS, which matches what was seen. Ten `WAIT_REG_MEM … timed out after 1000ms` lines show the queues stalling on each other.
 
-**Last thing to try:** `APS5_HOST_IMPORT_MIB=7168`, the most the driver allows here (its budget for that heap is 7491 MiB, 6944 MiB of which were in use). That leaves room for the 120 MiB block, which may cut most of the copies; it also pins 1 GiB more RAM on a PC that has none to spare. Beyond that, the fix is 32 GB of RAM: the driver's budget for this heap is about half the RAM, so it would roughly double.
+**`7168` is more than the driver can give** (`20261101-105548.log`). AnyPS5 accepted the setting, then `vkAllocateMemory` failed at 7072 MiB of imports (`host import of … failed at vkAllocateMemory (-2)`), with the heap at 7731 MiB used for a 7491 MiB budget, and AnyPS5 lowered its budget to 7072 MiB by itself. Refusals came back (237,916 before the crash), and the game ran at 5–12 FPS, barely better than 6144. Use 6144: it leaves room for the driver.
 
-## Feature proposals
-
-### 1. Per-game resolution setting (recommended, small)
-
-A "Game resolution" choice in the per-game settings, also offered before launch.
-
-- **AnyPS5 side, as of v0.1.4:** `APS5_OUTPUT_RESOLUTION=<width>x<height>` is parsed, then mapped by `resolutionIndex()` to one of **two** PS5 video modes: 2160p if width ≥ 3840 or height ≥ 2160, otherwise 1080p. An invalid value throws `VideoOut: APS5_OUTPUT_RESOLUTION must be <width>x<height> with positive integers, got "…"`. So the useful choices today are only **1080p** and **4K**, written as `1920x1080` and `3840x2160`. Any other value just picks one of the two. Don't offer 1440p until AnyPS5 supports it.
-- **Default:** unset (AnyPS5 reports the screen's mode, 1080p here). Making 1080p the PS5Kitsune default would change nothing on this PC: the game chooses 4K buffers itself (see the correction above).
-- **PS5Kitsune changes**, following the existing `presentMode` pattern:
-  - `GameRecord.cs` / `GameSettings`: add `resolution` (`null` | `"1080p"` | `"2160p"`), so it lands in `game.json` `settings`.
-  - `GameSettingsValidator.cs`: allowed values, normalize unknown ones to `null` and report them in `replaced`.
-  - `LaunchEnvironment.cs`: add the `APS5_OUTPUT_RESOLUTION` constant and emit it only when the value is not `null`. Note that this variable uses the `APS5_` prefix, not `ANYPS5_`.
-  - `SettingVariables.cs`: add an entry so the crash diagnosis can offer "Reset resolution" if AnyPS5 rejects the value.
-  - `GameSettingsReport.cs` and `ps5kitsune settings <titleId>`: show it.
-  - `GameSettingsView.axaml` / `GameSettingsViewModel.cs`: a combo box.
-  - "Choose before starting": an optional pre-launch prompt or a dropdown next to the Launch button on the Game page, saved to the game's settings so the next launch remembers it.
-  - Profile: record that the variable exists from AnyPS5 v0.1.4 onward, and hide the setting for older installs.
-
-### 2. Advanced: extra environment variables per game (small)
-
-A free-form `KEY=VALUE` list in the per-game settings (`settings.extraEnvironment`), added last by `LaunchEnvironment.For`. This covers `APS5_HOST_IMPORT_MIB` and any future AnyPS5 tuning variable without a new release of PS5Kitsune. Only allow names that start with `APS5_` / `ANYPS5_`, and log the variables applied at launch so bug reports show them.
-
-### 3. RAM warning in `check` and on the Game page (small)
-
-The game logs how much memory it reserves (`[MSG-Init] Total Direct Memory: …` for this engine; others may differ). `check` could warn below 32 GB, and the Game page could show "this game reserved 13.5 GB on a 16 GB PC; expect heavy slowdowns" after a run. The `[gpu] host import budget: … refused` line with a large refused count is a good signal for the crash diagnosis to explain as a performance hint.
-
-### 4. DLSS / FSR upscaling and frame generation (AnyPS5's job; PS5Kitsune only exposes it)
-
-AnyPS5 v0.1.4 has no upscaling code at all. `libSceAgcDriver/Execution/src/AspectFit.cpp` only computes the scale from the game image to the window. What follows is an assessment of what could come, not an announced plan. There are three levels, from most to least likely.
-
-#### Level 1: spatial upscaling, for every game (likely)
-
-- **FSR 1, NVIDIA NIS, or a sharpened bilinear filter** only needs the final image, which AnyPS5 already has when it scales the game to the window. It is general code that touches no specific game, so it fits AnyPS5's rules (see Level 3). Many console emulators offer FSR 1 for exactly this reason.
-- Combined with feature 1, the game renders at 1080p and FSR 1 upscales to a 1440p or 4K window. That is the realistic "upscaling for all games".
-- That would be a feature request to AnyPS5. Once AnyPS5 has a variable for it, PS5Kitsune adds a per-game setting like the others.
-
-#### Level 2: frame generation, for every game (already exists outside AnyPS5)
-
-- These work on any window by interpolating the final images, with no change to AnyPS5:
-  - Lossless Scaling (a paid Steam app) does upscaling (LS1, FSR) and frame generation on any GPU, including an RTX 3060.
-  - AMD Fluid Motion Frames works on AMD GPUs only, and NVIDIA Smooth Motion on RTX 40/50 only.
-- The quality is lower than DLSS Frame Generation, which needs game data and an RTX 40/50, so an RTX 3060 can't use it anyway. But it is universal. AnyPS5 has no reason to rebuild it, and PS5Kitsune can mention it in its docs.
-- **Frame generation needs a decent base frame rate** (about 30 FPS or more for a good result, about 60 recommended). At 1–8 FPS it produces mostly artifacts and adds latency. It is only worth looking at once the memory bottleneck above is solved.
-
-#### Level 3: temporal upscaling (DLSS SR, FSR 2+, XeSS) per engine (possible, hard, not soon)
-
-- **What these upscalers need:** a low-resolution image taken before the UI, depth, motion vectors and the camera jitter. An emulator only sees GPU commands. Nothing tells it which target is the scene, which is the UI, or where the camera is.
-- **The per-game approach**, as in the Bloodborne PC port (see `2026-10-31-ps4-games-and-bloodborne.md`): it rebuilds camera vectors from depth and the camera transforms, and object vectors from a history of G-buffer draws classified by Bloodborne's vertex-buffer sizes. That works, but for one game only.
-- **The per-engine approach, which could cover far more games:** almost every PS5 game already does its own temporal anti-aliasing or upscaling (Unreal TAA/TSR, checkerboard rendering, FSR 2 compiled into the game, Insomniac's IGTI). So it **already computes motion vectors, depth and jitter**. An emulator wouldn't have to rebuild them. It would only have to find the game's own TAA pass and replace it with DLSS/FSR, feeding it the game's own data. That's how OptiScaler works on PC: it replaces FSR 2 or XeSS with DLSS in games that support only one of them. One profile for Unreal Engine 4/5 could cover dozens of PS5 games.
-- **Why it stays hard:**
-  - Finding the pass means recognizing its shaders, which change with each engine version.
-  - Each engine encodes its vectors differently (scale, sign, resolution, dilation).
-  - The jitter has to be read from the game's data.
-  - Some games draw the UI before their TAA.
-  - The game's own sharpening has to be turned off.
-- **Why it is unlikely in AnyPS5's core:** AnyPS5's CI rejects game-specific code. `scripts/tools/check_conventions.py`, rule `title-specific`, fails core code that contains a `PPSA`/`CUSA` title ID: *"Implement the general behaviour, not what one title needs; title-specific code belongs in its sce_module"*. Per-engine profiles are a borderline case. They would more likely live in an optional layer or a fork, as bloodborne_pc did with shadPS4. And the project's priority today is getting games to run (it doesn't even have the PS4 graphics driver yet), not image quality.
-
-#### What PS5Kitsune does at each level
-
-| Level | PS5Kitsune's role |
-|---|---|
-| 1. FSR 1 / NIS in AnyPS5 | A per-game "Upscaling" setting, once AnyPS5 exposes a variable for it |
-| 2. Frame generation outside AnyPS5 | A short docs section: Lossless Scaling and the driver-level options, and the minimum base frame rate |
-| 3. Per-engine DLSS/FSR | If it ever appears, show the game's engine in the summary and whether it is supported. That information would come from AnyPS5's audit and logs, not from PS5Kitsune |
-
-### Suggested order
-
-1. Resolution setting (feature 1): biggest effect, smallest change.
-2. Extra environment variables (feature 2).
-3. RAM and import-budget hints (feature 3).
-4. A docs section on frame generation with Lossless Scaling and the driver-level options (Level 2).
-5. Open an AnyPS5 issue for spatial upscaling (FSR 1 / NIS) when scaling to the window (Level 1), and one for `sceAgcUpdateInterpolantMapping_0100` if it ever stops the game.
+**Conclusion for this PC:** no setting makes Demon's Souls playable on 16 GB. The game reserves 13.5 GB, the driver lets the GPU read at most about 7 GB of it in place, and everything else is copied by the CPU. 32 GB of RAM would roughly double the driver's budget for that heap (it is about half the RAM). The crash above is separate and needs an AnyPS5 fix.
