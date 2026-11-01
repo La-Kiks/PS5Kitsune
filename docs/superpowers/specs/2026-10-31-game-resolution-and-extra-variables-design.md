@@ -111,5 +111,6 @@ PS5Kitsune:
 
 1. Unit tests pass on Windows and Linux CI.
 2. Manual, Windows: Demon's Souls with "1080p" logs `guest 1920x1080`; with "Match the display" on a 4K screen it logs `guest 3840x2160` as before.
+   - **Note (2026-11-01):** this test cannot pass as written. The `guest` size is the size of the buffers the game flips, not the mode AnyPS5 reports, and Demon's Souls logs `guest 1920x1080` then `guest 3840x2160` with or without the setting. On a 1080p screen the setting changes nothing (AnyPS5 already reports 1080p). See the correction in the Demon's Souls report. The extra-variables part passed: `APS5_HOST_IMPORT_MIB sets` is logged and no import is refused.
 3. Manual: with `APS5_HOST_IMPORT_MIB=6144` in the box, the bug report's `Settings:` line lists it and AnyPS5's budget line names it; a typo such as `APS5-HOST=1` shows the error and cannot be saved.
 4. The report's "Result of the workaround" line is filled in with the FPS seen at 1080p.
