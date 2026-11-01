@@ -18,6 +18,91 @@ public sealed class GameValidatorTests : IDisposable
 
     private void WriteParam(string json) => TestFiles.Write(Path.Combine(Game, "sce_sys", "param.json"), json);
 
+    private GameValidation ValidatePs4(Ps4Support? ps4 = null) =>
+        new GameValidator(_ => long.MaxValue).Validate(Game, _temp.Combine("games"), ps4);
+
+    private void MakePs4()
+    {
+        File.Delete(Path.Combine(Game, "sce_sys", "param.json"));
+        File.WriteAllBytes(Path.Combine(Game, "sce_sys", "param.sfo"), TestSfo.Bloodborne);
+    }
+
+    [Fact]
+    public void A_ps4_game_without_the_driver_is_blocked_with_the_version()
+    {
+        MakePs4();
+
+        var validation = ValidatePs4(new Ps4Support(DriverPresent: false, "AnyPS5 v0.1.4"));
+
+        Assert.True(validation.IsBlocked);
+        Assert.Equal(new GameMetadata("CUSA03173", "Bloodborne®", IsPs4: true), validation.Metadata);
+        var issue = Assert.Single(validation.Issues);
+        Assert.Equal(new ValidationIssue(IssueSeverity.Blocking, "PS4 game: AnyPS5 v0.1.4 cannot draw PS4 graphics yet (no libSceGnmDriver). PS4 support is in progress upstream."), issue);
+    }
+
+    [Fact]
+    public void Without_an_active_install_the_message_names_the_installed_anyps5()
+    {
+        MakePs4();
+
+        Assert.Equal(
+            "PS4 game: the installed AnyPS5 cannot draw PS4 graphics yet (no libSceGnmDriver). PS4 support is in progress upstream.",
+            Assert.Single(ValidatePs4().Issues).Message);
+    }
+
+    [Fact]
+    public void A_ps4_game_with_the_driver_gets_a_warning_only()
+    {
+        MakePs4();
+
+        var validation = ValidatePs4(new Ps4Support(DriverPresent: true, "AnyPS5 v0.2.0"));
+
+        Assert.False(validation.IsBlocked);
+        Assert.Equal(
+            new ValidationIssue(IssueSeverity.Warning, "PS4 game: PS4 support in AnyPS5 is experimental. Expect missing imports in the audit."),
+            Assert.Single(validation.Issues));
+    }
+
+    [Fact]
+    public void A_cusa_title_id_in_param_json_counts_as_ps4()
+    {
+        WriteParam("""{ "titleId": "CUSA01664", "localizedParameters": { "en-US": { "titleName": "LIMBO" } } }""");
+
+        var validation = ValidatePs4(new Ps4Support(DriverPresent: false, "AnyPS5 v0.1.4"));
+
+        Assert.True(validation.Metadata!.IsPs4);
+        Assert.Contains(validation.Issues, issue => issue.Message.StartsWith("PS4 game: AnyPS5 v0.1.4 cannot draw", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_damaged_param_sfo_is_blocking_with_its_reason()
+    {
+        File.Delete(Path.Combine(Game, "sce_sys", "param.json"));
+        File.WriteAllBytes(Path.Combine(Game, "sce_sys", "param.sfo"), [1, 2, 3]);
+
+        var validation = ValidatePs4();
+
+        Assert.Null(validation.Metadata);
+        Assert.Equal(new ValidationIssue(IssueSeverity.Blocking, "sce_sys/param.sfo is not a valid PSF file."), Assert.Single(validation.Issues));
+    }
+
+    [Fact]
+    public void Neither_metadata_file_names_both()
+    {
+        File.Delete(Path.Combine(Game, "sce_sys", "param.json"));
+
+        Assert.Contains(
+            new ValidationIssue(IssueSeverity.Blocking, "sce_sys/param.json is missing (PS5) and so is sce_sys/param.sfo (PS4)."),
+            Validate().Issues);
+    }
+
+    [Fact]
+    public void A_ps5_game_gets_no_ps4_issue_whatever_the_driver()
+    {
+        Assert.Empty(ValidatePs4(new Ps4Support(DriverPresent: false, "AnyPS5 v0.1.4")).Issues);
+        Assert.Empty(ValidatePs4(new Ps4Support(DriverPresent: true, "AnyPS5 v0.2.0")).Issues);
+    }
+
     [Fact]
     public void A_doom_like_game_is_valid()
     {

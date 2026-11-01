@@ -21,7 +21,8 @@ public sealed class GameValidator(Func<string, long> availableBytes)
         !string.IsNullOrEmpty(titleId) && titleId.All(char.IsAsciiLetterOrDigit);
 
     /// <param name="destination">Folder the game will be copied under; only its drive's free space matters.</param>
-    public GameValidation Validate(string gameRoot, string destination)
+    /// <param name="ps4">What the active install offers PS4 games; null is <see cref="Ps4Support.Unknown"/>.</param>
+    public GameValidation Validate(string gameRoot, string destination, Ps4Support? ps4 = null)
     {
         var issues = new List<ValidationIssue>();
         if (!File.Exists(Path.Combine(gameRoot, GameSourceResolver.ExecutableName)))
@@ -30,6 +31,10 @@ public sealed class GameValidator(Func<string, long> availableBytes)
         }
 
         var metadata = ReadMetadata(gameRoot, issues);
+        if (metadata is { IsPs4: true })
+        {
+            issues.Add(Ps4Issue(ps4 ?? Ps4Support.Unknown));
+        }
 
         List<string> modules = [.. ModuleDirectoryNames.Where(name => Directory.Exists(Path.Combine(gameRoot, name)))];
         if (modules.Contains("sce_module") && modules.Contains("sce_modules"))
@@ -52,25 +57,36 @@ public sealed class GameValidator(Func<string, long> availableBytes)
         return new GameValidation(metadata, modules, size, issues);
     }
 
+    // param.json for a PS5 game; param.sfo, which PS4 games ship instead, when it is absent.
     private static GameMetadata? ReadMetadata(string gameRoot, List<ValidationIssue> issues)
     {
-        var path = Path.Combine(gameRoot, "sce_sys", "param.json");
-        if (!File.Exists(path))
-        {
-            issues.Add(Blocking("sce_sys/param.json is missing."));
-            return null;
-        }
-
+        var json = Path.Combine(gameRoot, "sce_sys", "param.json");
+        var sfo = Path.Combine(gameRoot, "sce_sys", "param.sfo");
         try
         {
-            return ParamJson.Read(path);
+            if (File.Exists(json))
+            {
+                return ParamJson.Read(json);
+            }
+
+            if (File.Exists(sfo))
+            {
+                return ParamSfo.Read(sfo);
+            }
         }
         catch (InvalidDataException exception)
         {
             issues.Add(Blocking(exception.Message));
             return null;
         }
+
+        issues.Add(Blocking("sce_sys/param.json is missing (PS5) and so is sce_sys/param.sfo (PS4)."));
+        return null;
     }
+
+    private static ValidationIssue Ps4Issue(Ps4Support ps4) => ps4.DriverPresent
+        ? new ValidationIssue(IssueSeverity.Warning, "PS4 game: PS4 support in AnyPS5 is experimental. Expect missing imports in the audit.")
+        : Blocking($"PS4 game: {ps4.AnyPS5Name} cannot draw PS4 graphics yet (no libSceGnmDriver). PS4 support is in progress upstream.");
 
     private static ValidationIssue Blocking(string message) => new(IssueSeverity.Blocking, message);
 

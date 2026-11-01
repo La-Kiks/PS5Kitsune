@@ -34,6 +34,12 @@ public sealed partial class GameImporter(
 
     public IReadOnlyList<string> StepNames => Names;
 
+    // The PS4 graphics driver ships as a converted library, so it sits in the install's libs folder in both modes.
+    private Ps4Support Ps4SupportOfActiveInstall() =>
+        installer.ReadRecord() is { } record
+            ? new Ps4Support(File.Exists(Path.Combine(paths.For(record.Mode).Libs, Ps4Support.DriverFile)), $"AnyPS5 {record.Version}")
+            : Ps4Support.Unknown;
+
     /// <param name="toIntel">Convert for an Intel CPU (relinker Intel option).</param>
     /// <exception cref="AnyPS5NotInstalledException">Run install first.</exception>
     /// <exception cref="InvalidGameSourceException">The input is not a game folder or zip.</exception>
@@ -144,7 +150,7 @@ public sealed partial class GameImporter(
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            var validation = validator.Validate(source.Root, layout.Games);
+            var validation = validator.Validate(source.Root, layout.Games, Ps4SupportOfActiveInstall());
             var icon = Path.Combine(source.Root, "sce_sys", "icon0.png");
             var binaries = new List<GameBinary> { new(GameSourceResolver.ExecutableName, BinaryKinds.Detect(Path.Combine(source.Root, GameSourceResolver.ExecutableName))) };
             foreach (var directory in validation.ModuleDirectories)
