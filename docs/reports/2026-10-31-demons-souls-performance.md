@@ -6,7 +6,7 @@ Date: 2026-10-31. Setup: PS5Kitsune 0.1.0 (Windows `.exe`), AnyPS5 v0.1.4 releas
 
 - The "black screen at start" was not a crash. On the first launch the game spends about 30 s initializing and builds about 945 shaders (about 870 MB) before its first frame. It was stopped about a minute in, before anything showed.
 - Once it got past loading, the game ran at under 1 FPS, with CPU and RAM at 100% and the GPU at 10–20%. **The GPU was in use** (RTX 3060 selected, no CPU rendering). The bottleneck is memory traffic between RAM and the GPU, made worse by 16 GB of RAM and a 4K internal resolution.
-- Two AnyPS5 environment variables help: `APS5_OUTPUT_RESOLUTION` and `APS5_HOST_IMPORT_MIB`. PS5Kitsune does not expose either yet, so this report proposes adding them (see [Feature proposals](#feature-proposals)).
+- Two AnyPS5 environment variables looked useful: `APS5_OUTPUT_RESOLUTION` and `APS5_HOST_IMPORT_MIB`. PS5Kitsune 0.3.0 exposes both (see [Feature proposals](#feature-proposals)). Tested on 2026-11-01 (see [Result](#result-2026-11-01)): `APS5_HOST_IMPORT_MIB=6144` removes every refused import and cuts the GPU frame time by about a third; `APS5_OUTPUT_RESOLUTION` changes nothing on this 1080p screen, because the game picks 4K by itself.
 - The `.esbak` backup files are no longer an issue: the latest AnyPS5 release handles them itself, so the TODO.md item can be dropped.
 
 ## Log analysis
@@ -51,7 +51,9 @@ Every refused import falls back to a copy done by the CPU. That is the 100% CPU 
 [mouse] video driver windows: guest 3840x2160 presented at 1536x864, delta scale 2.5000 x 2.5000
 ```
 
-AnyPS5 reports a 4K display to the game, so it renders at 3840×2160, then AnyPS5 scales that down to a 1536×864 window. That is 4× the pixels, and 4× the render-target memory to move, for no visible gain.
+The game renders at 3840×2160, then AnyPS5 scales that down to a 1536×864 window. That is 4× the pixels, and 4× the render-target memory to move, for no visible gain.
+
+> **Correction (2026-11-01).** This report first said AnyPS5 reports a 4K display to the game. It does not. The screen is 1080p (1536×864 at 125% scaling), and AnyPS5 v0.1.4 reports the screen's mode, so the game was told 1080p. The `guest` size in this line is the size of the buffers the game flips (`MouseInput::SetPresentation`), not the mode AnyPS5 reports (`sceVideoOutGetResolutionStatus`, `libSceVideoOut/src/Output.cpp`). Every run logs `guest 1920x1080` when the main loop starts, then `guest 3840x2160` a few seconds later: Demon's Souls chooses 4K buffers itself.
 
 **3. GPU frame time is 110–130 ms** (`[staging] adaptive: ... GPU 120.8 ms/frame staged`), so about 8 FPS at best before the CPU copies are counted.
 
@@ -68,7 +70,7 @@ On a PS5, the CPU and GPU share one memory pool. The game's CPU code now runs na
 Both variables are read by AnyPS5 v0.1.4 (`libSceVideoOut/src/VideoOutDriver.cpp`, `libSceAgcDriver/Graphics/src/GuestBufferMemory.cpp`). Setting them for the Windows user makes the game inherit them. Restart PS5Kitsune afterwards.
 
 ```powershell
-setx APS5_OUTPUT_RESOLUTION 1920x1080   # game renders at 1080p instead of 4K
+setx APS5_OUTPUT_RESOLUTION 1920x1080   # tells the game the screen is 1080p (no effect here, see Result)
 setx APS5_HOST_IMPORT_MIB 6144          # optional, try second: larger GPU import budget (default here: 4077)
 ```
 
@@ -81,7 +83,25 @@ reg delete HKCU\Environment /v APS5_HOST_IMPORT_MIB /f
 
 `APS5_HOST_IMPORT_MIB` is a gamble on 16 GB of RAM: it pins more RAM, which can cut the copies or make the swapping worse. Compare the FPS with and without it. The real fix for this game is 32 GB of RAM.
 
-Result of the workaround: _to fill in after testing._
+Result of the workaround: see below. In PS5Kitsune 0.3.0, both are per-game settings (Resolution, and Advanced, then Extra AnyPS5 variables), so `setx` is no longer needed.
+
+### Result (2026-11-01)
+
+PS5Kitsune 0.3.0 (main at `2d9c5d4`), AnyPS5 v0.1.4 release, same PC. The two 2026-11-01 runs went from launch to the PlayStation Studios logo video, a few minutes each; the 2026-10-31 run, with no setting, played longer.
+
+| | No setting (`20261031-163825.log`) | Resolution 1080p (`20261101-085601.log`) | 1080p + `APS5_HOST_IMPORT_MIB=6144` (`20261101-092242.log`) |
+|---|---|---|---|
+| `guest` line | 1920x1080, then 3840x2160 | 1920x1080, then 3840x2160 | 1920x1080, then 3840x2160 |
+| Import budget | 4077 MiB, the default | 4077 MiB, the default | 6144 MiB, `APS5_HOST_IMPORT_MIB sets` |
+| Imports refused | 61,123 | 30,478 (441,624 MiB the CPU copied instead) | **0** |
+| GPU frame time (`[staging] adaptive`) | 82–121 ms | 60–87 ms | 38–65 ms |
+
+The first two columns differ mostly by session length (the frame time rises the longer the game runs), not by the resolution setting: the `guest` lines are the same.
+
+- **`APS5_OUTPUT_RESOLUTION=1920x1080` does nothing on a 1080p screen**, as its help text says: AnyPS5 already reports 1080p, and the game still switches to 4K buffers. Whether it changes anything on a 4K screen is not tested.
+- **`APS5_HOST_IMPORT_MIB=6144` works.** No import is refused for the whole run, the CPU copies are gone, and the GPU frame time drops from 60–87 ms to 38–65 ms, about 15–26 FPS instead of 11–16. It felt faster in game.
+- **The new budget is nearly full too:** 6052 of 6144 MiB live at shutdown. A longer session in the game world may refuse imports again. The driver's budget for that heap is 7491 MiB, so 7168 is the ceiling to try; each MiB is pinned RAM, which a 16 GB PC with a 13.5 GB game has little of.
+- **What is left is GPU work at 4K,** which no setting PS5Kitsune has can lower.
 
 ## Feature proposals
 
@@ -90,7 +110,7 @@ Result of the workaround: _to fill in after testing._
 A "Game resolution" choice in the per-game settings, also offered before launch.
 
 - **AnyPS5 side, as of v0.1.4:** `APS5_OUTPUT_RESOLUTION=<width>x<height>` is parsed, then mapped by `resolutionIndex()` to one of **two** PS5 video modes: 2160p if width ≥ 3840 or height ≥ 2160, otherwise 1080p. An invalid value throws `VideoOut: APS5_OUTPUT_RESOLUTION must be <width>x<height> with positive integers, got "…"`. So the useful choices today are only **1080p** and **4K**, written as `1920x1080` and `3840x2160`. Any other value just picks one of the two. Don't offer 1440p until AnyPS5 supports it.
-- **Default:** unset (AnyPS5's own choice, which was 4K here). Consider making 1080p the PS5Kitsune default, because 4K rarely pays off on a PC.
+- **Default:** unset (AnyPS5 reports the screen's mode, 1080p here). Making 1080p the PS5Kitsune default would change nothing on this PC: the game chooses 4K buffers itself (see the correction above).
 - **PS5Kitsune changes**, following the existing `presentMode` pattern:
   - `GameRecord.cs` / `GameSettings`: add `resolution` (`null` | `"1080p"` | `"2160p"`), so it lands in `game.json` `settings`.
   - `GameSettingsValidator.cs`: allowed values, normalize unknown ones to `null` and report them in `replaced`.
