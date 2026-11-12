@@ -112,7 +112,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
   "schemaVersion": 2,
   "id": "doom-validated-2026-10",
   "os": "windows",
-  "source": { "kind": "release", "tag": "v0.1.4" },
+  "source": { "kind": "release", "tag": "v0.1.5" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
     "commit": "3fd1cc393b8512c2e989860053f30dee5a8cd1aa"
@@ -232,7 +232,7 @@ V2 takes a game folder supplied by the user, in the DOOM for PS5 format, and tur
 2. **Validate the structure** (nothing is copied before this step):
    - `eboot.bin` present;
    - `sce_sys/param.json` present and matching what AnyPS5 reads: a non-empty `titleId` and a non-empty `localizedParameters` object. The displayed name is the `titleName` of the `defaultLanguage` entry (inside `localizedParameters` or at the top level), else `en-US`, else the first language. Read with `System.Text.Json`;
-   - otherwise `sce_sys/param.sfo` (PS4 dumps): `TITLE_ID` and `TITLE` read from the PSF table (UTF-8 text entries). A game is PS4 when its metadata came from `param.sfo` or its title ID starts with `CUSA`. Without the PS4 graphics driver in the active install (`libs\libSceGnmDriver.prx`, absent in AnyPS5 v0.1.4), a PS4 game is blocked: "PS4 game: AnyPS5 v0.1.4 cannot draw PS4 graphics yet (no libSceGnmDriver)…"; with it, the add runs with an "experimental" warning. Neither file: "sce_sys/param.json is missing (PS5) and so is sce_sys/param.sfo (PS4).";
+   - otherwise `sce_sys/param.sfo` (PS4 dumps): `TITLE_ID` and `TITLE` read from the PSF table (UTF-8 text entries). A game is PS4 when its metadata came from `param.sfo` or its title ID starts with `CUSA`. Without the PS4 graphics driver in the active install (`libs\libSceGnmDriver.prx`, absent in AnyPS5 v0.1.4, shipped since v0.1.5), a PS4 game is blocked: "PS4 game: AnyPS5 v0.1.4 cannot draw PS4 graphics yet (no libSceGnmDriver)…"; with it, the add runs with an "experimental" warning. Neither file: "sce_sys/param.json is missing (PS5) and so is sce_sys/param.sfo (PS4).";
    - module folders: `sce_module`, `sce_modules` or `prx`. `prx` can coexist with either of the other two, but `sce_module` and `sce_modules` together are a relinker error. Unity games also keep modules in `Media/Modules` and `Media/Plugins`, which the relinker converts only when each is named with `--module-dir`. None of these → offer `--module-dir .` for homebrews that keep their libraries beside the executable;
    - total game size compared with free space at the destination.
 3. **Show the summary**: `sce_sys/icon0.png` icon, name, title ID, size, module count, ELF or SELF state of each file.
@@ -301,7 +301,7 @@ V3 shows the games registered by V2 and launches them correctly, that is, from t
 | CPU rendering (Lavapipe) | `lavapipe` | `VK_DRIVER_FILES` = Mesa's `lvp_icd.x86_64.json` manifest + `ANYPS5_GPU=llvmpipe` | On for a new game when Vulkan works but no GPU has `shaderInt64` and `bufferDeviceAddress`, off otherwise. It overrides the GPU and Disable Dozen |
 | Game language | `language` | `ANYPS5_LANGUAGE` | Default 1 (English, US); list of the 31 languages from the docs (0 to 30) |
 | Vertical sync | `presentMode` | `ANYPS5_PRESENT_MODE` | On (`fifo`, default), Latest frame (`fifo_latest_ready`), Mailbox (`mailbox`), Off, may tear (`immediate`) |
-| Resolution | `resolution` | `APS5_OUTPUT_RESOLUTION` (`1920x1080` or `3840x2160`) | Match the display (`null`, default: AnyPS5 uses the mode of the display the window is on), 1080p (`1080p`), 4K (`2160p`). AnyPS5 v0.1.4 has only these two modes |
+| Resolution | `resolution` | `APS5_OUTPUT_RESOLUTION` (`1920x1080` or `3840x2160`) | Match the display (`null`, default: AnyPS5 uses the mode of the display the window is on), 1080p (`1080p`), 4K (`2160p`). AnyPS5 v0.1.5 still has only these two modes |
 | Disable Dozen | `disableDozen` | `VK_LOADER_DRIVERS_DISABLE='*dzn*'` | Shown when Dozen and another driver are found, or the probe only worked without Dozen |
 | Performance overlay | `overlay`, `overlayPosition` | `ANYPS5_OVERLAY=1` (+ `ANYPS5_OVERLAY_POS`) | Otherwise F10 in game. Position: `tl` (default), `tr`, `bl`, `br` |
 | Advanced: PlayGo chunks | `playGoUnlistedChunks` | `APS5_PLAYGO_UNLISTED_CHUNKS` | `installed`, `absent` or empty (`null`) |
@@ -490,7 +490,7 @@ The main risk is how fast AnyPS5 evolves: the repository merges several pull req
 
 | Point | Finding |
 | --- | --- |
-| Latest release | `v0.1.4` of 2026-10-30 (tag commit `7fcab08`, the build mode's commit); Windows libs weigh ~91 MB, Linux libs ~96 MB |
+| Latest release | `v0.1.5` of 2026-11-11 (tag commit `62bd7dd`; the build mode stays on `7fcab08`, the v0.1.4 tag commit); Windows libs weigh ~110 MB, Linux libs ~116 MB |
 | Release asset names | `relinker-<tag>.exe`, `prx-windows-<tag>.zip` (content under `libs/`), plus `USAGE.md` and `INPUT_MAPPING.md` |
 | Release asset hashes | `digest` field (`sha256:…`) present in the GitHub API |
 | Relinker path after a full build | `build\core\relinker\relinker.exe` (`tools/package_release.py`) |
