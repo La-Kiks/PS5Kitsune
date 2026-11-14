@@ -1,30 +1,30 @@
 {
   "schemaVersion": 2,
   "os": "windows",
-  "id": "doom-validated-2026-10",
+  "id": "doom-validated-2026-11",
   "validated": true,
-  "source": { "kind": "release", "tag": "v0.1.4", "publishedAt": "2026-10-30T23:09:14Z" },
+  "source": { "kind": "release", "tag": "v0.1.5", "publishedAt": "2026-11-11T15:01:01Z" },
   "build": {
     "repository": "https://github.com/boykopovar/AnyPS5.git",
     "commit": "7fcab08f71e463b1768730a626a0f5472d336708"
   },
   "assets": {
     "relinker": {
-      "name": "relinker-v0.1.4.exe",
-      "sha256": "6f6d49e3613ea7fce859621265068bfd64161a729a8051c83150f2d45ec193e0"
+      "name": "relinker-v0.1.5.exe",
+      "sha256": "541fa50fb7255be93111b72ebe5c320f3ccb936905f8f522914f233177ca17e7"
     },
     "libs": {
-      "name": "prx-windows-v0.1.4.zip",
-      "sha256": "cbd61c521d555614dbcddc62cdabf45acfe409c520307cdb58732c8486dd0d7a"
+      "name": "prx-windows-v0.1.5.zip",
+      "sha256": "d026931807f977d9ce21d07bcecd8dd229e652ec849414ac69cefcab4cc96a57"
     },
     "scripts": {
-      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.4.zip",
-      "sha256": "fd13fe84a43c32b6296f502097d4b9da06610f94937e20ef724c007e1ae41ff1",
+      "url": "https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.5.zip",
+      "sha256": "f5ba3989167b94b0dbafaebb7761acca6f3ee597b66f39430d580f5704cfaace",
       "include": [ "tools/", "core/libs/prx/" ]
     },
     "unwrapScript": {
-      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/7fcab08f71e463b1768730a626a0f5472d336708/tools/unwrap_self.py",
-      "sha256": "9d6f75be2bf721a88e15c997923a901179073a55d2ebf4cbae568b4a33ad3cc2"
+      "url": "https://raw.githubusercontent.com/boykopovar/AnyPS5/62bd7dd61e2b8a7a59262c4c145edff549bae5b9/tools/unwrap_self.py",
+      "sha256": "832aea1e9b4cf4780d5793c1c649299727b464d3940e28813f2410ce95531b69"
     }
   },
   "tools": {

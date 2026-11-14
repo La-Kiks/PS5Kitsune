@@ -16,7 +16,7 @@ PS5Kitsune automates the manual AnyPS5 procedure:
 
 ## Status
 
-Early development — all 8 milestones of the roadmap are done. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. On Linux, the app and the command-line tool ship as one AppImage, in release mode only; DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. On Windows, the app also ships as a single `.exe`; with v0.1.4, release plays and quits cleanly, and build mode plays but crashes at the quit prompt, a known AnyPS5 issue (see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)). Both are downloads on the [latest release](https://github.com/La-Kiks/PS5Kitsune/releases/latest). The design and roadmap are in [docs/architecture.md](docs/architecture.md).
+Early development — all 8 milestones of the roadmap are done. The app installs AnyPS5 from its screens, as a release or built from source, and both installs can stay side by side; adding, launching and reconverting a game are also possible from the app, in a light or dark theme and with the keyboard alone. On Linux, the app and the command-line tool ship as one AppImage, in release mode only; DOOM was played with it on a real Ubuntu 26.04 install with AnyPS5 v0.1.4. On Windows, the app also ships as a single `.exe`; release v0.1.5 plays and quits cleanly, and build mode (`7fcab08`) plays but crashes at the quit prompt, a known AnyPS5 issue (see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)). Both are downloads on the [latest release](https://github.com/La-Kiks/PS5Kitsune/releases/latest). The design and roadmap are in [docs/architecture.md](docs/architecture.md).
 
 ### Roadmap
 
@@ -33,7 +33,7 @@ The command-line tool installs AnyPS5, adds a game and runs it:
 
 ```powershell
 ps5kitsune check                     # can this PC run AnyPS5? CPU, Vulkan, memory, disk, data folder
-ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.4
+ps5kitsune install                   # checks, then Python, relinker, libraries and scripts of AnyPS5 v0.1.5
 ps5kitsune install --mode build      # same result, but AnyPS5 is built from source (see below)
 ps5kitsune use release|build         # switch between the release and build installs, both kept side by side
 ps5kitsune add <game folder or zip>  # validate, copy, unwrap, convert and audit
@@ -81,7 +81,7 @@ Without `--mode`, the CLI resumes an unfinished install in the mode it was start
 
 ```text
 Data root: C:\PS5Kitsune (saved setting)
-Profile: doom-validated-2026-10 (embedded)
+Profile: doom-validated-2026-11 (embedded)
 Mode: build (current install)
 ```
 
