@@ -9,11 +9,11 @@
     <StackPanel Grid.Row="0" Spacing="12">
       <TextBlock Text="{Binding Title}" Classes="h1" />
       <TextBlock Text="{Binding BuildText}" IsVisible="{Binding BuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-      <TextBlock Text="Adding games from the app comes in a later version; until then, use 'ps5kitsune add'." Classes="caption" />
+      <TextBlock Text="To add a game, use Add a game on Home or in the Library." Classes="caption" />
       <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="6">
-        <TextBlock Text="Relinker" Classes="caption" VerticalAlignment="Center" />
+        <TextBlock Text="Relinker" Classes="caption" Margin="0,1,0,0" />
         <SelectableTextBlock Grid.Column="1" Text="{Binding Relinker}" TextWrapping="Wrap" />
-        <TextBlock Grid.Row="1" Text="Libraries" Classes="caption" VerticalAlignment="Center" />
+        <TextBlock Grid.Row="1" Text="Libraries" Classes="caption" Margin="0,1,0,0" />
         <SelectableTextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Libs}" TextWrapping="Wrap" />
       </Grid>
       <TextBlock Text="{Binding OpenError}" Classes="error" AutomationProperties.LiveSetting="Assertive"

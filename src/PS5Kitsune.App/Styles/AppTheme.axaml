@@ -219,7 +219,7 @@
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
   <Style Selector="TextBlock.caption">
-    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="FontSize" Value="12" />
     <Setter Property="Foreground" Value="{DynamicResource Text.Muted}" />
     <Setter Property="TextWrapping" Value="Wrap" />
   </Style>
@@ -258,6 +258,17 @@
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="Padding" Value="0,12,0,0" />
     <Setter Property="Margin" Value="0,16,0,0" />
+  </Style>
+  <Style Selector="Border.dropzone">
+    <Setter Property="Background" Value="{DynamicResource Surface.Raised}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border.Strong}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="24" />
+    <Setter Property="MinHeight" Value="160" />
+  </Style>
+  <Style Selector="Border.dropzone.over">
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
   </Style>
   <Style Selector="Border.divider">
     <Setter Property="BorderBrush" Value="{DynamicResource Border.Subtle}" />

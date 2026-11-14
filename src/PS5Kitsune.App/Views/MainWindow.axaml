@@ -93,6 +93,7 @@
       </Grid>
     </Border>
 
-    <ContentControl Grid.Column="1" Margin="24" Content="{Binding Navigator.CurrentPage}" />
+    <!-- Pages stretch with the window up to a readable width, then stay centred in the space beside the sidebar. -->
+    <ContentControl Grid.Column="1" Margin="24" MaxWidth="1000" Content="{Binding Navigator.CurrentPage}" />
   </Grid>
 </Window>

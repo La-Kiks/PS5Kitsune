@@ -25,6 +25,10 @@ public sealed class Screenshots(HeadlessSession session)
         }
 
         Directory.CreateDirectory(folder);
+
+        // Optional window size, to check the layout at the minimum size (720x480) or on a wide screen; 860x680 otherwise.
+        var width = int.TryParse(Environment.GetEnvironmentVariable("PS5K_SCREENSHOT_WIDTH"), out var w) ? w : 860;
+        var height = int.TryParse(Environment.GetEnvironmentVariable("PS5K_SCREENSHOT_HEIGHT"), out var h) ? h : 680;
         using var gallery = new PageGallery();
         try
         {
@@ -39,9 +43,9 @@ public sealed class Screenshots(HeadlessSession session)
                         var window = new MainWindow
                         {
                             DataContext = new MainWindowViewModel(navigator, new FakeDialogs(), new FakePages(), new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { })),
-                            Width = 860,
+                            Width = width,
                             // The Advanced section is at the bottom of the Settings page.
-                            Height = name.EndsWith("-Advanced", StringComparison.Ordinal) ? 1100 : 680,
+                            Height = name.EndsWith("-Advanced", StringComparison.Ordinal) ? Math.Max(height, 1100) : height,
                         };
                         try
                         {
@@ -76,8 +80,8 @@ public sealed class Screenshots(HeadlessSession session)
                     var window = new MainWindow
                     {
                         DataContext = new MainWindowViewModel(new Navigator(), new FakeDialogs(), new FakePages(), new ThemeService(new AppSettingsStore(gallery.SettingsFolder), _ => { }), updateNotice: notice),
-                        Width = 860,
-                        Height = 680,
+                        Width = width,
+                        Height = height,
                     };
                     try
                     {
