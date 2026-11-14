@@ -14,11 +14,11 @@
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <c:StatusChip Kind="{Binding BannerStatus, Converter={x:Static conv:CheckStatusKindConverter.Instance}}"
                       Text="{Binding BannerLabel}" VerticalAlignment="Center" />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-          <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsChecking}" Width="80" VerticalAlignment="Center"
-                       AutomationProperties.Name="Checking" />
+        <DockPanel Grid.Column="1" VerticalAlignment="Center">
+          <ProgressBar DockPanel.Dock="Left" IsIndeterminate="True" IsVisible="{Binding IsChecking}" Width="80" Margin="0,0,12,0"
+                       VerticalAlignment="Center" AutomationProperties.Name="Checking" />
           <TextBlock Text="{Binding Verdict}" Classes="h2" VerticalAlignment="Center" />
-        </StackPanel>
+        </DockPanel>
         <Button Grid.Column="2" Content="Check again" Command="{Binding CheckCommand}" VerticalAlignment="Center" c:InitialFocus.Rank="2" />
       </Grid>
     </Border>

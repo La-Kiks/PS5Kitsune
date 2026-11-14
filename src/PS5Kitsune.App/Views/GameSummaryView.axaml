@@ -19,9 +19,13 @@
           </StackPanel>
         </StackPanel>
 
-        <TextBlock Text="{Binding SizeText}" />
-        <TextBlock Text="{Binding ModulesText}" />
-        <TextBlock Text="{Binding BinariesText}" TextWrapping="Wrap" />
+        <Border Classes="card" Margin="0,4,0,0">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding SizeText}" />
+            <TextBlock Text="{Binding ModulesText}" />
+            <TextBlock Text="{Binding BinariesText}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
 
         <ItemsControl ItemsSource="{Binding BlockingIssues}">
           <ItemsControl.ItemTemplate>

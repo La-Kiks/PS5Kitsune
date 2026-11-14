@@ -10,10 +10,13 @@
     <StackPanel Grid.Row="0" Spacing="16">
       <TextBlock Text="{Binding Title}" Classes="h1" />
       <TextBlock Text="{Binding Instructions}" TextWrapping="Wrap" />
-      <Border BorderThickness="2" BorderBrush="{DynamicResource Border.Strong}" CornerRadius="8" Padding="24" MinHeight="120">
-        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <Button Content="Choose a folder…" Command="{Binding ChooseFolderCommand}" c:InitialFocus.Rank="1" />
-          <Button Content="Choose a .zip…" Command="{Binding ChooseZipCommand}" />
+      <Border Name="DropZone" Classes="dropzone">
+        <StackPanel Spacing="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="Drop the folder or .zip here" Classes="h2" Foreground="{DynamicResource Text.Muted}" HorizontalAlignment="Center" />
+          <WrapPanel ItemSpacing="12" LineSpacing="12" HorizontalAlignment="Center">
+            <Button Content="Choose a folder…" Command="{Binding ChooseFolderCommand}" c:InitialFocus.Rank="1" />
+            <Button Content="Choose a .zip…" Command="{Binding ChooseZipCommand}" />
+          </WrapPanel>
         </StackPanel>
       </Border>
       <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsPreparing}">
