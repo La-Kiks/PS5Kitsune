@@ -81,7 +81,7 @@ Without `--mode`, the CLI resumes an unfinished install in the mode it was start
 
 ```text
 Data root: C:\PS5Kitsune (saved setting)
-Profile: doom-validated-2026-10 (embedded)
+Profile: doom-validated-2026-11 (embedded)
 Mode: build (current install)
 ```
 

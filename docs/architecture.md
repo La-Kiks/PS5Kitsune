@@ -85,7 +85,7 @@ PS5Kitsune/
 | `IPlatform` | OS-specific facts: default folders, executable suffix, relinker options, toolchain | `WindowsPlatform` returns `--windows`, `.exe`, WinLibs |
 | `ISystemCheck` | One PC check, returns OK, Warning or Blocking, with a corrective action | `ShaderInt64Check` |
 | `IPortableTool` | Detect, download, verify (SHA-256) and extract a tool into `tools\` | `MinGitTool`, `PythonEmbeddableTool`, `WinLibsTool` |
-| `AnyPS5Profile` | Targeted AnyPS5 version and everything that depends on it (see "AnyPS5 profiles") | `doom-validated-2026-10` |
+| `AnyPS5Profile` | Targeted AnyPS5 version and everything that depends on it (see "AnyPS5 profiles") | `doom-validated-2026-11` |
 | `IAnyPS5Source` | Produce an AnyPS5 install: relinker path, libs folder, scripts, version | `ReleaseSource`, `SourceBuildSource` |
 | `IStep` + `StepRunner` | A long step with progress, cancellation, logging and resume | `CloneStep`, `ConfigureStep`, `BuildLibsStep` |
 | `IProcessRunner` | Run git, cmake, python, the relinker, reading output line by line | CliWrap wrapper, fakeable in tests |
@@ -110,7 +110,7 @@ A profile is a JSON file describing an AnyPS5 version **validated with DOOM** an
 ```json
 {
   "schemaVersion": 2,
-  "id": "doom-validated-2026-10",
+  "id": "doom-validated-2026-11",
   "os": "windows",
   "source": { "kind": "release", "tag": "v0.1.5" },
   "build": {

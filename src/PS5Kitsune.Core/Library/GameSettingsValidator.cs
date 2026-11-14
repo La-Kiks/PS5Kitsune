@@ -15,7 +15,7 @@ public static class GameSettingsValidator
 
     public static IReadOnlyList<string> PlayGoValues { get; } = ["installed", "absent"];
 
-    /// <summary>The video-out modes AnyPS5 v0.1.4 has; a future mode is one more entry here and in <see cref="Launch.LaunchEnvironment.ResolutionValue"/>.</summary>
+    /// <summary>The video-out modes AnyPS5 has (v0.1.5 still has only these two); a future mode is one more entry here and in <see cref="Launch.LaunchEnvironment.ResolutionValue"/>.</summary>
     public static IReadOnlyList<string> Resolutions { get; } = ["1080p", "2160p"];
 
     /// <summary>Replaces each value AnyPS5 would refuse with its default; a blank GPU name becomes null.</summary>

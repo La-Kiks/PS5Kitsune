@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "os": "windows",
-  "id": "doom-validated-2026-10",
+  "id": "doom-validated-2026-11",
   "validated": true,
   "source": { "kind": "release", "tag": "v0.1.5", "publishedAt": "2026-11-11T15:01:01Z" },
   "build": {
