@@ -64,15 +64,15 @@ public sealed class ProfileLoaderTests
         var profile = ProfileLoader.LoadEmbedded();
 
         Assert.Equal(
-            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.4/relinker-v0.1.4.exe"),
+            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.5/relinker-v0.1.5.exe"),
             profile.AssetUrl(ProfileAssetKeys.Relinker));
         Assert.Equal(
-            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.4/prx-windows-v0.1.4.zip"),
+            new Uri("https://github.com/boykopovar/AnyPS5/releases/download/v0.1.5/prx-windows-v0.1.5.zip"),
             profile.AssetUrl(ProfileAssetKeys.Libs));
-        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.4.zip"), profile.AssetUrl(ProfileAssetKeys.Scripts));
+        Assert.Equal(new Uri("https://github.com/boykopovar/AnyPS5/archive/refs/tags/v0.1.5.zip"), profile.AssetUrl(ProfileAssetKeys.Scripts));
         Assert.Equal(["tools/", "core/libs/prx/"], profile.Asset(ProfileAssetKeys.Scripts).Include!);
-        Assert.Contains("7fcab08f71e463b1768730a626a0f5472d336708", profile.AssetUrl(ProfileAssetKeys.UnwrapScript).AbsolutePath, StringComparison.Ordinal);
-        Assert.Equal("v0.1.4", profile.Source.Version);
+        Assert.Contains("62bd7dd61e2b8a7a59262c4c145edff549bae5b9", profile.AssetUrl(ProfileAssetKeys.UnwrapScript).AbsolutePath, StringComparison.Ordinal);
+        Assert.Equal("v0.1.5", profile.Source.Version);
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public sealed class ProfileLoaderTests
     {
         var profile = ProfileLoader.LoadEmbedded();
 
-        Assert.Equal(new DateTimeOffset(2026, 10, 30, 23, 9, 14, TimeSpan.Zero), profile.Source.PublishedAt);
+        Assert.Equal(new DateTimeOffset(2026, 11, 11, 15, 1, 1, TimeSpan.Zero), profile.Source.PublishedAt);
     }
 
     [Fact]
@@ -368,10 +368,10 @@ public sealed class ProfileLoaderTests
 
         Assert.Equal(ProfileOs.Linux, profile.Os);
         Assert.True(profile.Validated);
-        Assert.Equal("relinker-v0.1.4", profile.Asset(ProfileAssetKeys.Relinker).Name);
-        Assert.Equal("9e5afd1313520906a9af43c468d6e31a5d2237879a85c0984134d628348e92a8", profile.Asset(ProfileAssetKeys.Relinker).Sha256);
-        Assert.Equal("prx-linux-v0.1.4.zip", profile.Asset(ProfileAssetKeys.Libs).Name);
-        Assert.Equal("04ea0a4a51cc93d5aad1c9d558473bd3eea4bf9ef7d17511aa467449b744a27e", profile.Asset(ProfileAssetKeys.Libs).Sha256);
+        Assert.Equal("relinker-v0.1.5", profile.Asset(ProfileAssetKeys.Relinker).Name);
+        Assert.Equal("6501ce4f4f28b26ebeebd34b79b84dbcd10a0ffdf331d21a766006d49e2e2bd1", profile.Asset(ProfileAssetKeys.Relinker).Sha256);
+        Assert.Equal("prx-linux-v0.1.5.zip", profile.Asset(ProfileAssetKeys.Libs).Name);
+        Assert.Equal("162272f6bcc134343e38390529e3e6ccd060be9870ba99a12c48ee02602fdfba", profile.Asset(ProfileAssetKeys.Libs).Sha256);
         Assert.Empty(profile.Tools);
         Assert.Equal(["--registry"], profile.Relinker.Args);
         Assert.Equal("--to-intel", profile.Relinker.IntelArg);
